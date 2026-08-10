@@ -46,13 +46,26 @@ class TestOuProcess:
         assert not np.array_equal(a, b)
 
     def test_initial_element_near_stationary(self):
-        """First element should be seeded from the stationary distribution, not mu."""
-        # stationary sd is sigma / sqrt(1 - phi^2); mean should still be mu
-        # over many seeds, x[0] mean ~ mu and std ~ sigma/sqrt(1-phi^2)
+        """First element should be drawn from N(mu, sigma), not N(mu, sigma/sqrt(1-phi^2)).
+
+        After the variance-scaling fix, innovation_sd = sigma*sqrt(1-phi^2) and
+        x[0] ~ N(mu, sigma) — the stationary SD of the corrected process.
+        """
         x0_vals = [ou_process(n=1, mu=50.0, sigma=5.0, phi=0.85, seed=s)[0] for s in range(200)]
         assert abs(np.mean(x0_vals) - 50.0) < 2.0
-        expected_sd = 5.0 / np.sqrt(1 - 0.85**2)
+        expected_sd = 5.0  # stationary SD equals sigma after the fix
         assert abs(np.std(x0_vals) - expected_sd) < 2.0
+
+    def test_stationary_sd_matches_sigma(self):
+        """Regression: ou_process must produce stationary SD within 2% of sigma.
+
+        Before the fix, phi=0.85 inflated SD by 1/sqrt(1-phi^2) ≈ 1.90×.
+        """
+        series = ou_process(n=100_000, mu=0.0, sigma=10.0, phi=0.85, seed=SEED)
+        measured_sd = np.std(series)
+        assert abs(measured_sd - 10.0) / 10.0 < 0.02, (
+            f"stationary SD {measured_sd:.4f} deviates >2% from requested sigma=10.0"
+        )
 
 
 class TestDiurnal:
@@ -128,6 +141,22 @@ class TestWeeklyDip:
         ts = self._make_ts(14)
         result = weekly_dip(ts, magnitude=0.2)
         assert np.max(result) - np.min(result) > 0.01
+
+    def test_sunday_is_trough(self):
+        """Regression: Sunday (dow=6) must have a strictly lower factor than every weekday.
+
+        Base timestamp 2026-01-05T00:00:00 is a Monday (verified: weekday()==0).
+        One week: Mon=hour 0, Tue=24, Wed=48, Thu=72, Fri=96, Sat=120, Sun=144.
+        """
+        ts = self._make_ts(7)  # 7 days = 168 hours starting on Monday
+        result = weekly_dip(ts, magnitude=0.2)
+        # One sample per day at midnight — take the hour-0 value for each day
+        daily = result[::24]  # indices 0..6 => Mon..Sun
+        sunday_val = daily[6]
+        weekday_vals = daily[:5]  # Mon–Fri
+        assert np.all(sunday_val < weekday_vals), (
+            f"Sunday value {sunday_val:.4f} not below all weekday values {weekday_vals}"
+        )
 
 
 class TestDropoutMask:

@@ -10,13 +10,12 @@ second run after a bad load from overwriting the only good copy.
 from __future__ import annotations
 
 import sys
+import os
 from dataclasses import dataclass
 from typing import Literal
 
 from google.cloud import bigquery
 
-import sys
-import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import (
@@ -41,7 +40,7 @@ class BackupResult:
 
 
 def _row_count(client: bigquery.Client, table_ref: str) -> int:
-    query = "SELECT COUNT(*) AS n FROM `" + table_ref + "`"
+    query = f"SELECT COUNT(*) AS n FROM `{table_ref}`"
     result = client.query(query).result()
     return next(result).n
 

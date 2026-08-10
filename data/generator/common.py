@@ -17,19 +17,23 @@ def ou_process(
 ) -> np.ndarray:
     """Ornstein-Uhlenbeck (AR-1) process.
 
-    x[t] = mu + phi*(x[t-1] - mu) + eps,  eps ~ N(0, sigma)
+    x[t] = mu + phi*(x[t-1] - mu) + eps,  eps ~ N(0, innovation_sd)
+
+    where innovation_sd = sigma * sqrt(1 - phi^2).  This scaling ensures the
+    *stationary* standard deviation of the process equals the requested sigma,
+    matching the calibration target stored in stats.json (which records the
+    observed stationary SD of each series).
 
     The first element is drawn from the process's stationary distribution
-    N(mu, sigma/sqrt(1-phi^2)) to avoid a burn-in artifact at the start of
-    every series.
+    N(mu, sigma) to avoid a burn-in artifact at the start of every series.
 
     Returns a 1-D numpy array of length n.
     """
     rng = np.random.default_rng(seed)
-    stationary_sd = sigma / math.sqrt(1.0 - phi**2)
+    innovation_sd = sigma * math.sqrt(1.0 - phi**2)
     x = np.empty(n)
-    x[0] = rng.normal(mu, stationary_sd)
-    eps = rng.normal(0.0, sigma, size=n - 1)
+    x[0] = rng.normal(mu, sigma)
+    eps = rng.normal(0.0, innovation_sd, size=n - 1)
     for t in range(1, n):
         x[t] = mu + phi * (x[t - 1] - mu) + eps[t - 1]
     return x
@@ -71,9 +75,11 @@ def weekly_dip(ts: np.ndarray, magnitude: float) -> np.ndarray:
     ts_days = ts.astype("datetime64[D]").astype(np.int64)
     # Day-of-week: numpy epoch (1970-01-01) was a Thursday (dow=3)
     dow = (ts_days + 3) % 7  # 0=Mon, 6=Sun
-    # Sinusoid over the week; trough on Sunday
-    phase = 2.0 * math.pi * dow / 7.0
-    # cos has max at dow=0 (Mon); shift to put trough on Sunday (dow=6 ~ -1 day)
+    # Phase shift so the cosine trough (cos = -1) lands on Sunday (dow=6).
+    # Without shift: trough at dow where 2*pi*dow/7 = pi => dow=3.5 (Thu/Fri).
+    # With shift of -5*pi/7: trough at dow where 2*pi*dow/7 - 5*pi/7 = pi
+    #   => dow = 6 (Sun). Verified: phase(dow=6) = 12*pi/7 - 5*pi/7 = pi.
+    phase = 2.0 * math.pi * dow / 7.0 - 5.0 * math.pi / 7.0
     factor = 1.0 - magnitude * 0.5 * (1.0 - np.cos(phase))
     return np.clip(factor, 0.0, 1.0)
 
