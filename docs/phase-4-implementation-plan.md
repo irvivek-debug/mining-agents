@@ -34,7 +34,14 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
 - **Deterministic seed** (`SEED = 20260810`) so any reviewer regenerates byte-identical data.
 - **No hardcoded model IDs** anywhere. No service-account keys. No string-interpolated SQL.
 - Timezone: all timestamps UTC, matching existing rows.
-- Window preserved: `2026-01-01` → `2026-06-16`, hourly, so no downstream date logic breaks.
+- **Sampling grids preserved exactly** (verified against the live tables, not assumed):
+  | Table | Grid | Points | Window (UTC) |
+  |---|---|---|---|
+  | `telemetry_stream` | **2-hourly** | 2004 timestamps | `2026-01-01 00:00` → `2026-06-16 22:00` |
+  | `metallurgical_recovery`, `crusher_states` | daily | 167 | `2026-01-01` → `2026-06-16` |
+  | `biometric_fatigue_logs`, `fatigue_logs_node` | daily × 20 operators | 167 × 20 = 3340 | `2026-01-01` → `2026-06-16` |
+- **Calibration targets come from `data/profile/stats.json`**, a profile of the live tables captured before any rewrite. Generators read it; no statistic is hardcoded from memory.
+- **Generated series must reconcile with `assets.current_state`**, the JSON snapshot of each asset's present reading. This is a free consistency check the original data fails, and it fixes the end-point of every ramp.
 
 ---
 
@@ -42,7 +49,8 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
 
 * **Files**: create `data/generator/config.py`, `data/generator/common.py`, `data/generator/backup.py`, `data/requirements.txt`
 * **Depends on**: none
-* **Deliverable**: a seeded RNG, the shared stochastic primitives every later task uses, and a verified backup of all six tables being rewritten.
+* **Already in place**: `data/profile/schemas.json` (all 28 table schemas with partitioning and clustering) and `data/profile/stats.json` (calibration statistics), both captured from the live dataset before any rewrite. `config.py` loads these rather than restating their numbers.
+* **Deliverable**: a seeded RNG, the shared stochastic primitives every later task uses, and a verified backup of all tables being rewritten.
   * `ou_process(n, mu, sigma, phi, seed)` — Ornstein-Uhlenbeck / AR(1): `x[t] = mu + phi*(x[t-1]-mu) + eps`. This single function is what fixes the autocorrelation failure.
   * `diurnal(ts, amplitude, peak_hour)` — 24-h sinusoid for shift rhythm.
   * `shift_step(ts)` — 12-h day/night step (06:00 / 18:00 handover).
@@ -65,7 +73,7 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
 
 * **Files**: create `data/generator/telemetry.py`, `data/generator/tests/test_telemetry.py`
 * **Depends on**: Task 1
-* **Deliverable**: a full rewrite of `telemetry_stream` — same schema, same window, ~34,000 rows.
+* **Deliverable**: a full rewrite of `telemetry_stream` — same schema, same 2-hourly grid, **13 asset·metric series × 2004 points ≈ 26,000 rows** (up from 5 series / 10,020 rows).
 
   **Per-asset metric model.** Each series is `OU(phi=0.85–0.92) + diurnal + shift_step + weekly_dip`, calibrated so the mean and standard deviation match the *existing* table's values. The distribution is preserved; only its temporal structure is repaired. Anyone comparing summary statistics before and after sees no change — which is the point.
 
@@ -77,7 +85,11 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
   | CONVEYOR-02 | **`belt_tension_kn`, `speed_mps`, `load_pct` (new)** | closes gap A2 |
   | TRUCK-08 | **`engine_temp_c`, `payload_tons`, `speed_kmh` (new)** | closes gap A2 |
 
-  **Degradation ramp (A1).** PUMP-104A bearing wear over the final 21 days, applied as an exponential envelope on top of the OU process, not a linear add: `vibration *= 1 + k*exp(alpha*(t-t0))`, reaching ~11.0 Hz. `temperature_c` follows to ~88 with the 3-h lag. Harmonic content is out of scope at hourly sampling and is not faked.
+  **Degradation ramp (A1).** PUMP-104A bearing wear over the final 21 days, applied as an exponential envelope on top of the OU process, not a linear add: `vibration *= 1 + k*exp(alpha*(t-t0))`. The end-point is **not chosen freely — it is fixed by `assets.current_state`**, which records PUMP-104A at `vibration_hz 12.5`, `temperature_c 85.2`. The ramp terminates there, so the time series and the asset snapshot finally agree. `temperature_c` follows with the 3-h lag. Harmonic content is out of scope at 2-hourly sampling and is not faked.
+
+  **Every new series lands on its `assets.current_state` value** at the final timestamp: MILL-01 `temperature_c 88.5` / `rotational_speed_rpm 14.8`; CONVEYOR-02 `speed_mps 4.5` / `belt_tension_kn 25.4` / `load_pct 88.0`; TRUCK-08 `speed_kmh 32.5` / `payload_tons 218.4` / `engine_temp_c 92.1`.
+
+  **Cross-table consistency.** `CRUSHER-03.feed_rate_tph` appears in *both* `telemetry_stream` (2-hourly) and `crusher_states` (daily). Today they are independent draws. After this task the daily series is the daily mean of the 2-hourly one — an inconsistency a reviewer can check in one join.
 
   **Faults.** 0.4% dropout; two stuck-sensor runs of 6–10 h on non-critical metrics.
 * **Verification**:
@@ -109,6 +121,8 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
 
   Recovery ceases to be an independent random number and becomes what it actually is — a consequence of three measured grades. This alone converts the most exposed table in the dataset into one that survives inspection.
 
+  **Calibration note.** Feeding today's *means* (`f` 1.1121, `c` 27.5795, `t` 0.0689) into the formula yields **R ≈ 94.0**, against a stored mean of 92.21 — a 1.8 pp gap that is itself evidence recovery was never computed. The generator holds `f` and `c` near their observed distributions and tunes the `t` distribution upward so the *computed* mean lands at 92.2 ± 0.3 and the range stays inside the observed 88.0 – 96.0. Recovery is never clipped to fit; if it leaves the band, the grade distributions are wrong and get fixed instead.
+
   **Excursion (A5).** A `crusher_states.gap_size_setting_mm` change drives coarser feed, which lifts `tailings_grade_pct`, which depresses recovery through the formula — a **causal chain S07 can discover**, not a correlation it has to assert.
 * **Verification**:
   ```
@@ -130,12 +144,16 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
               + fixed_mobilisation
   ```
 
-  `parts_cost` resolves through `work_order_parts_edge` → `inventory_levels.unit_price_usd`, so the number ties to real part prices. CRITICAL-priority orders draw larger crews and higher mobilisation.
+  `parts_cost` resolves through `work_order_parts_edge` → `inventory_levels.unit_price_usd`, so the number ties to real part prices. `crew_size` is **not a stored column** — it is derived deterministically from `priority` (CRITICAL 6, HIGH 4, MEDIUM 3, LOW 2) inside the generator, and `fixed_mobilisation` scales the same way.
+
+  **Only 152 of the 500 work orders have a `maintenance_logs` row**, and those are exactly the `COMPLETED` ones. For the other 348 there is no duration to correlate against, so cost is drawn from the priority-conditional distribution the 152 imply. The cost/duration correlation test therefore runs on the 152-row join, which is the only place both quantities exist.
+
+  **A second tell fixed here:** today mean cost is *inverted* against priority — LOW averages $6,381 while CRITICAL averages $6,160. Deriving cost from crew size and duration corrects the ordering as a by-product rather than by patching it.
 * **Verification**:
   ```
   py312 -m pytest data/generator/tests/test_maintenance.py -v
   ```
-  Expected: `corr(repair_cost, actual_duration_hours)` ∈ `[0.70, 0.90]`; every `repair_cost` reproducible from its components to within $1; mean cost by priority ordered CRITICAL > HIGH > MEDIUM > LOW; total spend within 15% of the original $2.4M so demo talking points survive.
+  Expected: on the 152-row `erp_work_orders ⋈ maintenance_logs` join, `corr(repair_cost, actual_duration_hours)` ∈ `[0.70, 0.90]`; every `repair_cost` reproducible from its components to within $1; mean cost by priority ordered CRITICAL > HIGH > MEDIUM > LOW; total spend within 15% of the original **$3,007,375** so demo talking points survive; the 152 logged work orders remain exactly the `COMPLETED` ones.
 
 ---
 
@@ -146,8 +164,9 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
 * **Deliverable**: rewritten `biometric_fatigue_logs` and mirrored `fatigue_logs_node`.
   - **Fix the sign**: `heart_rate_bpm` rises with `sleep_deficit_hours` (target corr **+0.35 to +0.55**), reversing the measured −0.116.
   - `microsleep_events_detected` drawn from a Poisson whose rate increases with deficit — preserving the 0.466 relationship that already worked.
-  - Circadian structure: deficits accumulate across consecutive night shifts and recover on days off, keyed to `operator_vehicle_assignments.shift_type`.
-  - **A6 case**: one operator crosses `sleep_deficit_hours` > 6 over consecutive nights and is assigned to a vehicle appearing in `incident_involvements`.
+  - Circadian structure: deficits accumulate across consecutive night shifts and recover on days off. **`operator_vehicle_assignments` cannot drive this** — it holds 5 rows, all dated `2026-06-18`, which is *outside* the 167-day fatigue window. The generator therefore synthesises a rotating roster (14-day cycle: 7 day / 2 off / 5 night) across the 20 operators, and the 5 real assignment rows are honoured as the roster's final state rather than contradicted.
+  - **A6 case**: **OP-113** — already a NIGHT-shift operator in `operator_vehicle_assignments` and already linked through `incident_involvements` to `INC-5059` on `TRUCK-03`. Using this operator means the fatigue trail leads to an incident that already exists, rather than requiring a new one. Their `sleep_deficit_hours` crosses 6 over consecutive nights approaching the incident date.
+  - `heart_rate_bpm` is `INTEGER` — values are rounded, not stored as floats. Preserve the observed band (50–84, mean 71.7, σ 7.4) while reversing the correlation sign.
 * **Verification**:
   ```
   py312 -m pytest data/generator/tests/test_fatigue.py -v
@@ -160,7 +179,7 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
 
 * **Files**: create `data/generator/supply_chain.py`, `data/generator/tests/test_supply_chain.py`
 * **Depends on**: Tasks 2, 4
-* **Deliverable**: `inventory_levels` stock positions driven below reorder point for parts that genuinely sit on the critical path of PUMP-104A's open work orders, **timed to coincide with the Task 2 degradation ramp**.
+* **Deliverable**: `inventory_levels` stock positions driven below reorder point for parts that genuinely sit on the critical path of PUMP-104A's open work orders, **timed to coincide with the Task 2 degradation ramp**. The columns are `stock_level` and `reorder_point_limit` (not `quantity_on_hand` / `reorder_point`); below-ROP means `stock_level < reorder_point_limit`.
 
   This is the demo's central claim — *the predicted failure and the missing bearing are the same event* — and it must be true in the data rather than asserted in the narration.
 
@@ -177,12 +196,16 @@ Phase 3 proposed seven additive injections and promised "no existing row is alte
 
 * **Files**: create `data/generator/geology.py`, `data/generator/tests/test_geology.py`
 * **Depends on**: Task 1
-* **Deliverable**: `drill_assay_logs` and `geological_block_models` sharing a spatial model — block estimates interpolated from nearby assays with realistic error, plus **one zone where assayed grades run materially below the model**, giving S06 something to find. Grades follow a lognormal distribution (as ore grades do), not uniform.
+* **Deliverable**: `drill_assay_logs` and `geological_block_models` sharing a spatial model — block estimates interpolated from nearby assays with realistic error, plus **one zone where assayed grades run materially below the model**, giving S06 something to find. Grades follow a lognormal distribution (as ore grades do), not the near-uniform spread they have today.
+
+  **The spatial join has to be constructed, because no coordinate column exists on the assays.** `drill_assay_logs` carries only `drill_hole_id` and `depth_start_meters` / `depth_end_meters`. Every hole in `drill_holes` is vertical (`dip_degrees = −90`, `azimuth 0` for all 30), so an assay interval's position is `(collar_easting, collar_northing, collar_elevation − mean_depth)`. That places assays in the same frame as `geological_block_models.centroid_x/y/z` (x 485100–486000, y 7432100–7433000, z 325–550) and makes inverse-distance interpolation possible.
+
+  Grade columns are `drill_assay_logs.gold_grade_gpt` and `geological_block_models.gold_grade_gpt_est`. Rock type is `geology_code` on assays and `lithology_type` on blocks — the same five values (`OVERBURDEN`, `GRANITE`, `QSP_ORE`, `BASALT`, `CHERT`), which today carry **no grade signal at all** (means 0.376–0.407 across all five). Real deposits are lithology-controlled; `QSP_ORE` should be the ore host and carry materially higher gold than `OVERBURDEN`.
 * **Verification**:
   ```
   py312 -m pytest data/generator/tests/test_geology.py -v
   ```
-  Expected: outside the divergent zone, assay-vs-model grade correlation > 0.6; inside it, assayed gold grade averages ≥ 25% below modelled; `specific_gravity` correlates with `lithology_type`; grade distribution passes a lognormality check.
+  Expected: outside the divergent zone, correlation between an assay's `gold_grade_gpt` and its nearest block's `gold_grade_gpt_est` > 0.6; inside it, assayed gold averages ≥ 25% below modelled; `QSP_ORE` mean gold ≥ 2× `OVERBURDEN` mean in both tables; `specific_gravity` differs by `lithology_type` beyond noise; the gold-grade distribution passes a lognormality check (it currently does not).
 
 ---
 
