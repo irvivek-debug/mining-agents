@@ -1,0 +1,113 @@
+"""Shared stochastic primitives used by all ten table-regeneration tasks.
+
+Every function takes an explicit seed or rng so callers get full reproducibility
+without relying on any global RNG state.
+"""
+
+import math
+import numpy as np
+
+
+def ou_process(
+    n: int,
+    mu: float,
+    sigma: float,
+    phi: float,
+    seed: int,
+) -> np.ndarray:
+    """Ornstein-Uhlenbeck (AR-1) process.
+
+    x[t] = mu + phi*(x[t-1] - mu) + eps,  eps ~ N(0, sigma)
+
+    The first element is drawn from the process's stationary distribution
+    N(mu, sigma/sqrt(1-phi^2)) to avoid a burn-in artifact at the start of
+    every series.
+
+    Returns a 1-D numpy array of length n.
+    """
+    rng = np.random.default_rng(seed)
+    stationary_sd = sigma / math.sqrt(1.0 - phi**2)
+    x = np.empty(n)
+    x[0] = rng.normal(mu, stationary_sd)
+    eps = rng.normal(0.0, sigma, size=n - 1)
+    for t in range(1, n):
+        x[t] = mu + phi * (x[t - 1] - mu) + eps[t - 1]
+    return x
+
+
+def diurnal(
+    ts: np.ndarray,
+    amplitude: float,
+    peak_hour: int,
+) -> np.ndarray:
+    """24-h sinusoidal shift-rhythm overlay.
+
+    Returns an array of the same shape as ts whose values are in
+    [-amplitude, +amplitude].  Peak occurs at peak_hour (UTC hour-of-day).
+    """
+    # Convert numpy datetime64 to fractional hours
+    ts_s = ts.astype("datetime64[s]").astype(np.int64)
+    hour_of_day = (ts_s % 86400) / 3600.0
+    phase = 2.0 * math.pi * (hour_of_day - peak_hour) / 24.0
+    return amplitude * np.cos(phase)
+
+
+def shift_step(ts: np.ndarray) -> np.ndarray:
+    """12-h day/night step: +1 during 06:00–17:59 UTC, -1 otherwise.
+
+    Handovers at 06:00 (day) and 18:00 (night).
+    """
+    ts_s = ts.astype("datetime64[s]").astype(np.int64)
+    hour = (ts_s % 86400) // 3600
+    return np.where((hour >= 6) & (hour < 18), 1.0, -1.0)
+
+
+def weekly_dip(ts: np.ndarray, magnitude: float) -> np.ndarray:
+    """Planned maintenance window: a multiplicative factor in [1-magnitude, 1].
+
+    Values are lowest on Sundays (day-of-week == 6) and highest midweek,
+    giving a realistic planned-maintenance signature.
+    """
+    ts_days = ts.astype("datetime64[D]").astype(np.int64)
+    # Day-of-week: numpy epoch (1970-01-01) was a Thursday (dow=3)
+    dow = (ts_days + 3) % 7  # 0=Mon, 6=Sun
+    # Sinusoid over the week; trough on Sunday
+    phase = 2.0 * math.pi * dow / 7.0
+    # cos has max at dow=0 (Mon); shift to put trough on Sunday (dow=6 ~ -1 day)
+    factor = 1.0 - magnitude * 0.5 * (1.0 - np.cos(phase))
+    return np.clip(factor, 0.0, 1.0)
+
+
+def dropout_mask(n: int, rate: float, seed: int) -> np.ndarray:
+    """Boolean mask where True means 'keep this row'.
+
+    rate is the fraction of rows to drop (sensor outages).
+    """
+    rng = np.random.default_rng(seed)
+    return rng.random(n) >= rate
+
+
+def stuck_sensor(
+    series: np.ndarray,
+    rate: float,
+    run_len: int,
+    seed: int,
+) -> np.ndarray:
+    """Inject flatline runs into series to simulate a stuck sensor.
+
+    rate is the expected fraction of the series covered by flatlines.
+    run_len is the length of each flatline segment.
+    Returns a copy of series with some windows replaced by their first value.
+    """
+    rng = np.random.default_rng(seed)
+    out = series.copy()
+    n = len(series)
+    if rate <= 0.0 or run_len <= 0:
+        return out
+    # Probability that any given position starts a stuck run
+    p_start = rate / run_len
+    starts = np.where(rng.random(n) < p_start)[0]
+    for s in starts:
+        end = min(s + run_len, n)
+        out[s:end] = out[s]
+    return out
