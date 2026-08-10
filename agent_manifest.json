@@ -1,0 +1,25 @@
+{
+  "domain": "Mining & Petroleum",
+  "agents": [
+    {
+      "id": "M-01",
+      "name": "Geological Exploration & Well Optimization Agent",
+      "category": "Exploration"
+    },
+    {
+      "id": "M-02",
+      "name": "Autonomous Haul Fleet & Equipment Dispatch Agent",
+      "category": "Mining Operations"
+    },
+    {
+      "id": "M-03",
+      "name": "Upstream Asset Integrity Agent",
+      "category": "Upstream Petroleum"
+    },
+    {
+      "id": "M-04",
+      "name": "Refinery Yield & Downstream Supply Chain Agent",
+      "category": "Downstream Petroleum"
+    }
+  ]
+}
