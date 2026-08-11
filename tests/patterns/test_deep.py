@@ -74,3 +74,19 @@ def test_the_agent_resolves_its_model_from_the_tier_not_a_literal():
     source = inspect.getsource(module)
     assert "gemini" not in source
     assert "model_for_tier" in source
+
+
+def test_the_instruction_never_names_a_tool_the_agent_does_not_hold():
+    """Naming an unbound tool invites a call that cannot resolve."""
+    for agent in DEEP:
+        text = build_instruction(agent)
+        for tool_name in ("operational_math", "request_approval"):
+            if tool_name not in agent.tools:
+                assert tool_name not in text, (agent.agent_id, tool_name)
+
+
+def test_agents_that_hold_operational_math_are_told_to_use_it():
+    holders = [a for a in DEEP if "operational_math" in a.tools]
+    assert len(holders) >= 1, "no deep agent holds operational_math"
+    for agent in holders:
+        assert "operational_math" in build_instruction(agent), agent.agent_id

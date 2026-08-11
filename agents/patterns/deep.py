@@ -68,13 +68,23 @@ def build_instruction(agent: AgentDef) -> str:
         "CITATION MANDATE — every factual claim you make must cite the table it "
         "came from. Your tool results carry meta.tables_read; quote those names. "
         "An uncited number is a defect.",
-        "",
-        "COMPUTATION — never compute an operational figure yourself. Use the "
-        "operational_math tool, which computes ROP, EOQ, Cpk, OEE and Little's "
-        "Law deterministically in Python. You choose the formula and the inputs.",
-        "",
-        "SQL — all queries use @parameters. Never interpolate a value into SQL.",
     ]
+
+    # Only describe tools this agent actually holds. Naming a tool it was not
+    # given invites a call that cannot resolve.
+    if "operational_math" in agent.tools:
+        parts += [
+            "",
+            "COMPUTATION — never compute an operational figure yourself. Use the "
+            "operational_math tool, which computes ROP, EOQ, Cpk, OEE and Little's "
+            "Law deterministically in Python. You choose the formula and the inputs.",
+        ]
+
+    if "bq_query" in agent.tools:
+        parts += [
+            "",
+            "SQL — all queries use @parameters. Never interpolate a value into SQL.",
+        ]
 
     if any(table in FREE_TEXT_FIELDS for table in agent.source_tables):
         parts += [
