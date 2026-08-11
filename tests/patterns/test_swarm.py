@@ -2,7 +2,7 @@ import warnings
 
 import pytest
 from google.adk.agents import LlmAgent
-from google.adk.workflow import Workflow
+from google.adk.workflow import JoinNode, Workflow
 
 from agents.catalog.definitions import SWARMS
 from agents.patterns.swarm import (
@@ -19,6 +19,10 @@ HITL_COORDINATORS = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S1
 def test_every_swarm_builds():
     built = [build_swarm(s) for s in SWARMS]
     assert len(built) == 12
+    assert [type(wf).__name__ for wf in built] == ["Workflow"] * 12
+    assert sorted(wf.name for wf in built) == sorted(
+        s.swarm_id.lower() for s in SWARMS
+    )
 
 
 def test_a_swarm_exposes_exactly_five_agents():
@@ -76,6 +80,13 @@ def test_every_swarm_has_exactly_five_llm_agents_plus_join_plus_start():
         llm_count = sum(1 for n in wf.graph.nodes if isinstance(n, LlmAgent))
         assert llm_count == 5, (
             f"{swarm.swarm_id}: expected 5 LlmAgent nodes, got {llm_count}"
+        )
+        # Exactly one JoinNode, asserted by type. Inferring it from the node
+        # count would let a refactor swap the barrier for a sixth LlmAgent and
+        # still total 7 — the barrier is the whole point of Pattern A.
+        joins = [n.name for n in wf.graph.nodes if isinstance(n, JoinNode)]
+        assert joins == [f"{swarm.swarm_id.lower()}_barrier"], (
+            f"{swarm.swarm_id}: expected exactly one JoinNode, got {joins}"
         )
 
 
@@ -215,6 +226,8 @@ def test_built_hitl_coordinators_carry_bound_request_approval():
     """Graph-level check: the built coordinator node (after ADK cloning) for
     HITL swarms must carry a bound request_approval callable, identified by
     BOTH __name__ == 'request_approval' AND tables_read == [APPROVAL_TABLE].
+    Either condition alone could one day match a different tool; together they
+    cannot.
 
     Non-HITL coordinators and all specialists and critics in every swarm must
     carry no such tool.
@@ -280,10 +293,16 @@ def test_no_deprecation_warning_from_build_swarm():
     """Building any swarm must emit zero DeprecationWarnings originating from
     agents/patterns/swarm.py.  We capture ALL warnings and filter by category
     and source filename so that unrelated framework deprecations do not fail
-    this test."""
+    this test.
+
+    All twelve are built, not just the first: this is the guard against a
+    reintroduced SequentialAgent/ParallelAgent/LoopAgent, and a regression
+    could reach only one swarm's code path.
+    """
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        build_swarm(SWARMS[0])
+        for swarm in SWARMS:
+            build_swarm(swarm)
 
     swarm_deprecations = [
         w for w in caught
