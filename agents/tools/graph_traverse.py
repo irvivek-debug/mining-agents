@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from agents.config import settings
 from agents.tools.base import ToolFailure, tool
 from agents.tools.bq_query import run_query
 
@@ -16,12 +17,18 @@ class Traversal:
     graph: str
     sql: str
     params: tuple[str, ...]
-    tables_read: list[str] = field(default_factory=list)
+    tables_read: tuple[str, ...] = field(default_factory=tuple)
 
 
-_BLAST_RADIUS = """
+def _sql(template: str) -> str:
+    """Substitute the configured dataset name into a SQL template."""
+    ds = settings().dataset
+    return template.replace("{ds}", ds)
+
+
+_BLAST_RADIUS_TMPL = """
 SELECT * FROM GRAPH_TABLE(
-  mining_data.MiningAssetGraph
+  {ds}.MiningAssetGraph
   MATCH (origin:assets WHERE origin.asset_id = @asset_id)
         -[:DEPENDS_ON]->{1,3} (impacted:assets)
   COLUMNS (origin.asset_id AS fail_origin,
@@ -30,9 +37,9 @@ SELECT * FROM GRAPH_TABLE(
 )
 """
 
-_STOCKOUT_EXPOSURE = """
+_STOCKOUT_EXPOSURE_TMPL = """
 SELECT * FROM GRAPH_TABLE(
-  mining_data.MiningSupplyChainGraph
+  {ds}.MiningSupplyChainGraph
   MATCH (p:SparePart WHERE p.part_number IN UNNEST(@below_rop_parts))
         <-[:REPLACED_PART]- (wo:WorkOrder) <-[:HAS_WORK_ORDER]- (a:Asset)
   COLUMNS (p.part_number AS part_number, wo.work_order_id AS work_order_id,
@@ -43,9 +50,9 @@ WHERE @asset_id IS NULL OR asset_id = @asset_id
 ORDER BY part_number, work_order_id
 """
 
-_FATIGUE_TO_INCIDENT = """
+_FATIGUE_TO_INCIDENT_TMPL = """
 SELECT * FROM GRAPH_TABLE(
-  mining_data.MiningOperationsSafetyGraph
+  {ds}.MiningOperationsSafetyGraph
   MATCH (f:FatigueLog) -[:LOGGED_FOR]->
         (o:Operator WHERE o.operator_id = @operator_id)
         -[:OPERATES]-> (v:Vehicle) -[:INVOLVED_IN]-> (i:Incident)
@@ -55,9 +62,9 @@ SELECT * FROM GRAPH_TABLE(
 )
 """
 
-_ONTOLOGY_RELATED = """
+_ONTOLOGY_RELATED_TMPL = """
 SELECT * FROM GRAPH_TABLE(
-  mining_data.MiningOntologyGraph
+  {ds}.MiningOntologyGraph
   MATCH (s:ontology_concepts WHERE s.concept_name = @concept)
         -[r:RELATED_TO]-> (o:ontology_concepts)
   COLUMNS (s.concept_name AS subject, r.predicate AS predicate,
@@ -65,42 +72,65 @@ SELECT * FROM GRAPH_TABLE(
 )
 """
 
+
+def _tables(*names: str) -> tuple[str, ...]:
+    ds = settings().dataset
+    return tuple(f"{ds}.{name}" for name in names)
+
+
 TRAVERSALS: dict[str, Traversal] = {
     "blast_radius": Traversal(
-        graph="MiningAssetGraph", sql=_BLAST_RADIUS, params=("asset_id",),
-        tables_read=["mining_data.assets", "mining_data.asset_dependencies"],
+        graph="MiningAssetGraph",
+        sql=_sql(_BLAST_RADIUS_TMPL),
+        params=("asset_id",),
+        tables_read=_tables("assets", "asset_dependencies"),
     ),
     "stockout_exposure": Traversal(
-        graph="MiningSupplyChainGraph", sql=_STOCKOUT_EXPOSURE,
+        graph="MiningSupplyChainGraph",
+        sql=_sql(_STOCKOUT_EXPOSURE_TMPL),
         params=("below_rop_parts", "asset_id"),
-        tables_read=["mining_data.inventory_levels", "mining_data.erp_work_orders",
-                     "mining_data.work_order_parts_edge", "mining_data.assets"],
+        tables_read=_tables(
+            "inventory_levels", "erp_work_orders",
+            "work_order_parts_edge", "assets",
+        ),
     ),
     "fatigue_to_incident": Traversal(
-        graph="MiningOperationsSafetyGraph", sql=_FATIGUE_TO_INCIDENT,
+        graph="MiningOperationsSafetyGraph",
+        sql=_sql(_FATIGUE_TO_INCIDENT_TMPL),
         params=("operator_id",),
-        tables_read=["mining_data.biometric_fatigue_logs", "mining_data.operators_node",
-                     "mining_data.operator_vehicle_assignments",
-                     "mining_data.incident_involvements",
-                     "mining_data.safety_incidents"],
+        tables_read=_tables(
+            "fatigue_logs_node", "operators_node",
+            "operator_vehicle_assignments", "fleet_vehicles",
+            "incident_involvements", "safety_incidents",
+        ),
     ),
     "ontology_related": Traversal(
-        graph="MiningOntologyGraph", sql=_ONTOLOGY_RELATED, params=("concept",),
-        tables_read=["mining_data.ontology_concepts"],
+        graph="MiningOntologyGraph",
+        sql=_sql(_ONTOLOGY_RELATED_TMPL),
+        params=("concept",),
+        tables_read=_tables("ontology_concepts", "ontology_triples"),
     ),
 }
 
-_ALL_TABLES = sorted({t for trav in TRAVERSALS.values() for t in trav.tables_read})
+_ALL_TABLES: tuple[str, ...] = tuple(
+    sorted({t for trav in TRAVERSALS.values() for t in trav.tables_read})
+)
 
 
 def make_graph_traverse(allowed: list[str]):
     """Build an enveloped graph_traverse bound to the traversals an agent owns."""
+    if not allowed:
+        raise ValueError(
+            "allowed traversal list is empty; pass at least one traversal name"
+        )
     unknown = [name for name in allowed if name not in TRAVERSALS]
     if unknown:
         raise ValueError(f"unknown traversal(s): {unknown}")
-    tables = sorted({t for name in allowed for t in TRAVERSALS[name].tables_read})
+    tables: tuple[str, ...] = tuple(
+        sorted({t for name in allowed for t in TRAVERSALS[name].tables_read})
+    )
 
-    @tool(tables or _ALL_TABLES)
+    @tool(list(tables))
     def graph_traverse(traversal: str, params: dict):
         """Run one of the canonical property-graph traversals."""
         if traversal not in allowed:
@@ -118,7 +148,7 @@ def make_graph_traverse(allowed: list[str]):
                 missing=missing,
             )
         bound = {p: params[p] for p in spec.params}
-        rows, scanned = run_query(spec.sql, bound, spec.tables_read)
+        rows, scanned = run_query(spec.sql, bound, list(spec.tables_read))
         return {"graph": spec.graph, "rows": rows}, scanned
 
     return graph_traverse

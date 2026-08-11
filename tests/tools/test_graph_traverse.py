@@ -1,4 +1,5 @@
 import pytest
+from agents.config import settings
 from agents.envelope import Envelope
 from agents.tools.graph_traverse import TRAVERSALS, make_graph_traverse
 
@@ -65,3 +66,55 @@ def test_an_unallowed_traversal_is_refused_inside_the_envelope():
     assert env["success"] is False
     assert env["error"]["code"] == "TRAVERSAL_NOT_PERMITTED"
     assert env["meta"]["tables_read"]
+
+
+def test_make_graph_traverse_rejects_empty_allowed_list():
+    """I3: an empty allowed list must fail fast rather than advertising all tables."""
+    with pytest.raises(ValueError, match="empty"):
+        make_graph_traverse([])
+
+
+@pytest.mark.parametrize("name,expected_tables", [
+    (
+        "blast_radius",
+        {
+            f"{settings().dataset}.assets",
+            f"{settings().dataset}.asset_dependencies",
+        },
+    ),
+    (
+        "stockout_exposure",
+        {
+            f"{settings().dataset}.inventory_levels",
+            f"{settings().dataset}.erp_work_orders",
+            f"{settings().dataset}.work_order_parts_edge",
+            f"{settings().dataset}.assets",
+        },
+    ),
+    (
+        "fatigue_to_incident",
+        {
+            f"{settings().dataset}.fatigue_logs_node",
+            f"{settings().dataset}.operators_node",
+            f"{settings().dataset}.operator_vehicle_assignments",
+            f"{settings().dataset}.fleet_vehicles",
+            f"{settings().dataset}.incident_involvements",
+            f"{settings().dataset}.safety_incidents",
+        },
+    ),
+    (
+        "ontology_related",
+        {
+            f"{settings().dataset}.ontology_concepts",
+            f"{settings().dataset}.ontology_triples",
+        },
+    ),
+])
+def test_traversal_tables_read_matches_graph_backing_tables(name, expected_tables):
+    """Pin each traversal's tables_read to the DDL-verified backing tables.
+
+    This catches provenance drift: if the graph DDL changes, or a table is
+    renamed, the mismatch is caught here rather than silently producing a wrong
+    meta.tables_read in every agent envelope.
+    """
+    assert set(TRAVERSALS[name].tables_read) == expected_tables
