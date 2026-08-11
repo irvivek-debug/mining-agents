@@ -1,6 +1,6 @@
 """Tests for ontology_lookup tool."""
 from agents.envelope import Envelope
-from agents.tools.ontology_lookup import ontology_lookup
+from agents.tools.ontology_lookup import TABLES, ontology_lookup
 
 
 def test_a_known_concept_returns_its_related_concepts():
@@ -12,16 +12,17 @@ def test_a_known_concept_returns_its_related_concepts():
                for r in env["data"]["related"])
 
 
-def test_meta_names_both_sources():
+def test_meta_names_both_graph_element_tables():
     env = ontology_lookup("CONVEYOR-02")
-    assert "mining_data.ontology_concepts" in env["meta"]["tables_read"]
-    assert "mining_data.unstructured_docs_metadata" in env["meta"]["tables_read"]
+    assert env["meta"]["tables_read"] == [
+        "mining_data.ontology_concepts",
+        "mining_data.ontology_triples",
+    ]
 
 
-def test_documents_can_be_suppressed():
-    env = ontology_lookup("CONVEYOR-02", include_docs=False)
-    assert env["success"] is True
-    assert env["data"]["documents"] == []
+def test_declared_tables_come_from_the_traversal_not_a_literal():
+    from agents.tools.graph_traverse import TRAVERSALS
+    assert TABLES == list(TRAVERSALS["ontology_related"].tables_read)
 
 
 def test_an_unknown_concept_succeeds_with_empty_results():
@@ -29,3 +30,4 @@ def test_an_unknown_concept_succeeds_with_empty_results():
     Envelope.model_validate(env)
     assert env["success"] is True
     assert env["data"]["related"] == []
+    assert env["data"]["concept"] == "NO-SUCH-CONCEPT-ZZZ"
