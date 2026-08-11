@@ -28,5 +28,8 @@ def test_v_fatigue_scored_never_exposes_raw_heart_rate():
         capture_output=True, text=True, check=True,
     ).stdout
     header = out.splitlines()[0].lower()
+    # DLP requirement: none of the sensitive numeric inputs may appear in the view
     assert "heart_rate_bpm" not in header
+    assert "sleep_deficit_hours" not in header
+    assert "microsleep_events_detected" not in header
     assert "fatigue_band" in header

@@ -12,7 +12,8 @@ def test_settings_defaults_to_the_argolis_project():
 def test_model_for_tier_resolves_both_tiers():
     reasoning = model_for_tier("reasoning")
     balanced = model_for_tier("balanced")
-    assert reasoning and balanced
+    assert reasoning.startswith("gemini-"), f"reasoning tier returned unexpected model ID: {reasoning!r}"
+    assert balanced.startswith("gemini-"), f"balanced tier returned unexpected model ID: {balanced!r}"
     assert reasoning != balanced
 
 
@@ -28,7 +29,8 @@ def test_no_raw_model_id_outside_model_policy():
     policy = root / "references" / "model-policy.md"
     pattern = re.compile(r"gemini-[0-9]")
     offenders = []
-    for path in list(root.glob("agents/**/*.py")) + list(root.glob("tests/**/*.py")):
+    for path in (list(root.glob("agents/**/*.py")) + list(root.glob("tests/**/*.py"))
+                 + list(root.glob("infra/**/*.py"))):
         if path == policy:
             continue
         if pattern.search(path.read_text()):

@@ -39,10 +39,13 @@ CREATE TABLE IF NOT EXISTS `genial-union-475913-i7.mining_data.agent_catalog` (
   value_branch  STRING NOT NULL,               -- B1..B6
   model_tier    STRING NOT NULL,               -- reasoning | balanced
   hitl_required BOOL   NOT NULL,
+  -- REQUIRED: must contain at least one table name. BigQuery cannot enforce ARRAY non-emptiness
+  -- (NOT NULL is rejected on ARRAY, and an omitted value lands as [] not NULL), so this is
+  -- enforced by the catalog loader.
   source_tables ARRAY<STRING>
 );
 
-ALTER TABLE `mining_data.agent_approvals`
+ALTER TABLE `genial-union-475913-i7.mining_data.agent_approvals`
   SET OPTIONS (partition_expiration_days = 90);
-ALTER TABLE `mining_data.agent_run_log`
+ALTER TABLE `genial-union-475913-i7.mining_data.agent_run_log`
   SET OPTIONS (partition_expiration_days = 90);
