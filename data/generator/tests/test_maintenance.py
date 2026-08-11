@@ -2,33 +2,88 @@
 
 Verifies:
   - corr(repair_cost, actual_duration_hours) in [0.70, 0.90] on the 152-row join
-  - every repair_cost reproducible from components to within $1
+  - repair_cost matches independently computed expected values to the cent, and
+    carries no additive noise term
   - mean cost by priority ordered CRITICAL > HIGH > MEDIUM > LOW
-  - total spend within 15% of $3,007,375
+  - total spend close to the stats.json figure
   - the 152 logged work orders remain exactly the COMPLETED ones
+  - logged durations still hit the stats.json mean/SD calibration
+  - the 348 synthetic durations (recovered by inverting the cost formula) are in
+    range and reproduce the per-priority moments
+  - every log listing replaced parts carries a non-zero parts cost
+  - calibration is read from the frozen backup tables, not the live ones
   - deterministic: two runs produce identical output
 """
 
-import sys
 import os
+import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# abspath matters: config.py locates data/profile/ relative to its own __file__,
+# so an unnormalised ".." on sys.path would send it looking in tests/profile/.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from maintenance import generate_work_orders, generate_maintenance_logs, LABOUR_RATE, MOB_BASE, CREW_SIZE, compute_parts_cost
+from config import BACKUP_SUFFIX, SEED, STATS
+from maintenance import (
+    CREW_SIZE,
+    DUR_MAX,
+    DUR_MEAN,
+    DUR_MIN,
+    DUR_SD,
+    LABOUR_RATE,
+    MOB_BASE,
+    TARGET_TOTAL_SPEND,
+    _SOURCE_TABLES,
+    compute_parts_cost,
+    fit_duration_params,
+    duration_sampling_params,
+    generate_maintenance_logs,
+    generate_work_orders,
+    truncated_normal_moments,
+    truncated_normal_quantile,
+)
 
 # ---------------------------------------------------------------------------
-# Constants from the brief
+# Tolerances (the targets themselves come from config.STATS — never restated)
 # ---------------------------------------------------------------------------
-SEED = 20260810
-TARGET_TOTAL_SPEND = 3_007_375.0
-TOTAL_SPEND_TOLERANCE = 0.15  # ±15%
+TOTAL_SPEND_TOLERANCE = 0.15  # +/-15%, from the brief
 CORR_LOW = 0.70
 CORR_HIGH = 0.90
-REPRODUCIBILITY_TOLERANCE = 1.0  # dollars
+CENT = 0.01
+
+# stats.json stores the duration moments to 3 decimal places.
+DURATION_MOMENT_TOLERANCE = 0.01
+
+#: Independently computed expected repair costs.
+#:
+#: These were derived straight from the brief's formula
+#:     150 * crew_size * duration + parts + 150 * crew_size
+#: using values read out of the frozen BigQuery backups by hand, *not* by
+#: calling anything in maintenance.py.  They pin the cost of one work order for
+#: every (priority x parts-count) combination that occurs, including the two
+#: SKUs that carry no catalogue price and are valued at the $450 median of the
+#: maintenance-consumed catalogue.
+EXPECTED_COSTS: list[tuple[str, str, float, float, float]] = [
+    # (work_order_id, priority, duration_h, parts_cost, expected_repair_cost)
+    ("WO-990004", "LOW", 13.4, 180.00, 4500.00),
+    ("WO-990008", "LOW", 3.8, 630.00, 2070.00),
+    ("WO-990011", "HIGH", 1.3, 630.00, 2010.00),
+    ("WO-990014", "CRITICAL", 12.8, 900.00, 13320.00),
+    ("WO-990015", "HIGH", 4.3, 900.00, 4080.00),
+    ("WO-990018", "HIGH", 15.7, 1250.00, 11270.00),
+    ("WO-990023", "HIGH", 3.8, 0.00, 2880.00),
+    ("WO-990032", "MEDIUM", 8.1, 1250.00, 5345.00),
+    ("WO-990042", "MEDIUM", 18.3, 0.00, 8685.00),
+    ("WO-990075", "MEDIUM", 12.5, 900.00, 6975.00),
+    ("WO-990088", "MEDIUM", 4.5, 630.00, 3105.00),
+    ("WO-990111", "LOW", 6.3, 900.00, 3090.00),
+    ("WO-990144", "CRITICAL", 7.2, 630.00, 8010.00),
+    ("WO-990166", "LOW", 18.4, 0.00, 5820.00),
+    ("WO-990180", "CRITICAL", 2.4, 1250.00, 4310.00),
+    ("WO-990279", "CRITICAL", 11.2, 0.00, 10980.00),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -38,17 +93,50 @@ REPRODUCIBILITY_TOLERANCE = 1.0  # dollars
 @pytest.fixture(scope="module")
 def generated_data():
     """Generate both tables once and cache for all tests in this module."""
-    wo = generate_work_orders(seed=SEED)
-    ml = generate_maintenance_logs(seed=SEED)
-    return wo, ml
+    return generate_work_orders(seed=SEED), generate_maintenance_logs()
 
 
 @pytest.fixture(scope="module")
 def joined(generated_data):
     """152-row join of work orders with maintenance logs."""
     wo, ml = generated_data
-    j = wo.merge(ml, on="work_order_id", how="inner")
-    return j
+    return wo.merge(ml, on="work_order_id", how="inner")
+
+
+@pytest.fixture(scope="module")
+def non_completed(generated_data):
+    """The 348 non-COMPLETED work orders with their *implied* duration.
+
+    The duration is recovered by inverting the cost formula, so this exercises
+    both the synthetic-duration path and the cost arithmetic for the 70% of
+    rows that never appear in the 152-row join.
+    """
+    wo, ml = generated_data
+    logged = set(ml["work_order_id"])
+    nc = wo[~wo["work_order_id"].isin(logged)].copy()
+    crew = nc["priority"].map(CREW_SIZE)
+    parts = nc["work_order_id"].map(compute_parts_cost)
+    nc["implied_duration"] = (
+        nc["repair_cost"] - parts - MOB_BASE * crew
+    ) / (LABOUR_RATE * crew)
+    return nc
+
+
+# ---------------------------------------------------------------------------
+# Provenance: calibration must come from the frozen Task-1 backups
+# ---------------------------------------------------------------------------
+
+class TestSourceProvenance:
+    @pytest.mark.parametrize("key", ["work_orders", "maintenance_logs", "inventory"])
+    def test_reads_frozen_backup_not_live_table(self, key):
+        """Task 8 overwrites the live tables with this module's own output.
+
+        Reading them back would make the generator consume its own output, so
+        every table that Task 8 rewrites must be read from its backup.
+        """
+        assert _SOURCE_TABLES[key].endswith(BACKUP_SUFFIX), (
+            f"{key} reads {_SOURCE_TABLES[key]!r}, which is not a frozen backup"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -76,14 +164,49 @@ class TestSchemas:
                     "asset_id", "technician_notes", "work_order_id"}
         assert expected == set(ml.columns), f"Column mismatch: {set(ml.columns)}"
 
-    def test_repair_cost_positive(self, generated_data):
+    def test_status_mix_unchanged(self, generated_data):
         wo, _ = generated_data
-        assert (wo["repair_cost"] > 0).all(), "All repair costs must be positive"
+        expected = {row["status"]: row["n"] for row in STATS["workorders_by_status"]}
+        assert wo["status"].value_counts().to_dict() == expected
 
-    def test_actual_duration_in_range(self, generated_data):
+
+# ---------------------------------------------------------------------------
+# Duration calibration (152 logged durations)
+# ---------------------------------------------------------------------------
+
+class TestLoggedDurations:
+    """Replaces the old range/positivity checks.
+
+    Those asserted ``between(1, 19)`` on a column the generator had just
+    clipped to [1, 19], and positivity of a sum of positive terms — neither
+    could fail.  The clip is gone; these assert the durations against the
+    calibration recorded in stats.json instead.
+    """
+
+    def test_duration_mean_matches_stats(self, generated_data):
         _, ml = generated_data
-        assert ml["actual_duration_hours"].between(1.0, 19.0).all(), \
-            f"Duration out of [1, 19] range: min={ml['actual_duration_hours'].min()}, max={ml['actual_duration_hours'].max()}"
+        mean = ml["actual_duration_hours"].mean()
+        assert abs(mean - DUR_MEAN) <= DURATION_MOMENT_TOLERANCE, (
+            f"Duration mean {mean:.4f} h differs from the stats.json target "
+            f"{DUR_MEAN} h by more than {DURATION_MOMENT_TOLERANCE}"
+        )
+
+    def test_duration_sd_matches_stats(self, generated_data):
+        _, ml = generated_data
+        sd = ml["actual_duration_hours"].std(ddof=1)
+        assert abs(sd - DUR_SD) <= DURATION_MOMENT_TOLERANCE, (
+            f"Duration SD {sd:.4f} h differs from the stats.json target "
+            f"{DUR_SD} h by more than {DURATION_MOMENT_TOLERANCE}"
+        )
+
+    def test_duration_within_stats_bounds(self, generated_data):
+        """No longer tautological — the generator does not clip this column."""
+        _, ml = generated_data
+        dur = ml["actual_duration_hours"]
+        assert dur.between(DUR_MIN, DUR_MAX).all(), (
+            f"Duration outside [{DUR_MIN}, {DUR_MAX}]: "
+            f"min={dur.min()}, max={dur.max()}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -133,36 +256,136 @@ class TestCostModel:
         assert means["MEDIUM"] > means["LOW"], \
             f"MEDIUM mean {means['MEDIUM']:.2f} not > LOW {means['LOW']:.2f}"
 
-    def test_total_spend_within_15pct(self, generated_data):
-        """Total spend within 15% of $3,007,375."""
+    def test_total_spend_close_to_stats(self, generated_data):
+        """Total spend within 15% of the stats.json total."""
         wo, _ = generated_data
         total = wo["repair_cost"].sum()
         ratio = abs(total - TARGET_TOTAL_SPEND) / TARGET_TOTAL_SPEND
         assert ratio <= TOTAL_SPEND_TOLERANCE, \
             f"Total spend {total:.2f} deviates {ratio*100:.1f}% from target {TARGET_TOTAL_SPEND:.2f}"
 
-    def test_reproducibility_from_components(self, generated_data, joined):
-        """Each repair_cost for COMPLETED WOs must be reproducible from components to within $1.
+    @pytest.mark.parametrize(
+        "work_order_id,priority,duration,parts_cost,expected_cost", EXPECTED_COSTS
+    )
+    def test_repair_cost_matches_independent_expectation(
+        self, generated_data, joined, work_order_id, priority, duration, parts_cost, expected_cost
+    ):
+        """Cost must equal a value computed outside this module, to the cent.
 
-        For each row in the 152-row join, verify:
-          repair_cost ≈ LABOUR_RATE * crew_size * actual_duration_hours + parts_cost + fixed_mobilisation
-        within $1.
+        The previous version of this test recomputed the cost with the same
+        constants and the same ``compute_parts_cost`` the generator uses, so it
+        could only show the module agreed with itself.  These figures were
+        derived independently from the frozen source tables.
         """
-        wo, ml = generated_data
-        j = joined.copy()
+        row = joined[joined["work_order_id"] == work_order_id]
+        assert len(row) == 1, f"{work_order_id} missing from the 152-row join"
+        row = row.iloc[0]
+        assert row["priority"] == priority
+        assert abs(row["actual_duration_hours"] - duration) <= CENT
+        assert abs(compute_parts_cost(work_order_id) - parts_cost) <= CENT
+        assert abs(row["repair_cost"] - expected_cost) <= CENT, (
+            f"{work_order_id}: expected {expected_cost:.2f}, "
+            f"got {row['repair_cost']:.2f}"
+        )
 
-        errors = []
-        for _, row in j.iterrows():
-            crew = CREW_SIZE[row["priority"]]
-            mob = MOB_BASE * crew
-            parts = compute_parts_cost(row["work_order_id"])
-            expected = LABOUR_RATE * crew * row["actual_duration_hours"] + parts + mob
-            diff = abs(row["repair_cost"] - expected)
-            if diff > REPRODUCIBILITY_TOLERANCE:
-                errors.append(
-                    f"WO {row['work_order_id']}: expected {expected:.2f}, got {row['repair_cost']:.2f}, diff {diff:.2f}"
-                )
-        assert not errors, f"Reproducibility failures:\n" + "\n".join(errors[:5])
+    def test_no_additive_noise_term(self, joined):
+        """Cost carries no per-row noise on top of labour + parts + mobilisation.
+
+        Stripping labour and mobilisation must leave only the parts term.  Parts
+        cost is discrete (0-2 items drawn from a small catalogue), so a handful
+        of distinct residuals is expected; an additive noise term would give a
+        different residual on nearly every one of the 152 rows.
+        """
+        crew = joined["priority"].map(CREW_SIZE)
+        residual = (
+            joined["repair_cost"]
+            - LABOUR_RATE * crew * joined["actual_duration_hours"]
+            - MOB_BASE * crew
+        ).round(2)
+        assert (residual >= -CENT).all(), "Negative parts residual — cost is not additive"
+        distinct = sorted(set(residual))
+        assert len(distinct) <= 8, (
+            f"{len(distinct)} distinct residuals over 152 rows suggests an "
+            f"additive noise term: {distinct[:10]}"
+        )
+
+    def test_logs_with_parts_have_non_zero_parts_cost(self, generated_data):
+        """parts_replaced and repair_cost must not contradict each other.
+
+        A cost-forecasting agent joining parts_replaced -> inventory_levels has
+        to reach the same parts bill the cost formula used.  Two SKUs carry no
+        catalogue price; before the fallback was added, 26 of the 152 logs listed
+        two replaced parts against $0 of parts cost.
+        """
+        _, ml = generated_data
+        offenders = [
+            row.work_order_id
+            for row in ml.itertuples()
+            if len(row.parts_replaced) > 0
+            and compute_parts_cost(row.work_order_id) <= 0.0
+        ]
+        assert not offenders, (
+            f"{len(offenders)} logs list replaced parts but carry $0 of parts "
+            f"cost, e.g. {offenders[:5]}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Synthetic durations for the 348 non-COMPLETED work orders
+# ---------------------------------------------------------------------------
+
+class TestSyntheticDurations:
+    """The 348 rows the 152-row join never sees (70% of the table)."""
+
+    def test_covers_all_non_completed_rows(self, non_completed):
+        assert len(non_completed) == 348, \
+            f"Expected 348 non-COMPLETED work orders, got {len(non_completed)}"
+
+    def test_implied_duration_in_range(self, non_completed):
+        """Recovered by inverting the cost formula, so this checks both the
+        sampler bounds and the cost arithmetic for these rows."""
+        dur = non_completed["implied_duration"]
+        assert dur.between(DUR_MIN - CENT, DUR_MAX + CENT).all(), (
+            f"Implied duration outside [{DUR_MIN}, {DUR_MAX}]: "
+            f"min={dur.min():.3f}, max={dur.max():.3f}"
+        )
+
+    @pytest.mark.parametrize("priority", sorted(CREW_SIZE))
+    def test_implied_duration_moments_match_fit(self, non_completed, priority):
+        """Per-priority mean/SD must reproduce the fitted distribution.
+
+        Tolerances are loose enough to absorb the 0.1 h rounding of the stored
+        durations and the fact that a truncated normal on [1, 19] cannot quite
+        reach the observed CRITICAL SD of 5.34 h (its ceiling is ~5.2 h), and
+        tight enough to fail if the sampler is mis-parameterised: plugging the
+        untruncated sample moments straight into the sampler, as the first
+        implementation did, put the SD 1.2-1.6 h low.
+        """
+        mu, sigma = duration_sampling_params()[priority]
+        expected_mean, expected_sd = truncated_normal_moments(mu, sigma)
+        observed_mean, observed_sd = fit_duration_params()[priority]
+
+        group = non_completed[non_completed["priority"] == priority]["implied_duration"]
+        assert abs(group.mean() - expected_mean) <= 0.10, (
+            f"{priority}: mean {group.mean():.3f} h vs fitted {expected_mean:.3f} h"
+        )
+        assert abs(group.std(ddof=1) - expected_sd) <= 0.10, (
+            f"{priority}: SD {group.std(ddof=1):.3f} h vs fitted {expected_sd:.3f} h"
+        )
+        # ... and the fit itself must track the COMPLETED durations it calibrates on.
+        assert abs(group.mean() - observed_mean) <= 0.25, (
+            f"{priority}: mean {group.mean():.3f} h vs observed {observed_mean:.3f} h"
+        )
+        assert abs(group.std(ddof=1) - observed_sd) <= 0.45, (
+            f"{priority}: SD {group.std(ddof=1):.3f} h vs observed {observed_sd:.3f} h"
+        )
+
+    @pytest.mark.parametrize("priority", sorted(CREW_SIZE))
+    def test_quantile_clips_at_the_bounds(self, priority):
+        """Directly covers the clip guard in truncated_normal_quantile."""
+        mu, sigma = duration_sampling_params()[priority]
+        assert truncated_normal_quantile(0.0, mu, sigma) == DUR_MIN
+        assert truncated_normal_quantile(1.0, mu, sigma) == DUR_MAX
 
 
 # ---------------------------------------------------------------------------
@@ -171,13 +394,14 @@ class TestCostModel:
 
 class TestDeterminism:
     def test_two_runs_identical_work_orders(self):
-        """Two calls with the same seed must produce byte-identical work orders."""
+        """Two calls with the same seed must produce identical work orders."""
         wo1 = generate_work_orders(seed=SEED)
         wo2 = generate_work_orders(seed=SEED)
         pd.testing.assert_frame_equal(wo1.reset_index(drop=True), wo2.reset_index(drop=True))
 
     def test_two_runs_identical_maintenance_logs(self):
-        """Two calls with the same seed must produce byte-identical maintenance logs."""
-        ml1 = generate_maintenance_logs(seed=SEED)
-        ml2 = generate_maintenance_logs(seed=SEED)
+        """generate_maintenance_logs takes no seed — it is a pure function of
+        the frozen backup table (see its docstring)."""
+        ml1 = generate_maintenance_logs()
+        ml2 = generate_maintenance_logs()
         pd.testing.assert_frame_equal(ml1.reset_index(drop=True), ml2.reset_index(drop=True))
