@@ -1,0 +1,872 @@
+"""The 100 agent definitions, transcribed from docs/phase-1-prd.md §5.1 and §5.2."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+Role = Literal["coordinator", "specialist", "critic"]
+
+
+class AgentDef(BaseModel):
+    agent_id: str
+    display_name: str
+    pattern: Literal["A", "B"]
+    swarm_id: str | None = None
+    swarm_role: Role | None = None
+    apqc_code: str
+    persona: str
+    value_branch: str
+    model_tier: Literal["reasoning", "balanced"]
+    hitl_required: bool = False
+    source_tables: list[str] = Field(default_factory=list)
+    tools: list[str] = Field(default_factory=list)
+    traversals: list[str] = Field(default_factory=list)
+    models: list[str] = Field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SwarmDef:
+    swarm_id: str
+    display_name: str
+    coordinator: AgentDef
+    specialists: tuple[AgentDef, AgentDef, AgentDef]
+    critic: AgentDef
+
+    @property
+    def agents(self) -> list[AgentDef]:
+        return [self.coordinator, *self.specialists, self.critic]
+
+
+def _tier(role: Role | None) -> str:
+    return "reasoning" if role in ("coordinator", "critic") else "balanced"
+
+
+def _a(agent_id: str, display_name: str, swarm_id: str, role: Role, *,
+       apqc: str, persona: str, branch: str, hitl: bool = False,
+       tables: list[str], tools: list[str] = (), traversals: list[str] = (),
+       models: list[str] = ()) -> AgentDef:
+    return AgentDef(
+        agent_id=agent_id, display_name=display_name, pattern="A",
+        swarm_id=swarm_id, swarm_role=role, apqc_code=apqc, persona=persona,
+        value_branch=branch, model_tier=_tier(role), hitl_required=hitl,
+        source_tables=tables, tools=list(tools), traversals=list(traversals),
+        models=list(models),
+    )
+
+
+def _b(agent_id: str, display_name: str, *, apqc: str, persona: str, branch: str,
+       hitl: bool = False, tables: list[str], tools: list[str] = (),
+       traversals: list[str] = (), models: list[str] = ()) -> AgentDef:
+    return AgentDef(
+        agent_id=agent_id, display_name=display_name, pattern="B",
+        swarm_id=None, swarm_role=None, apqc_code=apqc, persona=persona,
+        value_branch=branch, model_tier="balanced", hitl_required=hitl,
+        source_tables=tables, tools=list(tools), traversals=list(traversals),
+        models=list(models),
+    )
+
+
+# ---------------------------------------------------------------------------
+# S01 — Cascading Failure Impact & Recovery
+# Data: telemetry_stream, asset_dependencies, MiningAssetGraph,
+#       downtime_regression_model*, maintenance_logs
+# ---------------------------------------------------------------------------
+S01 = SwarmDef(
+    swarm_id="S01",
+    display_name="Cascading Failure Impact & Recovery",
+    coordinator=_a(
+        "S01", "Cascading Failure Impact & Recovery Coordinator", "S01",
+        "coordinator", apqc="11.0.3", persona="P1", branch="asset_reliability",
+        hitl=True,
+        tables=[
+            "mining_data.telemetry_stream",
+            "mining_data.asset_dependencies",
+            "mining_data.assets",
+            "mining_data.maintenance_logs",
+        ],
+        tools=["bq_query", "graph_traverse", "request_approval"],
+        traversals=["blast_radius"],
+    ),
+    specialists=(
+        _a("S01-SP1", "Telemetry Anomaly Detector", "S01", "specialist",
+           apqc="11.0.3", persona="P1", branch="asset_reliability",
+           tables=["mining_data.telemetry_stream"],
+           tools=["bq_query"]),
+        _a("S01-SP2", "Dependency Blast-Radius Tracer", "S01", "specialist",
+           apqc="11.0.3", persona="P1", branch="asset_reliability",
+           tables=["mining_data.asset_dependencies", "mining_data.assets"],
+           tools=["graph_traverse"], traversals=["blast_radius"]),
+        _a("S01-SP3", "Downtime Duration Forecaster", "S01", "specialist",
+           apqc="11.0.3", persona="P1", branch="asset_reliability",
+           tables=["mining_data.maintenance_logs"],
+           tools=["bq_query", "bqml_predict"],
+           models=["downtime_regression_model"]),
+    ),
+    critic=_a(
+        "S01-CRITIC", "Recovery Plan Critic", "S01", "critic",
+        apqc="11.0.3", persona="P1", branch="asset_reliability",
+        tables=["mining_data.maintenance_logs"],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S02 — Planned Shutdown Readiness
+# Data: erp_work_orders, work_order_parts_edge, inventory_levels,
+#       MiningSupplyChainGraph
+# ---------------------------------------------------------------------------
+S02 = SwarmDef(
+    swarm_id="S02",
+    display_name="Planned Shutdown Readiness",
+    coordinator=_a(
+        "S02", "Planned Shutdown Readiness Coordinator", "S02",
+        "coordinator", apqc="11.0.3 / 4.1.2", persona="P2",
+        branch="maintenance_execution", hitl=True,
+        tables=[
+            "mining_data.erp_work_orders",
+            "mining_data.work_order_parts_edge",
+            "mining_data.inventory_levels",
+            "mining_data.assets",
+        ],
+        tools=["bq_query", "graph_traverse", "request_approval"],
+        traversals=["stockout_exposure"],
+    ),
+    specialists=(
+        _a("S02-SP1", "Work Order Bundler", "S02", "specialist",
+           apqc="11.0.3 / 4.1.2", persona="P2", branch="maintenance_execution",
+           tables=["mining_data.erp_work_orders", "mining_data.work_order_parts_edge"],
+           tools=["bq_query"]),
+        _a("S02-SP2", "Parts Availability Checker", "S02", "specialist",
+           apqc="11.0.3 / 4.1.2", persona="P2", branch="maintenance_execution",
+           tables=[
+               "mining_data.inventory_levels",
+               "mining_data.erp_work_orders",
+               "mining_data.work_order_parts_edge",
+               "mining_data.assets",
+           ],
+           tools=["graph_traverse"], traversals=["stockout_exposure"]),
+        _a("S02-SP3", "Lead-Time Feasibility Analyst", "S02", "specialist",
+           apqc="11.0.3 / 4.1.2", persona="P2", branch="maintenance_execution",
+           tables=["mining_data.inventory_levels", "mining_data.erp_work_orders"],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S02-CRITIC", "Readiness Critic", "S02", "critic",
+        apqc="11.0.3 / 4.1.2", persona="P2", branch="maintenance_execution",
+        tables=["mining_data.erp_work_orders", "mining_data.inventory_levels"],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S03 — Fleet Reliability & Availability
+# Data: fleet_vehicles, maintenance_logs, erp_work_orders
+# ---------------------------------------------------------------------------
+S03 = SwarmDef(
+    swarm_id="S03",
+    display_name="Fleet Reliability & Availability",
+    coordinator=_a(
+        "S03", "Fleet Reliability & Availability Coordinator", "S03",
+        "coordinator", apqc="11.0.3 / 4.3.1", persona="P1",
+        branch="asset_reliability", hitl=False,
+        tables=[
+            "mining_data.fleet_vehicles",
+            "mining_data.maintenance_logs",
+            "mining_data.erp_work_orders",
+        ],
+        tools=["bq_query"],
+    ),
+    specialists=(
+        _a("S03-SP1", "Vehicle Health Screener", "S03", "specialist",
+           apqc="11.0.3 / 4.3.1", persona="P1", branch="asset_reliability",
+           tables=["mining_data.fleet_vehicles"],
+           tools=["bq_query"]),
+        _a("S03-SP2", "Duty-Cycle Analyst", "S03", "specialist",
+           apqc="11.0.3 / 4.3.1", persona="P1", branch="asset_reliability",
+           tables=["mining_data.fleet_vehicles", "mining_data.maintenance_logs"],
+           tools=["bq_query"]),
+        _a("S03-SP3", "Maintenance History Correlator", "S03", "specialist",
+           apqc="11.0.3 / 4.3.1", persona="P1", branch="asset_reliability",
+           tables=["mining_data.maintenance_logs", "mining_data.erp_work_orders"],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S03-CRITIC", "Availability Forecast Critic", "S03", "critic",
+        apqc="11.0.3 / 4.3.1", persona="P1", branch="asset_reliability",
+        tables=["mining_data.fleet_vehicles", "mining_data.maintenance_logs"],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S04 — Shift Dispatch Re-plan
+# Data: haulage_routes, operator_vehicle_assignments, operators_node,
+#       fleet_vehicles
+# ---------------------------------------------------------------------------
+S04 = SwarmDef(
+    swarm_id="S04",
+    display_name="Shift Dispatch Re-plan",
+    coordinator=_a(
+        "S04", "Shift Dispatch Re-plan Coordinator", "S04",
+        "coordinator", apqc="4.3.1", persona="P7",
+        branch="mine_ops", hitl=True,
+        tables=[
+            "mining_data.haulage_routes",
+            "mining_data.operator_vehicle_assignments",
+            "mining_data.operators_node",
+            "mining_data.fleet_vehicles",
+        ],
+        tools=["bq_query", "request_approval"],
+    ),
+    specialists=(
+        _a("S04-SP1", "Cycle Time Variance Analyst", "S04", "specialist",
+           apqc="4.3.1", persona="P7", branch="mine_ops",
+           tables=["mining_data.haulage_routes"],
+           tools=["bq_query", "operational_math"]),
+        _a("S04-SP2", "Route Congestion Modeller", "S04", "specialist",
+           apqc="4.3.1", persona="P7", branch="mine_ops",
+           tables=["mining_data.haulage_routes"],
+           tools=["bq_query"]),
+        _a("S04-SP3", "Operator Assignment Fit", "S04", "specialist",
+           apqc="4.3.1", persona="P7", branch="mine_ops",
+           tables=[
+               "mining_data.operator_vehicle_assignments",
+               "mining_data.operators_node",
+               "mining_data.fleet_vehicles",
+           ],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S04-CRITIC", "Dispatch Plan Critic", "S04", "critic",
+        apqc="4.3.1", persona="P7", branch="mine_ops",
+        tables=[
+            "mining_data.haulage_routes",
+            "mining_data.operator_vehicle_assignments",
+            "mining_data.fleet_vehicles",
+        ],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S05 — Autonomous Haulage Safety Interlock
+# Data: safety_incidents, incident_involvements, biometric_fatigue_logs,
+#       radio_communications, MiningOperationsSafetyGraph
+# ---------------------------------------------------------------------------
+S05 = SwarmDef(
+    swarm_id="S05",
+    display_name="Autonomous Haulage Safety Interlock",
+    coordinator=_a(
+        "S05", "Autonomous Haulage Safety Interlock Coordinator", "S05",
+        "coordinator", apqc="4.3.1 / 9.1.2", persona="P3",
+        branch="safety", hitl=True,
+        tables=[
+            "mining_data.safety_incidents",
+            "mining_data.incident_involvements",
+            "mining_data.biometric_fatigue_logs",
+            "mining_data.radio_communications",
+            "mining_data.fatigue_logs_node",
+            "mining_data.operators_node",
+            "mining_data.operator_vehicle_assignments",
+            "mining_data.fleet_vehicles",
+        ],
+        tools=["bq_query", "graph_traverse", "request_approval"],
+        traversals=["fatigue_to_incident"],
+    ),
+    specialists=(
+        _a("S05-SP1", "Proximity & Incident History Screener", "S05", "specialist",
+           apqc="4.3.1 / 9.1.2", persona="P3", branch="safety",
+           tables=[
+               "mining_data.safety_incidents",
+               "mining_data.incident_involvements",
+           ],
+           tools=["bq_query"]),
+        _a("S05-SP2", "Operator Fatigue Cross-Check", "S05", "specialist",
+           apqc="4.3.1 / 9.1.2", persona="P3", branch="safety",
+           tables=[
+               "mining_data.biometric_fatigue_logs",
+               "mining_data.fatigue_logs_node",
+               "mining_data.operators_node",
+               "mining_data.operator_vehicle_assignments",
+               "mining_data.fleet_vehicles",
+               "mining_data.incident_involvements",
+               "mining_data.safety_incidents",
+           ],
+           tools=["graph_traverse"], traversals=["fatigue_to_incident"]),
+        _a("S05-SP3", "Radio Emergency Listener", "S05", "specialist",
+           apqc="4.3.1 / 9.1.2", persona="P3", branch="safety",
+           tables=["mining_data.radio_communications"],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S05-CRITIC", "Interlock Critic", "S05", "critic",
+        apqc="4.3.1 / 9.1.2", persona="P3", branch="safety",
+        tables=[
+            "mining_data.safety_incidents",
+            "mining_data.biometric_fatigue_logs",
+            "mining_data.radio_communications",
+        ],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S06 — Grade-to-Recovery Reconciliation
+# Data: drill_assay_logs, geological_block_models, metallurgical_recovery
+# ---------------------------------------------------------------------------
+S06 = SwarmDef(
+    swarm_id="S06",
+    display_name="Grade-to-Recovery Reconciliation",
+    coordinator=_a(
+        "S06", "Grade-to-Recovery Reconciliation Coordinator", "S06",
+        "coordinator", apqc="2.0.1 / 4.2.2", persona="P5",
+        branch="geology", hitl=False,
+        tables=[
+            "mining_data.drill_assay_logs",
+            "mining_data.geological_block_models",
+            "mining_data.metallurgical_recovery",
+        ],
+        tools=["bq_query"],
+    ),
+    specialists=(
+        _a("S06-SP1", "Assay-to-Block Variance Analyst", "S06", "specialist",
+           apqc="2.0.1 / 4.2.2", persona="P5", branch="geology",
+           tables=["mining_data.drill_assay_logs", "mining_data.geological_block_models"],
+           tools=["bq_query"]),
+        _a("S06-SP2", "Delivered Feed Grade Tracer", "S06", "specialist",
+           apqc="2.0.1 / 4.2.2", persona="P5", branch="geology",
+           tables=["mining_data.drill_assay_logs", "mining_data.metallurgical_recovery"],
+           tools=["bq_query"]),
+        _a("S06-SP3", "Recovery Attribution Analyst", "S06", "specialist",
+           apqc="2.0.1 / 4.2.2", persona="P5", branch="geology",
+           tables=["mining_data.metallurgical_recovery", "mining_data.geological_block_models"],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S06-CRITIC", "Reconciliation Critic", "S06", "critic",
+        apqc="2.0.1 / 4.2.2", persona="P5", branch="geology",
+        tables=["mining_data.drill_assay_logs", "mining_data.metallurgical_recovery"],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S07 — Crusher–Mill Throughput Balance
+# Data: crusher_states, telemetry_stream (MILL-01), metallurgical_recovery
+# ---------------------------------------------------------------------------
+S07 = SwarmDef(
+    swarm_id="S07",
+    display_name="Crusher–Mill Throughput Balance",
+    coordinator=_a(
+        "S07", "Crusher–Mill Throughput Balance Coordinator", "S07",
+        "coordinator", apqc="4.2.2 / 11.0.3", persona="P6",
+        branch="processing", hitl=True,
+        tables=[
+            "mining_data.crusher_states",
+            "mining_data.telemetry_stream",
+            "mining_data.metallurgical_recovery",
+        ],
+        tools=["bq_query", "operational_math", "request_approval"],
+    ),
+    specialists=(
+        _a("S07-SP1", "Crusher Setting Analyst", "S07", "specialist",
+           apqc="4.2.2 / 11.0.3", persona="P6", branch="processing",
+           tables=["mining_data.crusher_states"],
+           tools=["bq_query"]),
+        _a("S07-SP2", "Mill Load Analyst", "S07", "specialist",
+           apqc="4.2.2 / 11.0.3", persona="P6", branch="processing",
+           tables=["mining_data.telemetry_stream"],
+           tools=["bq_query"]),
+        _a("S07-SP3", "Recovery Sensitivity Modeller", "S07", "specialist",
+           apqc="4.2.2 / 11.0.3", persona="P6", branch="processing",
+           tables=["mining_data.metallurgical_recovery", "mining_data.crusher_states"],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S07-CRITIC", "Setpoint Safety Critic", "S07", "critic",
+        apqc="4.2.2 / 11.0.3", persona="P6", branch="processing",
+        tables=["mining_data.crusher_states", "mining_data.metallurgical_recovery"],
+        tools=["bq_query", "operational_math"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S08 — Stockout-to-Work-Order Impact
+# Data: inventory_levels, MiningSupplyChainGraph, erp_work_orders,
+#       inventory_impact_model
+# ---------------------------------------------------------------------------
+S08 = SwarmDef(
+    swarm_id="S08",
+    display_name="Stockout-to-Work-Order Impact",
+    coordinator=_a(
+        "S08", "Stockout-to-Work-Order Impact Coordinator", "S08",
+        "coordinator", apqc="4.1.2 / 11.0.3", persona="P4",
+        branch="supply_chain", hitl=True,
+        tables=[
+            "mining_data.inventory_levels",
+            "mining_data.erp_work_orders",
+            "mining_data.work_order_parts_edge",
+            "mining_data.assets",
+        ],
+        tools=["bq_query", "graph_traverse", "request_approval"],
+        traversals=["stockout_exposure"],
+    ),
+    specialists=(
+        _a("S08-SP1", "Below-ROP Screener", "S08", "specialist",
+           apqc="4.1.2 / 11.0.3", persona="P4", branch="supply_chain",
+           tables=["mining_data.inventory_levels"],
+           tools=["bq_query"]),
+        _a("S08-SP2", "Work Order Exposure Tracer", "S08", "specialist",
+           apqc="4.1.2 / 11.0.3", persona="P4", branch="supply_chain",
+           tables=[
+               "mining_data.inventory_levels",
+               "mining_data.erp_work_orders",
+               "mining_data.work_order_parts_edge",
+               "mining_data.assets",
+           ],
+           tools=["graph_traverse"], traversals=["stockout_exposure"]),
+        _a("S08-SP3", "Downtime Cost Modeller", "S08", "specialist",
+           apqc="4.1.2 / 11.0.3", persona="P4", branch="supply_chain",
+           tables=[
+               "mining_data.inventory_levels",
+               "mining_data.erp_work_orders",
+           ],
+           tools=["bq_query", "bqml_predict"],
+           models=["inventory_impact_model"]),
+    ),
+    critic=_a(
+        "S08-CRITIC", "Stocking Critic", "S08", "critic",
+        apqc="4.1.2 / 11.0.3", persona="P4", branch="supply_chain",
+        tables=["mining_data.inventory_levels", "mining_data.erp_work_orders"],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S09 — RFP & Bid Award Evaluation
+# Data: procurement_bids, rfp_items, bid_parts_edge, inventory_levels
+# ---------------------------------------------------------------------------
+S09 = SwarmDef(
+    swarm_id="S09",
+    display_name="RFP & Bid Award Evaluation",
+    coordinator=_a(
+        "S09", "RFP & Bid Award Evaluation Coordinator", "S09",
+        "coordinator", apqc="5.2.1", persona="P4",
+        branch="procurement", hitl=True,
+        tables=[
+            "mining_data.procurement_bids",
+            "mining_data.rfp_items",
+            "mining_data.bid_parts_edge",
+            "mining_data.inventory_levels",
+        ],
+        tools=["bq_query", "request_approval"],
+    ),
+    specialists=(
+        _a("S09-SP1", "Bid Compliance Checker", "S09", "specialist",
+           apqc="5.2.1", persona="P4", branch="procurement",
+           tables=["mining_data.procurement_bids", "mining_data.rfp_items"],
+           tools=["bq_query"]),
+        _a("S09-SP2", "Technical Scoring Analyst", "S09", "specialist",
+           apqc="5.2.1", persona="P4", branch="procurement",
+           tables=[
+               "mining_data.procurement_bids",
+               "mining_data.rfp_items",
+               "mining_data.bid_parts_edge",
+           ],
+           tools=["bq_query"]),
+        _a("S09-SP3", "Cost & Spend Anomaly Analyst", "S09", "specialist",
+           apqc="5.2.1", persona="P4", branch="procurement",
+           tables=[
+               "mining_data.procurement_bids",
+               "mining_data.inventory_levels",
+           ],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S09-CRITIC", "Award Critic", "S09", "critic",
+        apqc="5.2.1", persona="P4", branch="procurement",
+        tables=[
+            "mining_data.procurement_bids",
+            "mining_data.rfp_items",
+            "mining_data.bid_parts_edge",
+        ],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S10 — Fatigue Intervention & Stand-down
+# Data: biometric_fatigue_logs, operator_vehicle_assignments, safety_model
+# ---------------------------------------------------------------------------
+S10 = SwarmDef(
+    swarm_id="S10",
+    display_name="Fatigue Intervention & Stand-down",
+    coordinator=_a(
+        "S10", "Fatigue Intervention & Stand-down Coordinator", "S10",
+        "coordinator", apqc="9.1.2 / 4.3.1", persona="P3",
+        branch="safety", hitl=True,
+        tables=[
+            "mining_data.biometric_fatigue_logs",
+            "mining_data.operator_vehicle_assignments",
+        ],
+        tools=["bq_query", "bqml_predict", "request_approval"],
+        models=["safety_model"],
+    ),
+    specialists=(
+        _a("S10-SP1", "Biometric Fatigue Scorer", "S10", "specialist",
+           apqc="9.1.2 / 4.3.1", persona="P3", branch="safety",
+           tables=["mining_data.biometric_fatigue_logs"],
+           tools=["bq_query", "bqml_predict"],
+           models=["safety_model"]),
+        _a("S10-SP2", "Microsleep Event Escalator", "S10", "specialist",
+           apqc="9.1.2 / 4.3.1", persona="P3", branch="safety",
+           tables=["mining_data.biometric_fatigue_logs"],
+           tools=["bq_query"]),
+        _a("S10-SP3", "Shift Coverage Impact Analyst", "S10", "specialist",
+           apqc="9.1.2 / 4.3.1", persona="P3", branch="safety",
+           tables=[
+               "mining_data.operator_vehicle_assignments",
+               "mining_data.biometric_fatigue_logs",
+           ],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S10-CRITIC", "Intervention Critic", "S10", "critic",
+        apqc="9.1.2 / 4.3.1", persona="P3", branch="safety",
+        tables=["mining_data.biometric_fatigue_logs", "mining_data.operator_vehicle_assignments"],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S11 — Incident Investigation & Corroboration
+# Data: safety_incidents, incident_involvements, radio_communications,
+#       MiningOperationsSafetyGraph
+# ---------------------------------------------------------------------------
+S11 = SwarmDef(
+    swarm_id="S11",
+    display_name="Incident Investigation & Corroboration",
+    coordinator=_a(
+        "S11", "Incident Investigation & Corroboration Coordinator", "S11",
+        "coordinator", apqc="9.1.2", persona="P3",
+        branch="safety", hitl=True,
+        tables=[
+            "mining_data.safety_incidents",
+            "mining_data.incident_involvements",
+            "mining_data.radio_communications",
+            "mining_data.fatigue_logs_node",
+            "mining_data.operators_node",
+            "mining_data.operator_vehicle_assignments",
+            "mining_data.fleet_vehicles",
+        ],
+        tools=["bq_query", "graph_traverse", "request_approval"],
+        traversals=["fatigue_to_incident"],
+    ),
+    specialists=(
+        _a("S11-SP1", "Incident Clustering Analyst", "S11", "specialist",
+           apqc="9.1.2", persona="P3", branch="safety",
+           tables=["mining_data.safety_incidents"],
+           tools=["bq_query"]),
+        _a("S11-SP2", "Involvement Tracer", "S11", "specialist",
+           apqc="9.1.2", persona="P3", branch="safety",
+           tables=[
+               "mining_data.incident_involvements",
+               "mining_data.fatigue_logs_node",
+               "mining_data.operators_node",
+               "mining_data.operator_vehicle_assignments",
+               "mining_data.fleet_vehicles",
+               "mining_data.safety_incidents",
+           ],
+           tools=["graph_traverse"], traversals=["fatigue_to_incident"]),
+        _a("S11-SP3", "Radio Transcript Corroborator", "S11", "specialist",
+           apqc="9.1.2", persona="P3", branch="safety",
+           tables=["mining_data.radio_communications", "mining_data.safety_incidents"],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S11-CRITIC", "Root-Cause Challenge Critic", "S11", "critic",
+        apqc="9.1.2", persona="P3", branch="safety",
+        tables=[
+            "mining_data.safety_incidents",
+            "mining_data.incident_involvements",
+            "mining_data.radio_communications",
+        ],
+        tools=["bq_query"],
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# S12 — Shift Handover & Site Value Briefing
+# Data: all six branches, read-only
+# ---------------------------------------------------------------------------
+S12 = SwarmDef(
+    swarm_id="S12",
+    display_name="Shift Handover & Site Value Briefing",
+    coordinator=_a(
+        "S12", "Shift Handover & Site Value Briefing Coordinator", "S12",
+        "coordinator", apqc="4.3.1", persona="P8",
+        branch="site_wide", hitl=False,
+        tables=[
+            "mining_data.telemetry_stream",
+            "mining_data.asset_dependencies",
+            "mining_data.assets",
+            "mining_data.maintenance_logs",
+            "mining_data.erp_work_orders",
+            "mining_data.fleet_vehicles",
+            "mining_data.haulage_routes",
+            "mining_data.operator_vehicle_assignments",
+            "mining_data.metallurgical_recovery",
+            "mining_data.crusher_states",
+            "mining_data.inventory_levels",
+            "mining_data.safety_incidents",
+            "mining_data.biometric_fatigue_logs",
+        ],
+        tools=["bq_query"],
+    ),
+    specialists=(
+        _a("S12-SP1", "Availability Summariser", "S12", "specialist",
+           apqc="4.3.1", persona="P8", branch="site_wide",
+           tables=[
+               "mining_data.telemetry_stream",
+               "mining_data.fleet_vehicles",
+               "mining_data.assets",
+               "mining_data.maintenance_logs",
+           ],
+           tools=["bq_query"]),
+        _a("S12-SP2", "Production & Recovery Summariser", "S12", "specialist",
+           apqc="4.3.1", persona="P8", branch="site_wide",
+           tables=[
+               "mining_data.metallurgical_recovery",
+               "mining_data.crusher_states",
+               "mining_data.haulage_routes",
+           ],
+           tools=["bq_query"]),
+        _a("S12-SP3", "Safety & Compliance Summariser", "S12", "specialist",
+           apqc="4.3.1", persona="P8", branch="site_wide",
+           tables=[
+               "mining_data.safety_incidents",
+               "mining_data.biometric_fatigue_logs",
+               "mining_data.incident_involvements",
+           ],
+           tools=["bq_query"]),
+    ),
+    critic=_a(
+        "S12-CRITIC", "Omission Critic", "S12", "critic",
+        apqc="4.3.1", persona="P8", branch="site_wide",
+        tables=[
+            "mining_data.telemetry_stream",
+            "mining_data.erp_work_orders",
+            "mining_data.inventory_levels",
+            "mining_data.safety_incidents",
+        ],
+        tools=["bq_query"],
+    ),
+)
+
+
+SWARMS: list[SwarmDef] = [S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S12]
+
+
+# ---------------------------------------------------------------------------
+# Pattern B — Deep Departmental Agents (D01–D40)
+# ---------------------------------------------------------------------------
+DEEP: list[AgentDef] = [
+    # --- Asset reliability (P1, D01–D06) ---
+    _b("D01", "Vibration Signature Diagnostic",
+       apqc="11.0.3", persona="P1", branch="asset_reliability",
+       tables=["mining_data.telemetry_stream"],
+       tools=["bq_query"]),
+    _b("D02", "Thermal Drift Diagnostic",
+       apqc="11.0.3", persona="P1", branch="asset_reliability",
+       tables=["mining_data.telemetry_stream"],
+       tools=["bq_query"]),
+    _b("D03", "Torque Signature Diagnostic",
+       apqc="11.0.3", persona="P1", branch="asset_reliability",
+       tables=["mining_data.telemetry_stream", "mining_data.crusher_states"],
+       tools=["bq_query"]),
+    _b("D04", "Power Draw Efficiency Analyst",
+       apqc="11.0.3", persona="P1", branch="asset_reliability",
+       tables=["mining_data.telemetry_stream"],
+       tools=["bq_query"]),
+    _b("D05", "Asset Dependency Criticality Ranker",
+       apqc="11.0.3", persona="P1", branch="asset_reliability",
+       tables=["mining_data.asset_dependencies", "mining_data.assets"],
+       tools=["graph_traverse"], traversals=["blast_radius"]),
+    _b("D06", "Digital Twin Simulation Replay Analyst",
+       apqc="11.0.3", persona="P1", branch="asset_reliability",
+       tables=["mining_data.simulation_runs"],
+       tools=["bq_query"]),
+
+    # --- Maintenance execution (P2, D07–D10) ---
+    _b("D07", "Work Order Triage & Prioritisation",
+       apqc="11.0.3", persona="P2", branch="maintenance_execution",
+       hitl=True,
+       tables=["mining_data.erp_work_orders"],
+       tools=["bq_query", "request_approval"]),
+    _b("D08", "Deferral & Cancellation Risk Analyst",
+       apqc="11.0.3", persona="P2", branch="maintenance_execution",
+       tables=["mining_data.erp_work_orders", "mining_data.maintenance_logs"],
+       tools=["bq_query"]),
+    _b("D09", "Repair Cost Variance Analyst",
+       apqc="11.0.3", persona="P2", branch="maintenance_execution",
+       tables=["mining_data.erp_work_orders", "mining_data.maintenance_logs"],
+       tools=["bq_query"]),
+    _b("D10", "Maintenance Effectiveness / Repeat-Failure Analyst",
+       apqc="11.0.3", persona="P2", branch="maintenance_execution",
+       tables=["mining_data.maintenance_logs", "mining_data.work_order_parts_edge"],
+       tools=["bq_query"]),
+
+    # --- Mine ops / dispatch (P7, D11–D15) ---
+    _b("D11", "Haul Cycle Time Analyst",
+       apqc="4.3.1", persona="P7", branch="mine_ops",
+       tables=["mining_data.haulage_routes"],
+       tools=["bq_query", "operational_math"]),
+    _b("D12", "Route Congestion Analyst",
+       apqc="4.3.1", persona="P7", branch="mine_ops",
+       tables=["mining_data.haulage_routes"],
+       tools=["bq_query"]),
+    _b("D13", "Payload Utilisation Analyst",
+       apqc="4.3.1", persona="P7", branch="mine_ops",
+       tables=["mining_data.fleet_vehicles", "mining_data.haulage_routes"],
+       tools=["bq_query", "operational_math"]),
+    _b("D14", "Fleet Assignment Optimiser",
+       apqc="4.3.1", persona="P7", branch="mine_ops",
+       hitl=True,
+       tables=["mining_data.operator_vehicle_assignments", "mining_data.fleet_vehicles"],
+       tools=["bq_query", "request_approval"]),
+    _b("D15", "Route Network Cluster Analyst",
+       apqc="4.3.1", persona="P7", branch="mine_ops",
+       tables=["mining_data.haulage_routes"],
+       tools=["bq_query", "bqml_predict"],
+       models=["asset_clustering_model"]),
+
+    # --- Geology (P5, D16–D20) ---
+    _b("D16", "Assay-to-Block Model Variance Analyst",
+       apqc="2.0.1", persona="P5", branch="geology",
+       tables=["mining_data.drill_assay_logs", "mining_data.geological_block_models"],
+       tools=["bq_query"]),
+    _b("D17", "Ore Dilution Estimator",
+       apqc="2.0.1", persona="P5", branch="geology",
+       tables=["mining_data.drill_assay_logs"],
+       tools=["bq_query"]),
+    _b("D18", "Lithology Classification Auditor",
+       apqc="2.0.1", persona="P5", branch="geology",
+       tables=["mining_data.drill_assay_logs", "mining_data.geological_block_models"],
+       tools=["bq_query"]),
+    _b("D19", "Drill Coverage Gap Analyst",
+       apqc="2.0.1", persona="P5", branch="geology",
+       tables=["mining_data.drill_holes", "mining_data.geological_block_models"],
+       tools=["bq_query"]),
+    _b("D20", "Grade Confidence Scorer",
+       apqc="2.0.1", persona="P5", branch="geology",
+       tables=["mining_data.drill_assay_logs", "mining_data.geological_block_models"],
+       tools=["bq_query"]),
+
+    # --- Processing / metallurgy (P6, D21–D26) ---
+    _b("D21", "Recovery Rate Variance Analyst",
+       apqc="4.2.2", persona="P6", branch="processing",
+       tables=["mining_data.metallurgical_recovery"],
+       tools=["bq_query", "operational_math"]),
+    _b("D22", "Feed Grade Sensitivity Analyst",
+       apqc="4.2.2", persona="P6", branch="processing",
+       tables=["mining_data.metallurgical_recovery"],
+       tools=["bq_query", "operational_math"]),
+    _b("D23", "Tailings Loss Analyst",
+       apqc="4.2.2", persona="P6", branch="processing",
+       tables=["mining_data.metallurgical_recovery"],
+       tools=["bq_query", "operational_math"]),
+    _b("D24", "Concentrate Quality Analyst",
+       apqc="4.2.2", persona="P6", branch="processing",
+       tables=["mining_data.metallurgical_recovery"],
+       tools=["bq_query", "operational_math"]),
+    _b("D25", "Crusher Setpoint Optimiser",
+       apqc="4.2.2", persona="P6", branch="processing",
+       hitl=True,
+       tables=["mining_data.crusher_states"],
+       tools=["bq_query", "operational_math", "request_approval"]),
+    _b("D26", "Crusher Bypass Event Analyst",
+       apqc="4.2.2", persona="P6", branch="processing",
+       tables=["mining_data.crusher_states"],
+       tools=["bq_query"]),
+
+    # --- Supply chain / inventory (P4, D27–D31) ---
+    _b("D27", "Safety Stock & Reorder Point Calculator",
+       apqc="4.1.2", persona="P4", branch="supply_chain",
+       tables=["mining_data.inventory_levels"],
+       tools=["bq_query", "operational_math"]),
+    _b("D28", "Economic Order Quantity Optimiser",
+       apqc="4.1.2", persona="P4", branch="supply_chain",
+       tables=["mining_data.inventory_levels", "mining_data.work_order_parts_edge"],
+       tools=["bq_query", "operational_math"]),
+    _b("D29", "Lead Time Risk Analyst",
+       apqc="4.1.2", persona="P4", branch="supply_chain",
+       tables=["mining_data.inventory_levels", "mining_data.erp_work_orders"],
+       tools=["bq_query"]),
+    _b("D30", "Criticality-Weighted Stocking Policy",
+       apqc="4.1.2", persona="P4", branch="supply_chain",
+       hitl=True,
+       tables=["mining_data.inventory_levels", "mining_data.assets"],
+       tools=["bq_query", "request_approval"]),
+    _b("D31", "Stockout Exposure Analyst",
+       apqc="4.1.2", persona="P4", branch="supply_chain",
+       tables=[
+           "mining_data.inventory_levels",
+           "mining_data.erp_work_orders",
+           "mining_data.work_order_parts_edge",
+           "mining_data.assets",
+       ],
+       tools=["graph_traverse"], traversals=["stockout_exposure"]),
+
+    # --- Procurement (P4, D32–D34) ---
+    _b("D32", "Bid Compliance Auditor",
+       apqc="5.2.1", persona="P4", branch="procurement",
+       tables=["mining_data.procurement_bids"],
+       tools=["bq_query"]),
+    _b("D33", "Vendor Performance & Concentration Analyst",
+       apqc="5.2.1", persona="P4", branch="procurement",
+       tables=["mining_data.procurement_bids"],
+       tools=["bq_query"]),
+    _b("D34", "Procurement Spend Anomaly Analyst",
+       apqc="5.2.1", persona="P4", branch="procurement",
+       tables=["mining_data.procurement_bids", "mining_data.inventory_levels"],
+       tools=["bq_query"]),
+
+    # --- Safety (P3, D35–D40) ---
+    _b("D35", "Fatigue Risk Scorer",
+       apqc="9.1.2", persona="P3", branch="safety",
+       tables=["mining_data.biometric_fatigue_logs"],
+       tools=["bq_query", "bqml_predict"],
+       models=["safety_model"]),
+    _b("D36", "Microsleep Trend Analyst",
+       apqc="9.1.2", persona="P3", branch="safety",
+       tables=["mining_data.biometric_fatigue_logs"],
+       tools=["bq_query"]),
+    _b("D37", "Radio Sentiment & Emergency Triage",
+       apqc="9.1.2", persona="P3", branch="safety",
+       hitl=True,
+       tables=["mining_data.radio_communications"],
+       tools=["bq_query", "request_approval"]),
+    _b("D38", "Incident Severity Trend Analyst",
+       apqc="9.1.2", persona="P3", branch="safety",
+       tables=["mining_data.safety_incidents"],
+       tools=["bq_query"]),
+    _b("D39", "Procedural Compliance Drift Analyst",
+       apqc="9.1.2", persona="P3", branch="safety",
+       tables=["mining_data.safety_incidents"],
+       tools=["bq_query"]),
+    # D40: profiles exposure from incidents and assignments, NOT biometrics.
+    # Least-privilege: no biometric_fatigue_logs access for this agent —
+    # it correlates operator exposure via incident records and assignments only.
+    _b("D40", "Operator Exposure Profile Analyst",
+       apqc="9.1.2", persona="P3", branch="safety",
+       tables=[
+           "mining_data.incident_involvements",
+           "mining_data.operator_vehicle_assignments",
+       ],
+       tools=["bq_query"]),
+]
+
+
+ALL_AGENTS: list[AgentDef] = [a for s in SWARMS for a in s.agents] + DEEP
