@@ -49,7 +49,10 @@ def test_sc3_stockout_exposure_reaches_named_assets():
         "asset_id": None,
     })
     assert len(env["data"]["rows"]) == 101
-    assert {r["asset_id"] for r in env["data"]["rows"]}
+    # The demo names affected assets, so every row must carry one. A bare
+    # truthiness check on the set would pass on 101 rows of empty asset_ids.
+    unnamed = [r for r in env["data"]["rows"] if not r["asset_id"]]
+    assert unnamed == []
 
 
 def test_sc4_fatigue_chain_reaches_incidents():

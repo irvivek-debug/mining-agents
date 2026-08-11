@@ -12,6 +12,7 @@ Ruling 2 & 3 tests for scripts/deploy.py:
 - DOMAIN_BINDING_COMMAND must never be subprocess-executed by any code path.
 """
 import inspect
+import os
 import subprocess
 from unittest.mock import patch
 
@@ -54,10 +55,15 @@ def test_building_twice_is_stable():
 
 
 def test_every_one_of_the_hundred_agents_resolves_to_a_real_table():
-    """PRD success metric: 100 of 100 agents resolve to a real table."""
+    """PRD success metric: 100 of 100 agents resolve to a real table.
+
+    The population is pinned before the offender list, not after: `unresolved
+    == []` is only meaningful once the loop is known to have iterated 100
+    agents rather than an empty catalog.
+    """
+    assert len(ALL_AGENTS) == 100
     unresolved = [a.agent_id for a in ALL_AGENTS if not a.source_tables]
     assert unresolved == []
-    assert len(ALL_AGENTS) == 100
 
 
 # ---------------------------------------------------------------------------
@@ -79,18 +85,50 @@ def test_deploy_dry_run_false_raises_not_implemented():
 # ---------------------------------------------------------------------------
 
 def test_deploy_dry_run_calls_no_subprocess(capsys):
-    """Ruling 3: dry_run=True must never invoke a subprocess."""
+    """Ruling 3: dry_run=True must never invoke a subprocess.
+
+    Patching the attributes on the subprocess and os module objects is global,
+    so this catches `import subprocess; subprocess.run(...)` added to deploy.py
+    later. It does NOT catch `from subprocess import run`, so the second half
+    asserts the module imports no execution machinery at all — the durable
+    guarantee, of which "calls nothing today" is only a consequence.
+    """
     with patch.object(subprocess, "run") as mock_run, \
          patch.object(subprocess, "call") as mock_call, \
          patch.object(subprocess, "check_call") as mock_check_call, \
-         patch.object(subprocess, "check_output") as mock_check_output:
+         patch.object(subprocess, "check_output") as mock_check_output, \
+         patch.object(os, "system") as mock_system, \
+         patch.object(os, "popen") as mock_popen:
         deploy(dry_run=True)
-        assert mock_run.call_count == 0, (
-            f"subprocess.run was called {mock_run.call_count} time(s) during dry run"
-        )
-        assert mock_call.call_count == 0
-        assert mock_check_call.call_count == 0
-        assert mock_check_output.call_count == 0
+        called = {
+            name: mock.call_count
+            for name, mock in [
+                ("subprocess.run", mock_run),
+                ("subprocess.call", mock_call),
+                ("subprocess.check_call", mock_check_call),
+                ("subprocess.check_output", mock_check_output),
+                ("os.system", mock_system),
+                ("os.popen", mock_popen),
+            ]
+            if mock.call_count
+        }
+        assert called == {}, f"dry run executed: {called}"
+
+    # scripts/deploy.py must hold no execution capability whatsoever. This is
+    # what makes the mock assertions above durable: a `from subprocess import
+    # run` would slip past the patches, but not past this.
+    source = inspect.getsource(deploy_module)
+    forbidden_imports = [
+        "import subprocess",
+        "from subprocess",
+        "import os",
+        "from os import",
+    ]
+    present = [i for i in forbidden_imports if i in source]
+    assert present == [], (
+        f"scripts/deploy.py imports execution machinery: {present}. "
+        f"The deploy path is human-gated; it must be unable to run anything."
+    )
 
 
 def test_deploy_module_source_never_subprocess_executes_domain_binding_command():
