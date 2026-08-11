@@ -15,10 +15,10 @@ Realised value per ton of ore at the site is below plan. The gap is not one fail
 
 | Signal | Measured value | Source |
 |---|---|---|
-| Work orders at CRITICAL priority | **102 of 500** | `erp_work_orders` |
-| Work orders CANCELLED (deferred, will resurface) | **104 of 500**, $622k booked repair cost | `erp_work_orders` |
-| Spare parts below reorder point | **15 of 103**, against 15.3-day mean lead time | `inventory_levels` |
-| Concentrator recovery spread | **88.0% – 96.0%** (mean 92.2%) at `CONC-01` | `metallurgical_recovery` |
+| Work orders at CRITICAL priority | **101 of 500** | `erp_work_orders` |
+| Work orders CANCELLED (deferred, will resurface) | **104 of 500**, $617k booked repair cost | `erp_work_orders` |
+| Spare parts below reorder point | **15 of 105**, against 15.2-day mean lead time | `inventory_levels` |
+| Concentrator recovery spread | **88.2% – 95.2%** (mean 92.2%) at `CONC-01` | `metallurgical_recovery` |
 | Safety incidents on record | **60**, including fatality-class events | `safety_incidents` |
 | Fatigue readings unreviewed per operator population | **3,340** across 20 operators | `biometric_fatigue_logs` |
 
@@ -59,9 +59,9 @@ Two classes, because this asset is judged twice — once in a demo room, once by
 
 | Metric | Baseline | Target |
 |---|---|---|
-| Recovery rate variance at `CONC-01` | 8.0 pt spread (88.0–96.0) | ≤ 4.0 pt spread |
-| Parts below reorder point | 15 of 103 (14.6%) | ≤ 5 of 103 (4.9%) |
-| CRITICAL work orders open at any time | 21 OPEN of 102 CRITICAL | ≤ 10 OPEN |
+| Recovery rate variance at `CONC-01` | 7.0 pt spread (88.2–95.2) | ≤ 4.0 pt spread |
+| Parts below reorder point | 15 of 105 (14.3%) | ≤ 5 of 105 (4.8%) |
+| CRITICAL work orders open at any time | 21 OPEN of 101 CRITICAL | ≤ 10 OPEN |
 | Fatigue events reaching an operator before shift start | 0% (post-hoc only) | 100% of `fatigue_alert_triggered` |
 | Mean time from telemetry anomaly to dependency-impact assessment | manual, hours | < 60 seconds |
 
@@ -101,7 +101,7 @@ Every swarm carries a **Critic** as its fourth specialist. That is not padding: 
 | ID | Agent | APQC | Persona | HITL | Data / deterministic method |
 |---|---|---|---|---|---|
 | D01 | Vibration Signature Diagnostic | 11.0.3 | P1 | false | `telemetry_stream.vibration_hz` (`PUMP-104A`) |
-| D02 | Thermal Drift Diagnostic | 11.0.3 | P1 | false | `telemetry_stream.temperature_c` — **PUMP-104A only today**; MILL-01 added by data injection A3 (see Phase 3 §0.2) |
+| D02 | Thermal Drift Diagnostic | 11.0.3 | P1 | false | `telemetry_stream.temperature_c` — `PUMP-104A` and `MILL-01`; MILL-01 added by data injection A3 (see Phase 3 §0.2) |
 | D03 | Torque Signature Diagnostic | 11.0.3 | P1 | false | `telemetry_stream.rotational_torque_nm`, `crusher_states` |
 | D04 | Power Draw Efficiency Analyst | 11.0.3 | P1 | false | `telemetry_stream.power_draw_mw` (`MILL-01`) |
 | D05 | Asset Dependency Criticality Ranker | 11.0.3 | P1 | false | `asset_dependencies.impact_score`, `MiningAssetGraph` |
@@ -187,7 +187,7 @@ Grounding discipline is not abandoned, only relocated: `MiningOntologyGraph` and
 Carried forward verbatim from Phase 0, plus two that arose while building the inventory.
 
 * **ASSUMPTION**: The five `assets` rows represent asset *classes* to be shown at demo scale, not the site's true asset register. — If wrong, per-asset agents collapse to five instances and the swarm topology should be re-cut by process area instead of by asset.
-* **ASSUMPTION**: Telemetry covering only `PUMP-104A`, `CRUSHER-03`, `MILL-01` (hourly, 2026-01-01 → 2026-06-16) is a deliberate demo subset. — If wrong, D01–D04 and S01 have no signal for `CONVEYOR-02` or `TRUCK-08` and must be re-grounded or dropped.
+* **ASSUMPTION**: Telemetry covers all five `assets` rows — `CONVEYOR-02`, `CRUSHER-03`, `MILL-01`, `PUMP-104A`, `TRUCK-08` (two-hourly, 2026-01-01 → 2026-06-16) — at a deliberate demo sampling rate rather than a production historian rate. — If wrong, the two-hourly interval is too coarse for D01–D04 and S01 to resolve a fast-developing fault and the series must be regenerated at a finer cadence. Coverage for `CONVEYOR-02` and `TRUCK-08` was added by data injections A2/A3; before that only three assets were instrumented, which is what the earlier revision of this assumption recorded.
 * **ASSUMPTION**: `safety_incidents.root_cause` is pre-populated because the data is synthetic; in a real deployment root cause is the *output* of investigation, not an input. — If wrong, S11 and D39 are reading their own answer key. **Mitigated in design**: S11's fourth specialist is a *Root-Cause Challenge Critic* that must corroborate the stated cause against `radio_communications` and `incident_involvements` independently, and report disagreement. Do not demo S11 as deriving root cause from scratch.
 * **ASSUMPTION**: No tailings/piezometer, LOTO permit, or EPC contractor schedule data exists. — Confirmed absent. The three corresponding playbook agents are dropped rather than built on invented data.
 * **OPEN QUESTION**: `metallurgical_recovery` has a single concentrator (`CONC-01`). D21–D24 therefore compare against time, not against peer units. If a second concentrator is expected, say so now — it changes those four agents from trend analysis to benchmarking.
