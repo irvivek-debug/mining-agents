@@ -108,6 +108,7 @@ class TableCheck:
     rows_loaded: int
     schema_ok: bool
     partitioning_ok: bool
+    content_ok: bool
     message: str
 
     @property
@@ -116,6 +117,7 @@ class TableCheck:
             self.rows_loaded == self.rows_expected
             and self.schema_ok
             and self.partitioning_ok
+            and self.content_ok
         )
 
 
@@ -201,6 +203,7 @@ def bq_load_command(table: str, target: str, schema_file: Path) -> list[str]:
         _bq_binary(),
         "load",
         "--source_format=PARQUET",
+        "--parquet_enable_list_inference=true",
         "--replace",
         f"--schema={schema_file}",
     ]
@@ -242,6 +245,58 @@ def parquet_row_count(table: str) -> int:
     import pyarrow.parquet as pq
 
     return pq.ParquetFile(parquet_path(table)).metadata.num_rows
+
+
+def repeated_columns(table: str) -> list[str]:
+    """Names of REPEATED (array) columns in the profile schema for `table`."""
+    return [
+        c["name"]
+        for c in schema_fields(table)
+        if c.get("mode") == "REPEATED"
+    ]
+
+
+def parquet_array_cardinality(table: str, column: str) -> int:
+    """Total number of elements across all rows in a REPEATED parquet column."""
+    import pyarrow.parquet as pq
+
+    col = pq.read_table(parquet_path(table), columns=[column]).column(column)
+    return sum(len(row.as_py()) for row in col)
+
+
+def bq_array_cardinality(client: bigquery.Client, name: str, column: str) -> int:
+    """Total number of elements across all rows of a REPEATED BigQuery column."""
+    sql = f"SELECT SUM(ARRAY_LENGTH(`{column}`)) AS n FROM `{table_ref(name)}`"
+    row = next(iter(client.query(sql).result()))
+    return row.n or 0
+
+
+def check_repeated_content(
+    client: bigquery.Client, table: str, loaded: str
+) -> tuple[bool, str]:
+    """For every REPEATED column: assert total array cardinality matches the parquet.
+
+    A table can load with perfect row count and schema while its arrays are
+    silently empty (e.g. missing --parquet_enable_list_inference).  This check
+    catches that class of bug by comparing element counts, not just row counts.
+    Returns (ok, message).  If the table has no REPEATED columns, returns True.
+    """
+    cols = repeated_columns(table)
+    if not cols:
+        return True, "no REPEATED columns"
+    problems = []
+    details = []
+    for col in cols:
+        want = parquet_array_cardinality(table, col)
+        got = bq_array_cardinality(client, loaded, col)
+        details.append(f"{col}: bq={got} parquet={want}")
+        if got != want:
+            problems.append(
+                f"{col} has {got} elements in BigQuery but {want} in parquet"
+            )
+    if problems:
+        return False, "; ".join(problems)
+    return True, "array cardinality ok (" + ", ".join(details) + ")"
 
 
 def row_count(client: bigquery.Client, name: str) -> int:
@@ -338,6 +393,7 @@ def load_and_verify(
     loaded = row_count(client, target)
     schema_ok, schema_msg = check_schema_against_backup(client, table, target)
     part_ok, part_msg = check_partitioning(client, table, target)
+    content_ok, content_msg = check_repeated_content(client, table, target)
     return TableCheck(
         table=table,
         target=target,
@@ -345,7 +401,8 @@ def load_and_verify(
         rows_loaded=loaded,
         schema_ok=schema_ok,
         partitioning_ok=part_ok,
-        message=f"{schema_msg}; {part_msg}",
+        content_ok=content_ok,
+        message=f"{schema_msg}; {part_msg}; {content_msg}",
     )
 
 

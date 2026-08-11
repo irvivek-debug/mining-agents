@@ -232,6 +232,79 @@ class TestBqLoadCommand:
         written = {c["name"]: c["mode"] for c in json.loads(schema_file.read_text())}
         assert written["parts_replaced"] == "REPEATED"
 
+    def test_parquet_enable_list_inference_flag_present(self, commands):
+        """Without this flag a 3-level parquet LIST does not map to REPEATED."""
+        for table, (argv, _) in commands.items():
+            assert "--parquet_enable_list_inference=true" in argv, (
+                f"{table}: missing --parquet_enable_list_inference=true in {argv}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Content-fidelity check for REPEATED columns
+# ---------------------------------------------------------------------------
+
+
+class TestCheckRepeatedContent:
+    """The content-fidelity check must catch silently-empty arrays.
+
+    Both directions are tested: the check passes when cardinalities match and
+    fails (is not vacuous) when they do not.  A check that cannot fail is worse
+    than none — that is what cost a day on this bug.
+    """
+
+    def test_passes_when_cardinalities_match(self):
+        """Stub a BQ client that returns the same count as the parquet file."""
+        want = load.parquet_array_cardinality("maintenance_logs", "parts_replaced")
+        assert want > 0, "parquet must have actual values for this test to mean anything"
+
+        class FakeClient:
+            def query(self, sql):
+                class FakeResult:
+                    def result(self):
+                        class FakeRow:
+                            n = want
+                        return iter([FakeRow()])
+                return FakeResult()
+
+        ok, msg = load.check_repeated_content(FakeClient(), "maintenance_logs", "maintenance_logs")
+        assert ok, f"expected ok=True but got: {msg}"
+        assert "bq=" in msg  # message includes the counts
+
+    def test_fails_when_bq_arrays_are_empty(self):
+        """Simulates the pre-fix state: parquet has 186 values, BQ has 0."""
+        want = load.parquet_array_cardinality("maintenance_logs", "parts_replaced")
+        assert want > 0
+
+        class FakeClientEmpty:
+            def query(self, sql):
+                class FakeResult:
+                    def result(self):
+                        class FakeRow:
+                            n = 0
+                        return iter([FakeRow()])
+                return FakeResult()
+
+        ok, msg = load.check_repeated_content(FakeClientEmpty(), "maintenance_logs", "maintenance_logs")
+        assert not ok, "check must fail when BigQuery arrays are empty"
+        assert "parts_replaced" in msg
+
+    def test_no_repeated_columns_returns_true(self):
+        """Tables without REPEATED columns should pass unconditionally."""
+        # telemetry_stream has no REPEATED columns
+        assert load.repeated_columns("telemetry_stream") == []
+        ok, msg = load.check_repeated_content(None, "telemetry_stream", "telemetry_stream")
+        assert ok
+        assert "no REPEATED" in msg
+
+    def test_parquet_cardinality_matches_known_value(self):
+        """Regression anchor: maintenance_logs has 186 parts_replaced values."""
+        total = load.parquet_array_cardinality("maintenance_logs", "parts_replaced")
+        assert total == 186, (
+            f"Expected 186 parts_replaced values in parquet, got {total}. "
+            "If the generator was re-run this anchor needs updating."
+        )
+
 
 # ---------------------------------------------------------------------------
 # Rollback SQL and delete safety
