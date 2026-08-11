@@ -37,7 +37,7 @@ def test_enveloped_tool_reports_the_declared_tables():
     Envelope.model_validate(env)
     assert env["success"] is True
     assert env["meta"]["tables_read"] == ["mining_data.assets"]
-    assert env["data"]["rows"][0]["n_assets"] > 0
+    assert env["data"]["rows"][0]["n_assets"] == 5
 
 
 def test_interpolated_sql_fails_inside_the_envelope_not_as_a_crash():

@@ -426,18 +426,18 @@ from agents.tools.base import tool, ToolFailure
 
 
 def test_ok_produces_a_valid_envelope():
-    env = ok({"n": 1}, tables_read=["mining_data.assets_node"], rows_scanned=5)
+    env = ok({"n": 1}, tables_read=["mining_data.assets"], rows_scanned=5)
     Envelope.model_validate(env)
     assert env["success"] is True
     assert env["error"] is None
-    assert env["meta"]["tables_read"] == ["mining_data.assets_node"]
+    assert env["meta"]["tables_read"] == ["mining_data.assets"]
     assert env["meta"]["rows_scanned"] == 5
     assert env["meta"]["timestamp"].endswith("Z")
 
 
 def test_fail_uses_rfc7807_shape():
     env = fail("INVALID_ARGUMENT", "bad input", {"field": "asset_id"},
-               tables_read=["mining_data.assets_node"])
+               tables_read=["mining_data.assets"])
     Envelope.model_validate(env)
     assert env["success"] is False
     assert env["data"] == {}
@@ -662,10 +662,10 @@ def test_parameterised_sql_is_accepted():
 
 def test_run_query_returns_rows_and_a_count():
     rows, scanned = run_query(
-        "SELECT asset_id FROM `mining_data.assets_node` "
+        "SELECT asset_id FROM `mining_data.assets` "
         "WHERE asset_id = @asset_id",
         {"asset_id": "PUMP-104A"},
-        ["mining_data.assets_node"],
+        ["mining_data.assets"],
     )
     assert len(rows) == 1
     assert rows[0]["asset_id"] == "PUMP-104A"
@@ -673,22 +673,22 @@ def test_run_query_returns_rows_and_a_count():
 
 
 def test_enveloped_tool_reports_the_declared_tables():
-    q = make_bq_query(["mining_data.assets_node"])
-    env = q("SELECT COUNT(*) AS n_assets FROM `mining_data.assets_node`", {})
+    q = make_bq_query(["mining_data.assets"])
+    env = q("SELECT COUNT(*) AS n_assets FROM `mining_data.assets`", {})
     Envelope.model_validate(env)
     assert env["success"] is True
-    assert env["meta"]["tables_read"] == ["mining_data.assets_node"]
+    assert env["meta"]["tables_read"] == ["mining_data.assets"]
     assert env["data"]["rows"][0]["n_assets"] > 0
 
 
 def test_interpolated_sql_fails_inside_the_envelope_not_as_a_crash():
-    q = make_bq_query(["mining_data.assets_node"])
+    q = make_bq_query(["mining_data.assets"])
     asset = "PUMP-104A"
-    env = q(f"SELECT * FROM `mining_data.assets_node` WHERE asset_id = '{asset}'", {})
+    env = q(f"SELECT * FROM `mining_data.assets` WHERE asset_id = '{asset}'", {})
     Envelope.model_validate(env)
     assert env["success"] is False
     assert env["error"]["code"] == "SQL_INTERPOLATION"
-    assert env["meta"]["tables_read"] == ["mining_data.assets_node"]
+    assert env["meta"]["tables_read"] == ["mining_data.assets"]
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -801,7 +801,7 @@ Expected: 8 passed. These hit real BigQuery — expect roughly 10–20 seconds.
 If `test_run_query_returns_rows_and_a_count` fails with zero rows, confirm the asset ID with:
 ```bash
 ~/.local/bin/bq query --use_legacy_sql=false --nouse_cache \
-  'SELECT asset_id FROM `mining_data.assets_node` LIMIT 5'
+  'SELECT asset_id FROM `mining_data.assets` LIMIT 5'
 ```
 and use a real one. Do not weaken the assertion to `>= 0`.
 
@@ -985,13 +985,13 @@ SELECT * FROM GRAPH_TABLE(
 TRAVERSALS: dict[str, Traversal] = {
     "blast_radius": Traversal(
         graph="MiningAssetGraph", sql=_BLAST_RADIUS, params=("asset_id",),
-        tables_read=["mining_data.assets_node", "mining_data.asset_dependencies"],
+        tables_read=["mining_data.assets", "mining_data.asset_dependencies"],
     ),
     "stockout_exposure": Traversal(
         graph="MiningSupplyChainGraph", sql=_STOCKOUT_EXPOSURE,
         params=("below_rop_parts", "asset_id"),
-        tables_read=["mining_data.spare_parts_node", "mining_data.erp_work_orders",
-                     "mining_data.work_order_parts_edge", "mining_data.assets_node"],
+        tables_read=["mining_data.inventory_levels", "mining_data.erp_work_orders",
+                     "mining_data.work_order_parts_edge", "mining_data.assets"],
     ),
     "fatigue_to_incident": Traversal(
         graph="MiningOperationsSafetyGraph", sql=_FATIGUE_TO_INCIDENT,
@@ -1813,7 +1813,7 @@ def test_wrap_rows_does_not_mutate_the_input():
 
 def test_a_table_with_no_free_text_passes_through():
     rows = [{"asset_id": "PUMP-104A"}]
-    assert wrap_rows(rows, "mining_data.assets_node") == rows
+    assert wrap_rows(rows, "mining_data.assets") == rows
 ```
 
 Create `tests/safety/test_output_filter.py`:
@@ -2269,7 +2269,7 @@ S01 = SwarmDef(
            tables=["mining_data.telemetry_stream"], tools=["bq_query"]),
         _a("S01-SP2", "Dependency Blast-Radius Tracer", "S01", "specialist",
            apqc="11.0.3", persona="P1", branch="asset_reliability",
-           tables=["mining_data.asset_dependencies", "mining_data.assets_node"],
+           tables=["mining_data.asset_dependencies", "mining_data.assets"],
            tools=["graph_traverse"], traversals=["blast_radius"]),
         _a("S01-SP3", "Downtime Duration Forecaster", "S01", "specialist",
            apqc="11.0.3", persona="P1", branch="asset_reliability",
@@ -2308,7 +2308,7 @@ Transcription rules:
 - **`tools`** is drawn from: `bq_query`, `graph_traverse`, `bqml_predict`, `ontology_lookup`, `operational_math`, `request_approval`. Give `request_approval` only to the 14 HITL agents. Give `operational_math` to D11 (Little's Law), D27 (ROP), D28 (EOQ), S07 and D25 (Cpk on setpoints), D13 and D21–D24 (OEE / ratios).
 - **`traversals`** map: `MiningAssetGraph` → `blast_radius`; `MiningSupplyChainGraph` → `stockout_exposure`; `MiningOperationsSafetyGraph` → `fatigue_to_incident`; `MiningOntologyGraph` → `ontology_related`.
 - **`models`** are BQML model names from the PRD's Data column (`downtime_regression_model*`, `inventory_impact_model`, `safety_model`, `asset_clustering_model`). Verify each against `list_models()` from Task 6 — the PRD's `downtime_regression_model*` wildcard must resolve to a real model name.
-- **The PRD's Data column names columns, not always tables.** Resolve each to its table: `sleep_deficit_hours` / `heart_rate_bpm` / `microsleep_events_detected` → `mining_data.biometric_fatigue_logs`; `vibration_hz` / `temperature_c` / `rotational_torque_nm` / `power_draw_mw` → `mining_data.telemetry_stream`; `emergency_keyword_flag` / `sentiment_score` → `mining_data.radio_communications`; `gap_size_setting_mm` / `feed_rate_tph` / `bypass_valve_open` → `mining_data.crusher_states`; `recovery_rate_pct` / `feed_grade_pct` / `tailings_grade_pct` / `concentrate_grade_pct` → `mining_data.metallurgical_recovery`; `current_payload_tons` / `payload_capacity_tons` → `mining_data.fleet_vehicles`; `average_cycle_time_mins` / `congestion_factor` / `distance_meters` → `mining_data.haulage_routes`; `criticality_rating` → `mining_data.assets_node`; `unit_price_usd` / `lead_time_days` → `mining_data.inventory_levels`; `vendor_name` / `bid_status` / `proposed_cost` / `compliance_checked` → `mining_data.procurement_bids`; `impact_score` → `mining_data.asset_dependencies`; `specific_gravity` / `geology_code` → `mining_data.drill_assay_logs`; `lithology_type` → `mining_data.geological_block_models`; `severity_level` / `root_cause` → `mining_data.safety_incidents`.
+- **The PRD's Data column names columns, not always tables.** Resolve each to its table: `sleep_deficit_hours` / `heart_rate_bpm` / `microsleep_events_detected` → `mining_data.biometric_fatigue_logs`; `vibration_hz` / `temperature_c` / `rotational_torque_nm` / `power_draw_mw` → `mining_data.telemetry_stream`; `emergency_keyword_flag` / `sentiment_score` → `mining_data.radio_communications`; `gap_size_setting_mm` / `feed_rate_tph` / `bypass_valve_open` → `mining_data.crusher_states`; `recovery_rate_pct` / `feed_grade_pct` / `tailings_grade_pct` / `concentrate_grade_pct` → `mining_data.metallurgical_recovery`; `current_payload_tons` / `payload_capacity_tons` → `mining_data.fleet_vehicles`; `average_cycle_time_mins` / `congestion_factor` / `distance_meters` → `mining_data.haulage_routes`; `criticality_rating` → `mining_data.assets`; `unit_price_usd` / `lead_time_days` → `mining_data.inventory_levels`; `vendor_name` / `bid_status` / `proposed_cost` / `compliance_checked` → `mining_data.procurement_bids`; `impact_score` → `mining_data.asset_dependencies`; `specific_gravity` / `geology_code` → `mining_data.drill_assay_logs`; `lithology_type` → `mining_data.geological_block_models`; `severity_level` / `root_cause` → `mining_data.safety_incidents`.
 - **S01 specialists depend on data injections A1 and A2** and **D02 covers `PUMP-104A` and `MILL-01` after A3** — both landed in Phase 4, so no scoping caveat is needed in the catalog.
 
 - [ ] **Step 4: Write `agents/catalog/loader.py`**
@@ -2915,17 +2915,17 @@ def test_the_snapshot_is_scrubbed_before_it_is_written():
 
 def test_tables_read_is_persisted_as_an_array():
     with logged_run("D01") as run:
-        run.tables_read = ["mining_data.telemetry_stream", "mining_data.assets_node"]
+        run.tables_read = ["mining_data.telemetry_stream", "mining_data.assets"]
     rows = _fetch(run.run_id)
     assert sorted(rows[0]["tables_read"]) == [
-        "mining_data.assets_node", "mining_data.telemetry_stream",
+        "mining_data.assets", "mining_data.telemetry_stream",
     ]
 
 
 def test_record_run_returns_a_unique_id():
-    a = record_run("D01", "SUCCESS", tables_read=["mining_data.assets_node"],
+    a = record_run("D01", "SUCCESS", tables_read=["mining_data.assets"],
                    reasoning_snapshot="x")
-    b = record_run("D01", "SUCCESS", tables_read=["mining_data.assets_node"],
+    b = record_run("D01", "SUCCESS", tables_read=["mining_data.assets"],
                    reasoning_snapshot="x")
     assert a != b
 ```
