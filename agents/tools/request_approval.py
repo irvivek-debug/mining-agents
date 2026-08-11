@@ -18,6 +18,7 @@ the APPROVED value — only a human does that through SC-4.
 """
 from __future__ import annotations
 
+import json
 import time
 import uuid
 from datetime import datetime, timezone
@@ -30,7 +31,7 @@ from agents.tools.bq_query import run_query
 
 # The only table this tool touches — declared as a module constant so
 # _tables() helpers in downstream modules can import it rather than duplicate.
-TABLE = "mining_data.agent_approvals"
+TABLE = f"{settings().dataset}.agent_approvals"
 
 # Sentinel used as approver_principal while a request is still pending.
 # SC-4 overwrites this when a human acts.
@@ -80,8 +81,11 @@ def make_request_approval(agent_id: str):
     payload       : dict  — action-specific data; serialised into target_entity
     reasoning     : str   — mandatory; shown to the human approver in SC-4
     source_tables : list  — the real BQ tables the agent read to reach this
-                            decision.  Must be non-empty (empty array = silent
-                            data-loss trap, see project wound note).
+                            decision.  Required and must be non-empty: this is
+                            the write boundary where the "every agent resolves
+                            to a real table" claim is enforced, and an empty
+                            array is indistinguishable from NULL after a
+                            BigQuery round-trip.
     """
 
     @tool([TABLE])
@@ -89,7 +93,7 @@ def make_request_approval(agent_id: str):
         action_type: str,
         payload: dict,
         reasoning: str,
-        source_tables: list[str] | None = None,
+        source_tables: list[str],
     ):
         """Submit an action for human approval. Always returns status=PENDING."""
         if not reasoning.strip():
@@ -99,8 +103,11 @@ def make_request_approval(agent_id: str):
                 field="reasoning",
             )
 
-        # Guard against the empty-array silent-data-loss trap.
-        if source_tables is not None and len(source_tables) == 0:
+        # Guard against the empty-array silent-data-loss trap. There is no
+        # default: defaulting to agent_approvals itself would record that the
+        # agent read the approvals table to reach its decision, which is false
+        # provenance — worse than refusing the call.
+        if not source_tables:
             raise ToolFailure(
                 "INVALID_ARGUMENT",
                 "source_tables must be non-empty; "
@@ -108,13 +115,7 @@ def make_request_approval(agent_id: str):
                 field="source_tables",
             )
 
-        effective_source_tables: list[str] = (
-            source_tables if source_tables is not None else [TABLE]
-        )
-
-        # approval_id carries the TEST- prefix in every call so the cleanup
-        # fixture can delete rows deterministically after each test.
-        approval_id = f"TEST-{uuid.uuid4()}"
+        approval_id = f"APR-{uuid.uuid4()}"
 
         # decided_at is REQUIRED in the live schema (it is the partition key).
         # We write the current timestamp as a placeholder; SC-4 overwrites it
@@ -125,9 +126,10 @@ def make_request_approval(agent_id: str):
             "approval_id": approval_id,
             "agent_id": agent_id,
             "action_type": action_type,
-            # target_entity: NULLABLE — serialise the payload as a JSON string
-            # so the full context is preserved without a schema change.
-            "target_entity": str(payload) if payload else None,
+            # target_entity: NULLABLE — serialise the payload as real JSON so
+            # SC-4 can parse it. str(dict) yields Python repr with single
+            # quotes, which json.loads rejects.
+            "target_entity": json.dumps(payload, sort_keys=True) if payload else None,
             # decision / approver_principal are REQUIRED; use sentinels for
             # pending requests.  Only SC-4 writes the real values.
             "decision": "PENDING",
@@ -135,7 +137,7 @@ def make_request_approval(agent_id: str):
             "decided_at": now_ts,
             "agent_reasoning_snapshot": reasoning,
             "unverified_flags": [],
-            "source_tables": effective_source_tables,
+            "source_tables": list(source_tables),
         }
 
         s = settings()
