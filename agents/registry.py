@@ -34,17 +34,21 @@ GATEWAY_SERVICE_ACCOUNT: str = (
 # but registration() copies it — callers cannot mutate the constant through a
 # returned payload.
 # ---------------------------------------------------------------------------
-GUARDRAILS: dict = {
+GUARDRAILS: dict[str, int] = {
     "max_input_bytes": 32768,       # 32 KB
     "max_output_bytes": 262144,     # 256 KB
     "rate_limit_per_min": 60,
 }
 
 # ---------------------------------------------------------------------------
-# R2: INPUT_SCHEMA is a module-level template; registration() deep-copies it
-# so no two payloads share an object reference.
+# R2: the input-schema template; registration() deep-copies it so no two
+# payloads share an object reference.
+#
+# Private where GUARDRAILS is public, deliberately: GUARDRAILS is part of this
+# module's declared interface (callers compare a payload's guardrails against
+# it), whereas the schema is only ever read through a registration payload.
 # ---------------------------------------------------------------------------
-_INPUT_SCHEMA: dict = {
+_INPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
         "query": {"type": "string", "maxLength": 8192},

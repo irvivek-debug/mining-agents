@@ -11,6 +11,7 @@ from infra.iam.service_accounts import sa_email
 from agents.registry import (
     GATEWAY_SERVICE_ACCOUNT,
     GUARDRAILS,
+    VERSION,
     caller_allowlist,
     registrable,
     registration,
@@ -75,11 +76,15 @@ def test_a_deep_agent_has_no_agent_caller_in_its_allowlist():
 
 
 def test_a_registration_carries_the_framework_and_capability_tags():
-    entry = registration(next(a for a in registrable() if a.agent_id == "D27"))
+    d27 = next(a for a in registrable() if a.agent_id == "D27")
+    entry = registration(d27)
     assert entry["framework"] == "ADK"
     assert entry["agent_id"] == "D27"
-    assert entry["version"]
-    assert entry["display_name"]
+    # Pinned to exact values rather than truthiness: `assert entry["version"]`
+    # would pass on "v0", " ", or any other wrong-but-non-empty string.
+    assert entry["version"] == VERSION
+    assert entry["display_name"] == d27.display_name
+    assert entry["display_name"] == "Safety Stock & Reorder Point Calculator"
     assert set(entry["capability_tags"]) >= {"pattern", "apqc_code", "persona",
                                              "value_branch"}
     assert entry["service_account"].startswith("mag-d27@")
