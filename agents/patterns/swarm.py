@@ -14,7 +14,7 @@ from typing import Literal
 
 from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
 
-from agents.catalog.definitions import SwarmDef
+from agents.catalog.definitions import AgentDef, SwarmDef
 from agents.config import model_for_tier
 from agents.patterns.deep import BIOMETRIC_TABLES, bind_tools, build_instruction
 from agents.safety.output_filter import BIOMETRIC_FIELDS
@@ -101,7 +101,7 @@ def coordinator_instruction(swarm: SwarmDef) -> str:
     ])
 
 
-def _llm(agent, instruction: str) -> LlmAgent:
+def _llm(agent: AgentDef, instruction: str) -> LlmAgent:
     """Build one LlmAgent from a catalog AgentDef."""
     return LlmAgent(
         name=agent.agent_id.lower().replace("-", "_"),

@@ -32,7 +32,9 @@ def test_a_blocked_specialist_does_not_abort_the_swarm():
                for i in (1, 2, 3)]
     out = barrier(results)
     assert out["completed"] == []
-    assert len(out["unverified"]) == 3
+    assert [r.agent_id for r in out["unverified"]] == [
+        "S01-SP1", "S01-SP2", "S01-SP3",
+    ]
 
 
 def test_the_critic_is_sequential_after_the_parallel_fan_out():
@@ -94,16 +96,21 @@ def test_built_hitl_coordinators_carry_bound_request_approval():
     """Graph-level check: built coordinator LlmAgent for HITL swarms must have
     a bound request_approval callable in its .tools list.
 
-    request_approval is identified by its tables_read attribute, which is set by
-    the @tool decorator to ["mining_data.agent_approvals"]. Non-HITL coordinators
-    and all specialists and critics in every swarm must carry no such tool.
+    request_approval is identified by BOTH its name and its tables_read
+    attribute, which the @tool decorator sets to ["mining_data.agent_approvals"].
+    Either alone could match another tool one day; together they cannot.
+    Non-HITL coordinators and all specialists and critics in every swarm must
+    carry no such tool.
     """
     APPROVAL_TABLE = "mining_data.agent_approvals"
 
     def has_approval(llm_agent) -> bool:
         """Return True if the LlmAgent holds a bound request_approval callable."""
         for t in llm_agent.tools:
-            if callable(t) and getattr(t, "tables_read", None) == [APPROVAL_TABLE]:
+            if not callable(t):
+                continue
+            if (getattr(t, "__name__", None) == "request_approval"
+                    and getattr(t, "tables_read", None) == [APPROVAL_TABLE]):
                 return True
         return False
 
