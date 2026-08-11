@@ -1,18 +1,27 @@
 """Pattern A factory: fan-out in parallel, barrier, then critic, then coordinator.
 
-Execution order: the three specialists run in parallel inside a ParallelAgent.
-ADK's ParallelAgent joins its children (all three must report — DONE or BLOCKED —
-before the sequence advances). After the join, the critic audits the combined
-outputs. The coordinator concludes last, after the critic's report.
+Execution order: the three specialists run in parallel as graph successors of
+START. ADK's JoinNode acts as a true barrier — it fires only after all three
+specialist predecessors have completed. After the join, the critic audits the
+combined outputs. The coordinator concludes last, after the critic's report.
 
-The ordering is enforced by SequentialAgent, not by barrier().
+The ordering is enforced by the Workflow graph (via JoinNode), not by
+barrier(). barrier() partitions the DONE/BLOCKED results that JoinNode hands
+the critic, populating the demo UI's '⚠ UNVERIFIED' band (SC-4).
+
+BLOCKED specialists: because Workflow aborts the entire graph if any node
+raises an exception (there is no partial-completion mode), a BLOCKED
+specialist MUST return a structured SpecialistResult rather than raise. This
+is a non-obvious framework property — future maintainers must not convert
+BLOCKED to an exception.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
 
-from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
+from google.adk.agents import LlmAgent
+from google.adk.workflow import JoinNode, Workflow, START
 
 from agents.catalog.definitions import AgentDef, SwarmDef
 from agents.config import model_for_tier
@@ -31,13 +40,15 @@ class SpecialistResult:
 def barrier(results: list[SpecialistResult]) -> dict:
     """Partition specialist results into completed and unverified buckets.
 
-    This is a reporting-side partition, not an execution-ordering mechanism.
-    ADK's ParallelAgent already ensures all specialists complete (DONE or BLOCKED)
-    before the SequentialAgent advances to the critic stage. barrier() splits
-    the results so that BLOCKED contributions are clearly labelled 'unverified'
-    rather than silently missing — this populates the '⚠ UNVERIFIED' band in the
-    demo UI (SC-4). A BLOCKED specialist does not abort the swarm; the coordinator
-    and critic receive the full picture including what could not be verified.
+    This function partitions the DONE/BLOCKED results that JoinNode hands the
+    critic (via the combined output dict). JoinNode is the execution-ordering
+    mechanism — it fires only once every graph predecessor has completed and
+    delivers a dict keyed by predecessor name. barrier() then splits those
+    results so that BLOCKED contributions are clearly labelled 'unverified'
+    rather than silently missing, populating the '⚠ UNVERIFIED' band in the
+    demo UI (SC-4). A BLOCKED specialist must never raise; it must return a
+    structured SpecialistResult so the Workflow graph can continue to the critic
+    and coordinator.
     """
     return {
         "completed": [r for r in results if r.status == "DONE"],
@@ -112,28 +123,40 @@ def _llm(agent: AgentDef, instruction: str) -> LlmAgent:
     )
 
 
-def build_swarm(swarm: SwarmDef) -> SequentialAgent:
-    """Build one Pattern A swarm.
+def build_swarm(swarm: SwarmDef) -> Workflow:
+    """Build one Pattern A swarm as an ADK 2.x Workflow graph.
 
-    Layout: SequentialAgent([ParallelAgent(specialists), critic, coordinator])
+    Graph shape:
+        START → (spec1, spec2, spec3)   [fan-out: specialists run in parallel]
+        spec1 → join, spec2 → join, spec3 → join
+        join → critic                   [JoinNode barrier: fires after all three]
+        critic → coordinator            [critic concludes before coordinator]
 
     The coordinator is last because it must conclude only after the critic
     has audited the specialists' combined output. coordinator_instruction()
     states this explicitly: "Only after the critic reports do you conclude."
 
-    The critic is second — it audits all three specialists in parallel, then
-    hands off to the coordinator. It must never be a peer of the specialists
-    inside the ParallelAgent (that would make it audit partial output).
+    The critic is placed downstream of the JoinNode — it must never be a peer
+    of the specialists (that would make it audit partial output). JoinNode
+    enforces that the critic receives all three specialist outputs before it
+    runs.
     """
-    fan_out = ParallelAgent(
-        name=f"{swarm.swarm_id.lower()}_specialists",
-        description=f"{swarm.swarm_id} parallel analysis stage",
-        sub_agents=[_llm(s, build_instruction(s)) for s in swarm.specialists],
+    spec1_llm, spec2_llm, spec3_llm = (
+        _llm(s, build_instruction(s)) for s in swarm.specialists
     )
     critic_llm = _llm(swarm.critic, critic_instruction(swarm))
     coordinator_llm = _llm(swarm.coordinator, coordinator_instruction(swarm))
-    return SequentialAgent(
+
+    join = JoinNode(name=f"{swarm.swarm_id.lower()}_barrier")
+
+    return Workflow(
         name=swarm.swarm_id.lower(),
-        description=swarm.display_name,
-        sub_agents=[fan_out, critic_llm, coordinator_llm],
+        edges=[
+            (START, (spec1_llm, spec2_llm, spec3_llm)),   # fan-out
+            (spec1_llm, join),
+            (spec2_llm, join),
+            (spec3_llm, join),
+            (join, critic_llm),                            # barrier → critic
+            (critic_llm, coordinator_llm),                 # critic → coordinator
+        ],
     )
