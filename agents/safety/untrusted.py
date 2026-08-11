@@ -23,11 +23,17 @@ FREE_TEXT_FIELDS: dict[str, tuple[str, ...]] = {
 def wrap(value: str, source: str) -> str:
     """Wrap one free-text value so a model cannot mistake it for instruction.
 
-    Both delimiter strings are stripped from the body before wrapping so that a
-    hostile payload cannot break out of the delimited block by embedding either
-    delimiter verbatim.
+    The delimiter strings and the banner itself are stripped from the body
+    before wrapping so that a hostile payload cannot break out of the delimited
+    block or inject a second apparent trusted header by embedding any of them
+    verbatim.
     """
-    body = str(value).replace(_OPEN, "").replace(_CLOSE, "")
+    body = (
+        str(value)
+        .replace(UNTRUSTED_PREFIX, "")
+        .replace(_OPEN, "")
+        .replace(_CLOSE, "")
+    )
     return f"{UNTRUSTED_PREFIX}\nsource: {source}\n{_OPEN}\n{body}\n{_CLOSE}"
 
 
@@ -35,7 +41,9 @@ def wrap_rows(rows: list[dict], table: str) -> list[dict]:
     """Wrap every free-text column of `table` across a copy of `rows`."""
     columns = FREE_TEXT_FIELDS.get(table)
     if not columns:
-        return rows
+        # Return a shallow copy so callers cannot mutate the original via the
+        # returned value even when no wrapping is performed.
+        return [dict(row) for row in rows]
     wrapped = []
     for row in rows:
         copy = dict(row)

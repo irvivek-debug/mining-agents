@@ -9,6 +9,9 @@ import re
 
 REDACTION = "[REDACTED:BIOMETRIC]"
 
+# Exactly three sensitive columns — if you add a fourth here you MUST also add
+# a matching prose pattern below, or the test_prose_coverage_matches_biometric_fields
+# test will fail loudly.
 BIOMETRIC_FIELDS = (
     "heart_rate_bpm",
     "sleep_deficit_hours",
@@ -17,15 +20,37 @@ BIOMETRIC_FIELDS = (
 
 _NUM = r"[-+]?\d+(?:\.\d+)?"
 
+# Between a column name and its numeric value, JSON, Python repr, and prose all
+# insert different punctuation.  The connector group accepts: optional
+# whitespace, then an optional run of punctuation characters (quotes, brackets,
+# braces, commas) and/or keyword connectors (of/=/:/is/was/to), then optional
+# whitespace again.  This matches all of:
+#   heart_rate_bpm 118          (bare)
+#   heart_rate_bpm: 118         (colon connector)
+#   "heart_rate_bpm": 118       (JSON)
+#   'heart_rate_bpm': 118       (Python repr)
+#   heart_rate_bpm = 118        (assignment)
+#   heart_rate_bpm is 118       (natural language)
+#   {"heart_rate_bpm": 118, …}  (JSON object)
+_CONN = r"""[\s"'{\[,]*(?:of|=|:|is|was|to)?[\s"'\]},]*"""
+
 _PATTERNS = (
-    # column-name forms: heart_rate_bpm of 118 / heart_rate_bpm = 118 / ... : 118
-    *(re.compile(rf"(?i)\b{field}\b\s*(?:of|=|:|is|was)?\s*{_NUM}")
+    # column-name forms — connector allows JSON/repr punctuation between name and value
+    *(re.compile(rf"(?i)\b{field}\b{_CONN}{_NUM}")
       for field in BIOMETRIC_FIELDS),
-    # prose forms
-    re.compile(rf"(?i)\bheart[ _]rate\b\s*(?:of|=|:|is|was)?\s*{_NUM}\s*(?:bpm)?"),
+    # prose: heart rate / heart_rate — connector includes "elevated to", "increased to",
+    # etc. where an adjective/verb precedes the "to".
+    re.compile(rf"(?i)\bheart[ _]rate\b\s*(?:\w+\s+)?{_CONN}{_NUM}\s*(?:bpm)?"),
+    # bpm abbreviation (e.g. "118 bpm", "pulse: 118 bpm")
     re.compile(rf"(?i){_NUM}\s*bpm\b"),
-    re.compile(rf"(?i)\bsleep[ _]deficit\b\s*(?:of|=|:|is|was)?\s*{_NUM}"),
-    re.compile(rf"(?i)\bmicrosleep(?:[ _]events?)?\b\s*(?:of|=|:|is|was)?\s*{_NUM}"),
+    # HR: 118 / pulse: 118 — short abbreviations commonly used in reports
+    re.compile(rf"(?i)\b(?:HR|pulse)\s*[:\-=]\s*{_NUM}"),
+    # beats per minute
+    re.compile(rf"(?i){_NUM}\s*beats?\s+per\s+minute\b"),
+    # sleep deficit / sleep debt
+    re.compile(rf"(?i)\bsleep[ _](?:deficit|debt)\b{_CONN}{_NUM}"),
+    # microsleep count / microsleep events
+    re.compile(rf"(?i)\bmicrosleep(?:[ _](?:events?|count))?\b{_CONN}{_NUM}"),
 )
 
 
