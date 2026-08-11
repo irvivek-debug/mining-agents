@@ -1,8 +1,13 @@
 import pytest
 from agents.catalog.definitions import ALL_AGENTS, DEEP, SWARMS
+from agents.tools.bqml_predict import list_models
+from agents.tools.graph_traverse import TRAVERSALS
 
 HITL_COORDINATORS = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S11"}
 HITL_DEEP = {"D07", "D14", "D25", "D30", "D37"}
+
+# Resolved against BigQuery, so a renamed or dropped model fails the catalog.
+LIVE_MODELS = set(list_models())
 
 
 def test_the_build_has_exactly_one_hundred_agents():
@@ -63,9 +68,17 @@ def test_specialists_and_critics_are_never_hitl():
 
 
 def test_every_agent_declares_at_least_one_source_table():
-    """PRD success metric: 100 of 100 agents resolve to a real table."""
+    """PRD success metric: 100 of 100 agents resolve to a real table.
+
+    Bare truthiness would pass on [""] — a list that is structurally non-empty
+    and semantically void, which is the exact shape of this project's known
+    array-loss failure. Pin the count and the qualification of every entry.
+    """
     for agent in ALL_AGENTS:
-        assert agent.source_tables, agent.agent_id
+        assert len(agent.source_tables) >= 1, agent.agent_id
+        for table in agent.source_tables:
+            assert table.startswith("mining_data."), (agent.agent_id, table)
+            assert len(table) > len("mining_data."), (agent.agent_id, table)
 
 
 @pytest.mark.parametrize("agent_id,fragment", [
@@ -108,10 +121,12 @@ def test_bqml_predict_is_never_granted_without_a_model():
     """make_bqml_predict([]) would raise: a tool must declare tables_read."""
     for agent in ALL_AGENTS:
         if "bqml_predict" in agent.tools:
-            assert agent.models, agent.agent_id
+            assert len(agent.models) >= 1, agent.agent_id
+            assert all(m in LIVE_MODELS for m in agent.models), agent.agent_id
 
 
 def test_graph_traverse_is_never_granted_without_a_traversal():
     for agent in ALL_AGENTS:
         if "graph_traverse" in agent.tools:
-            assert agent.traversals, agent.agent_id
+            assert len(agent.traversals) >= 1, agent.agent_id
+            assert all(t in TRAVERSALS for t in agent.traversals), agent.agent_id

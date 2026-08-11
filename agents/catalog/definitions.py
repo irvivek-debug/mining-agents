@@ -727,9 +727,11 @@ DEEP: list[AgentDef] = [
        apqc="4.3.1", persona="P7", branch="mine_ops",
        tables=["mining_data.haulage_routes"],
        tools=["bq_query"]),
+    # PRD gives D13 only current_payload_tons / payload_capacity_tons, both on
+    # fleet_vehicles. haulage_routes is not one of its sources.
     _b("D13", "Payload Utilisation Analyst",
        apqc="4.3.1", persona="P7", branch="mine_ops",
-       tables=["mining_data.fleet_vehicles", "mining_data.haulage_routes"],
+       tables=["mining_data.fleet_vehicles"],
        tools=["bq_query", "operational_math"]),
     _b("D14", "Fleet Assignment Optimiser",
        apqc="4.3.1", persona="P7", branch="mine_ops",
