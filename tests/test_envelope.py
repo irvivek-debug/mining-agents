@@ -66,3 +66,44 @@ def test_tool_requires_a_nonempty_tables_read_declaration():
         @tool([])
         def nothing():
             return {}, 0
+
+
+# --- Finding 1 fix tests ---
+
+def test_envelope_error_when_ok_cannot_build_envelope():
+    """If ok() raises (e.g. rows_scanned is not an int), the last-resort path
+    must still return a valid Envelope with success=False and the declared
+    tables_read, rather than propagating into the ADK runtime."""
+    @tool(["mining_data.assets_node"])
+    def bad_rows_scanned():
+        # rows_scanned must be an int; returning a string forces a Pydantic
+        # ValidationError inside ok(), triggering the outer except.
+        return {"x": 1}, "not-an-int"
+
+    env = bad_rows_scanned()
+    Envelope.model_validate(env)
+    assert env["success"] is False
+    assert env["meta"]["tables_read"] == ["mining_data.assets_node"]
+
+
+def test_envelope_error_code_is_envelope_error():
+    """The last-resort path is distinguishable by error.code == ENVELOPE_ERROR."""
+    @tool(["mining_data.assets_node"])
+    def bad_rows_scanned():
+        return {"x": 1}, "not-an-int"
+
+    env = bad_rows_scanned()
+    assert env["error"]["code"] == "ENVELOPE_ERROR"
+
+
+def test_keyboard_interrupt_propagates():
+    """KeyboardInterrupt must NOT be swallowed by the @tool boundary.
+    This test pins the deliberate choice to catch Exception (not BaseException)
+    so that Ctrl-C and interpreter shutdown still work correctly.
+    """
+    @tool(["mining_data.assets_node"])
+    def raise_kbd():
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        raise_kbd()
