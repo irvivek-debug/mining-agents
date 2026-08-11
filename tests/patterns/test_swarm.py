@@ -80,9 +80,9 @@ def test_every_swarm_has_exactly_five_llm_agents_plus_join_plus_start():
 
 
 def test_fan_out_all_three_specialists_are_reachable_from_start():
-    """START must have exactly 3 successors, all of which are LlmAgent nodes
-    whose names contain 'sp1', 'sp2', 'sp3' (i.e. the specialists, not the
-    critic or coordinator)."""
+    """START's successors must be exactly the three specialists — no more, no
+    fewer, and not the critic or coordinator. Asserting only a count of 3 would
+    pass if the fan-out reached the wrong three nodes."""
     for swarm in SWARMS:
         wf = build_swarm(swarm)
         start_successors = sorted(
@@ -90,12 +90,13 @@ def test_fan_out_all_three_specialists_are_reachable_from_start():
             for e in wf.graph.edges
             if e.from_node.name == "__START__"
         )
-        # Exactly 3 successors from START
-        assert len(start_successors) == 3, (
-            f"{swarm.swarm_id}: START should fan out to exactly 3 nodes, "
-            f"got {start_successors}"
+        specialist_names = sorted(
+            s.agent_id.lower().replace("-", "_") for s in swarm.specialists
         )
-        # All three are LlmAgent nodes
+        assert start_successors == specialist_names, (
+            f"{swarm.swarm_id}: START must fan out to exactly the three "
+            f"specialists {specialist_names}, got {start_successors}"
+        )
         node_map = {n.name: n for n in wf.graph.nodes}
         for name in start_successors:
             assert isinstance(node_map[name], LlmAgent), (
