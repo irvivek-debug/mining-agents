@@ -1,0 +1,76 @@
+import pytest
+from agents.catalog.definitions import DEEP
+from agents.patterns.deep import bind_tools, build_deep_agent, build_instruction
+
+
+def _by_id(agent_id):
+    return next(a for a in DEEP if a.agent_id == agent_id)
+
+
+def test_every_deep_agent_builds():
+    built = [build_deep_agent(a) for a in DEEP]
+    assert len(built) == 40
+
+
+def test_tools_are_bound_to_the_names_the_catalog_declares():
+    agent = _by_id("D01")
+    tools = bind_tools(agent)
+    assert len(tools) == len(agent.tools)
+    assert all(callable(t) for t in tools)
+
+
+def test_only_hitl_agents_get_request_approval():
+    for agent in DEEP:
+        has_approval = "request_approval" in agent.tools
+        assert has_approval == agent.hitl_required, agent.agent_id
+
+
+def test_every_bound_tool_declares_tables_read():
+    for agent in DEEP:
+        for tool in bind_tools(agent):
+            tables_read = getattr(tool, "tables_read", None)
+            # Bare truthiness passes on [""] — a structurally non-empty but
+            # semantically void list.  Pin that every entry is a non-empty string.
+            assert tables_read is not None, (
+                f"{agent.agent_id}: tool {tool.__name__!r} has no tables_read"
+            )
+            assert len(tables_read) >= 1, (
+                f"{agent.agent_id}: tool {tool.__name__!r} tables_read is empty"
+            )
+            for entry in tables_read:
+                assert isinstance(entry, str) and entry.strip(), (
+                    f"{agent.agent_id}: tool {tool.__name__!r} tables_read "
+                    f"contains empty or non-string entry: {entry!r}"
+                )
+
+
+def test_an_unknown_tool_name_is_rejected_loudly():
+    agent = _by_id("D01").model_copy(update={"tools": ["teleport"]})
+    with pytest.raises(ValueError, match="teleport"):
+        bind_tools(agent)
+
+
+def test_the_instruction_carries_the_citation_mandate():
+    text = build_instruction(_by_id("D01"))
+    assert "mining_data.telemetry_stream" in text
+    assert "cite" in text.lower()
+
+
+def test_the_instruction_warns_about_untrusted_field_content():
+    text = build_instruction(_by_id("D37"))   # reads radio_communications
+    assert "UNTRUSTED" in text
+    assert "never instructions" in text
+
+
+def test_biometric_agents_are_told_to_use_bands_not_raw_values():
+    text = build_instruction(_by_id("D35"))   # Fatigue Risk Scorer
+    assert "band" in text.lower()
+    assert "heart_rate_bpm" in text
+
+
+def test_the_agent_resolves_its_model_from_the_tier_not_a_literal():
+    import inspect
+    import agents.patterns.deep as module
+    source = inspect.getsource(module)
+    assert "gemini" not in source
+    assert "model_for_tier" in source
