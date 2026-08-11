@@ -17,6 +17,55 @@ def test_model_for_tier_resolves_both_tiers():
     assert reasoning != balanced
 
 
+def test_both_configured_models_are_callable_in_this_project():
+    """A withdrawn or misspelled model ID must fail here, not at deploy time.
+
+    model-policy.md is edited by hand and nothing else validates it, so a typo
+    would survive every other test in this suite and surface as a 404 on the
+    first live agent run. One token per model keeps this cheap.
+    """
+    import json
+    import urllib.error
+    import urllib.request
+
+    import google.auth
+    import google.auth.transport.requests
+
+    creds, _ = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    creds.refresh(google.auth.transport.requests.Request())
+    project = settings().project_id
+    body = json.dumps({
+        "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+        "generationConfig": {"maxOutputTokens": 1},
+    }).encode()
+
+    for tier in ("reasoning", "balanced"):
+        model = model_for_tier(tier)
+        url = (
+            f"https://aiplatform.googleapis.com/v1/projects/{project}"
+            f"/locations/global/publishers/google/models/{model}:generateContent"
+        )
+        request = urllib.request.Request(url, data=body, headers={
+            "Authorization": f"Bearer {creds.token}",
+            "Content-Type": "application/json",
+        })
+        try:
+            urllib.request.urlopen(request)
+        except urllib.error.HTTPError as exc:
+            raise AssertionError(
+                f"tier {tier!r} names {model!r}, which this project cannot call "
+                f"(HTTP {exc.code}). Fix references/model-policy.md."
+            ) from exc
+
+
+def test_no_floating_model_alias_is_configured():
+    """A `-latest` alias changes underneath a demo and breaks reproducibility."""
+    for tier in ("reasoning", "balanced"):
+        assert not model_for_tier(tier).endswith("-latest"), tier
+
+
 def test_model_for_tier_rejects_pattern_c_tier():
     with pytest.raises(ValueError):
         model_for_tier("high-volume-subagent")
