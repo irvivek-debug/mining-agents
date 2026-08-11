@@ -12,6 +12,7 @@ import time
 import uuid
 
 import pytest
+from google.api_core.exceptions import BadRequest
 from google.cloud import bigquery
 
 from agents.config import settings
@@ -25,7 +26,13 @@ def _delete_test_rows(run_ids: list[str]) -> None:
     """Delete exactly the rows a test wrote.
 
     Streaming inserts cannot be DML-deleted while in the streaming buffer
-    (~30–90 minutes). We swallow the BadRequest so the suite still passes.
+    (~30–90 minutes). We swallow that one BadRequest so the suite still passes,
+    and nothing else — a swallowed auth or syntax error would leave rows behind
+    with no signal.
+
+    The project and dataset are interpolated because BigQuery cannot bind an
+    identifier to a @parameter; they come from settings(), never from a test
+    value. The run_ids — the only values here — are bound.
     """
     if not run_ids:
         return
@@ -40,8 +47,9 @@ def _delete_test_rows(run_ids: list[str]) -> None:
     )
     try:
         client.query(sql, job_config=job_config).result()
-    except Exception:  # noqa: BLE001
-        pass
+    except BadRequest as exc:
+        if "streaming buffer" not in str(exc):
+            raise
 
 
 def _read_back(run_id: str) -> dict:
