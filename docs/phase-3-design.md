@@ -190,46 +190,93 @@ All four traverse and return rows (probed in Phase 0):
 
 Each swarm's coordinator owns exactly one graph traversal. These are the queries, written once here so Phase 5 does not reinvent them.
 
+> **Executable source of truth.** Every query below is also present in
+> `data/generator/tests/test_realism.py::GRAPH_PROBES`, where it runs in CI
+> against the live dataset (R6 gate). Each probe is paired with a negative
+> control — the same SQL with a sentinel key — to guard against the silent
+> zero-row trap described below. If a query here and the probe in that file
+> diverge, the probe is authoritative: it is gated; this document is not.
+
 **S01 — blast radius from a degrading asset** (`MiningAssetGraph`):
 
 ```sql
+-- Verified 2026-08-11: returns 3 rows for asset_id = 'CONVEYOR-02'
 SELECT * FROM GRAPH_TABLE(
-  MiningAssetGraph
+  mining_data.MiningAssetGraph
   MATCH (origin:assets WHERE origin.asset_id = @asset_id)
-        -[d:asset_dependencies]->{1,3} (impacted:assets)
+        -[:DEPENDS_ON]->{1,3} (impacted:assets)
   COLUMNS (origin.asset_id AS fail_origin,
            impacted.asset_id AS impacted_asset,
-           impacted.criticality_rating AS impacted_criticality,
-           d.impact_score AS impact_score)
+           impacted.criticality_rating AS impacted_criticality)
 );
 ```
 
-**S08 — stockout exposure, part → work order → asset** (`MiningSupplyChainGraph`):
+Note: the edge label is `DEPENDS_ON` (not the table name `asset_dependencies`).
+Edge variables cannot be bound under quantification, so `d.impact_score` is not
+available with `{1,3}`; remove the quantifier and use a single-hop pattern if
+per-edge impact scores are required.
+
+**S08 — stockout exposure, part ← work order ← asset** (`MiningSupplyChainGraph`):
 
 ```sql
+-- Verified 2026-08-11: returns 101 rows for below_rop_parts = ['SKU-BELT-SPLICE-G2', 'SKU-LUBE-HEAVY-T2']
 SELECT * FROM GRAPH_TABLE(
-  MiningSupplyChainGraph
+  mining_data.MiningSupplyChainGraph
   MATCH (p:SparePart WHERE p.part_number IN UNNEST(@below_rop_parts))
-        <-[:work_order_parts_edge]- (wo:WorkOrder) -[:erp_work_orders]-> (a:Asset)
-  COLUMNS (p.part_number, wo.work_order_id, wo.priority,
-           wo.repair_cost, a.asset_id, a.criticality_rating)
-);
+        <-[:REPLACED_PART]- (wo:WorkOrder) <-[:HAS_WORK_ORDER]- (a:Asset)
+  COLUMNS (p.part_number AS part_number, wo.work_order_id AS work_order_id,
+           wo.priority AS priority, wo.repair_cost AS repair_cost,
+           a.asset_id AS asset_id, a.criticality_rating AS criticality_rating)
+)
+WHERE @asset_id IS NULL OR asset_id = @asset_id
+ORDER BY part_number, work_order_id;
 ```
 
-**S10 / S05 — operator → vehicle → incident exposure** (`MiningOperationsSafetyGraph`):
+Note: edge labels are `REPLACED_PART` and `HAS_WORK_ORDER` (not the table names
+`work_order_parts_edge` / `erp_work_orders`). The `HAS_WORK_ORDER` edge runs
+Asset → WorkOrder in the deployed graph, so the traversal from an asset to its
+work orders is `<-[:HAS_WORK_ORDER]-` (reversed from the earlier doc version).
+The canonical implementation is `supply_chain.py::_S08_SQL`.
+
+**S10 / S05 — fatigue log → operator → vehicle → incident** (`MiningOperationsSafetyGraph`):
 
 ```sql
+-- Verified 2026-08-11: returns 167 rows for operator_id = 'OP-103'
 SELECT * FROM GRAPH_TABLE(
-  MiningOperationsSafetyGraph
-  MATCH (o:Operator WHERE o.operator_id = @operator_id)
-        -[:operator_vehicle_assignments]-> (v:Vehicle)
-        <-[:incident_involvements]- (i:Incident)
-  COLUMNS (o.operator_id, v.vehicle_id, i.incident_id,
-           i.severity_level, i.root_cause)
+  mining_data.MiningOperationsSafetyGraph
+  MATCH (f:FatigueLog) -[:LOGGED_FOR]->
+        (o:Operator WHERE o.operator_id = @operator_id)
+        -[:OPERATES]-> (v:Vehicle) -[:INVOLVED_IN]-> (i:Incident)
+  COLUMNS (f.log_id AS log_id, o.operator_id AS operator_id,
+           v.vehicle_id AS vehicle_id, i.incident_id AS incident_id,
+           i.severity_level AS severity_level)
 );
 ```
 
-**S11 — incident → involved operators and vehicles**, reverse direction of the above, same graph.
+Note: edge labels are `LOGGED_FOR`, `OPERATES`, `INVOLVED_IN` (not the table
+names `operator_vehicle_assignments` / `incident_involvements`). The
+`INVOLVED_IN` edge runs Vehicle → Incident in the deployed graph, so its
+direction is `-[:INVOLVED_IN]->` (the earlier doc version had it reversed).
+
+**MiningOntologyGraph — concept → related concepts:**
+
+```sql
+-- Verified 2026-08-11: returns 4 rows for concept = 'CONVEYOR-02'
+SELECT * FROM GRAPH_TABLE(
+  mining_data.MiningOntologyGraph
+  MATCH (s:ontology_concepts WHERE s.concept_name = @concept)
+        -[r:RELATED_TO]-> (o:ontology_concepts)
+  COLUMNS (s.concept_name AS subject, r.predicate AS predicate,
+           o.concept_name AS object)
+);
+```
+
+No swarm in the current design owns `MiningOntologyGraph` as its primary
+traversal. The query above is the verified canonical form used in the R6
+realism gate; it is included here so the graph is not silently absent from
+this section when `graph_traverse` is implemented.
+
+**S11 — incident → involved operators and vehicles**, reverse direction of the S10 traversal, same graph.
 
 **S06 / S07** traverse no graph; they are multi-table joins. Declaring that plainly matters — claiming a graph traversal where a join suffices is the kind of thing a technical reviewer catches immediately.
 
