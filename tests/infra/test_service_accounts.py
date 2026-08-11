@@ -3,6 +3,7 @@ import pathlib
 import pytest
 from agents.catalog.definitions import ALL_AGENTS
 from agents.patterns.deep import BIOMETRIC_TABLES
+from infra.iam import service_accounts
 from infra.iam.service_accounts import (
     BIOMETRIC_READERS, plan, sa_email, sa_id, tier_roles,
 )
@@ -68,6 +69,39 @@ def test_no_agent_receives_project_level_dataeditor():
                 assert binding["resource"].endswith("agent_approvals"), entry
 
 
+def test_job_user_is_bound_at_project_scope_never_the_dataset():
+    """roles/bigquery.jobUser authorises running a query against the project's
+    billing account. It has no BigQuery dataset ACL form — writing it into the
+    dataset ACL is rejected with a 400, and the binding that pays for every
+    query would silently never be applied.
+
+    All 100 accounts carry jobUser, so the count assertion also proves this loop
+    inspected a populated plan rather than passing vacuously.
+    """
+    job_user_bindings = [
+        binding
+        for entry in plan()
+        for binding in entry["bindings"]
+        if binding["role"] == "roles/bigquery.jobUser"
+    ]
+    assert len(job_user_bindings) == 100
+    misscoped = [b for b in job_user_bindings if b["resource_kind"] != "project"]
+    assert misscoped == []
+    assert {b["resource"] for b in job_user_bindings} == {"genial-union-475913-i7"}
+
+
+def test_a_role_with_no_acl_equivalent_cannot_reach_the_dataset_acl():
+    """_bq_acl_role must refuse rather than pass an unmapped role through.
+
+    A passthrough would append `{"role": "roles/bigquery.jobUser"}` to the ACL
+    document; BigQuery rejects the whole update, naming the document rather than
+    the offending entry.
+    """
+    assert service_accounts._bq_acl_role("roles/bigquery.dataViewer") == "READER"
+    with pytest.raises(ValueError, match="jobUser"):
+        service_accounts._bq_acl_role("roles/bigquery.jobUser")
+
+
 def test_the_biometric_allowlist_is_exactly_five_patterns():
     assert BIOMETRIC_READERS == frozenset({
         "mag-s10-*", "mag-s05-sp2", "mag-d35", "mag-d36", "mag-d40",
@@ -75,7 +109,13 @@ def test_the_biometric_allowlist_is_exactly_five_patterns():
 
 
 def test_no_code_path_creates_a_service_account_key():
-    source = pathlib.Path("infra/iam/service_accounts.py").read_text()
+    """The module must contain no service-account credential-file call at all.
+
+    The path is taken from the imported module rather than the cwd: a relative
+    path would raise FileNotFoundError when pytest runs from anywhere but the
+    repo root, turning a security assertion into a collection error.
+    """
+    source = pathlib.Path(service_accounts.__file__).read_text()
     assert "keys create" not in source
     assert "keys" not in source
 

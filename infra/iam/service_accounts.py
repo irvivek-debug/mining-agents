@@ -20,6 +20,11 @@ BASE_ROLES = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser"]
 HITL_ROLE = "roles/bigquery.dataEditor"
 COORDINATOR_ROLE = "roles/aiplatform.user"
 
+# bigquery.* roles that BigQuery only accepts at project level. A dataset ACL
+# accepts READER/WRITER/OWNER (and the IAM roles that map onto them); jobUser
+# grants query execution against the project's billing and has no ACL form.
+_PROJECT_LEVEL_BQ_ROLES = frozenset({"roles/bigquery.jobUser"})
+
 # ---------------------------------------------------------------------------
 # Biometric table access — exactly five patterns, copied from §5.1.
 # mag-s10-* is a wildcard covering all five S10 accounts.
@@ -83,12 +88,18 @@ def tier_roles(agent: AgentDef) -> list[str]:
 def _resource_kind(role: str) -> ResourceKind:
     """Derive the binding resource scope from the role.
 
-    - dataEditor   → table-scoped (agent_approvals only; never project-level)
-    - bigquery.*   → dataset-scoped (mining_data ACL)
-    - aiplatform.* → project-level
+    - dataEditor         → table-scoped (agent_approvals only; never project-level)
+    - bigquery.jobUser   → project-level. jobUser authorises *running* a query and
+                           is billed to the project; BigQuery rejects it as a
+                           dataset ACL entry. It is the one bigquery.* role that
+                           cannot be dataset-scoped.
+    - other bigquery.*   → dataset-scoped (mining_data ACL)
+    - aiplatform.*       → project-level
     """
     if role == HITL_ROLE:
         return "table"
+    if role in _PROJECT_LEVEL_BQ_ROLES:
+        return "project"
     if role.startswith("roles/bigquery."):
         return "dataset"
     return "project"
@@ -166,45 +177,27 @@ def _fmt_project_binding(email: str, role: str, project_id: str) -> list[str]:
     ]
 
 
-def _fmt_dataset_binding(email: str, role: str, dataset_ref: str) -> list[str]:
-    # bq update --source merges a new ACL entry into the dataset ACL.
-    # We use bq set-iam-policy on the dataset resource.
-    # The command issued is a print-only representation here; the real path
-    # in apply(dry_run=False) uses a JSON policy file built in memory.
-    return [
-        "bq", "update",
-        "--dataset",
-        f"--add-iam-policy-member={role}:serviceAccount:{email}",
-        dataset_ref,
-    ]
-
-
-def _fmt_table_binding(email: str, role: str, table_ref: str) -> list[str]:
-    # bq set-iam-policy on the table (agent_approvals).
-    return [
-        "bq", "set-iam-policy",
-        table_ref,
-        f"--member=serviceAccount:{email}",
-        f"--role={role}",
-    ]
-
-
 def apply(dry_run: bool = True) -> None:
     """Create 100 service accounts and bind their roles across three resource scopes.
 
-    dry_run=True (default): print all commands; touch nothing.
-    dry_run=False:          execute every command.  Do NOT call with dry_run=False
-                            until the customer has given explicit approval and the
+    dry_run=True (default): print exactly the operations the live path performs;
+                            touch nothing.
+    dry_run=False:          execute them. Do NOT call with dry_run=False until the
+                            customer has given explicit approval and the
                             service-account quota has been confirmed sufficient.
 
-    All three resource kinds read their data from plan(), so the printed output
-    is a faithful representation of what the live path would do.
+    Both branches walk plan() and accumulate identically; only the final step
+    differs. Dataset and table scopes have no single-command CLI form — they are
+    read-modify-write cycles against an existing policy, so batching them once at
+    the end is what the live path does and what the dry run reports. Printing an
+    invented one-liner per binding would produce an audit that does not match
+    execution.
     """
     s = settings()
 
-    # Accumulate dataset and table bindings to batch them efficiently.
-    # For dry_run=False, dataset ACL and table IAM are applied via bq get/set
-    # to avoid overwriting concurrent ACL changes one-by-one.
+    # dataset ACL and table IAM are read-modify-write: accumulate every addition,
+    # then apply each policy once. Applying per-binding would re-read and
+    # overwrite the policy 100 times and lose concurrent edits.
     dataset_additions: list[tuple[str, str]] = []   # (email, role)
     table_additions: dict[str, list[tuple[str, str]]] = {}  # table_ref -> [(email, role)]
 
@@ -228,24 +221,48 @@ def apply(dry_run: bool = True) -> None:
                     subprocess.run(cmd, check=True)
 
             elif kind == "dataset":
-                if dry_run:
-                    cmd = _fmt_dataset_binding(email, role, binding["resource"])
-                    print(" ".join(cmd))
-                else:
-                    dataset_additions.append((email, role))
+                dataset_additions.append((email, role))
 
             elif kind == "table":
-                if dry_run:
-                    cmd = _fmt_table_binding(email, role, binding["resource"])
-                    print(" ".join(cmd))
-                else:
-                    tref = binding["resource"]
-                    table_additions.setdefault(tref, []).append((email, role))
+                table_additions.setdefault(binding["resource"], []).append(
+                    (email, role)
+                )
 
-    if not dry_run:
+    if dry_run:
+        _print_dataset_acl_plan(s, dataset_additions)
+        for tref, members in table_additions.items():
+            _print_table_iam_plan(s, tref, members)
+    else:
         _apply_dataset_acl(s, dataset_additions)
         for tref, members in table_additions.items():
             _apply_table_iam(s, tref, members)
+
+
+def _print_dataset_acl_plan(s, additions: list[tuple[str, str]]) -> None:
+    """Report the dataset ACL read-modify-write that _apply_dataset_acl performs."""
+    dataset_ref = f"{s.project_id}:{s.dataset}"
+    print()
+    print(f"# dataset ACL patch on {dataset_ref} "
+          f"({len(additions)} entries, applied as one read-modify-write):")
+    print(f"{s.bq_binary} show --format=prettyjson {dataset_ref}")
+    print("#   append to .access, then write the merged document back:")
+    for email, role in additions:
+        print(f"#     {{\"role\": \"{_bq_acl_role(role)}\", "
+              f"\"userByEmail\": \"{email}\"}}")
+    print(f"{s.bq_binary} update --source=/dev/stdin {dataset_ref}")
+
+
+def _print_table_iam_plan(s, table_ref: str, members: list[tuple[str, str]]) -> None:
+    """Report the table IAM read-modify-write that _apply_table_iam performs."""
+    bq_table = table_ref.replace(".", ":", 1)
+    print()
+    print(f"# table IAM patch on {bq_table} "
+          f"({len(members)} members, applied as one read-modify-write):")
+    print(f"{s.bq_binary} get-iam-policy --format=prettyjson {bq_table}")
+    print("#   append to .bindings, then write the merged policy back:")
+    for email, role in members:
+        print(f"#     {role} -> serviceAccount:{email}")
+    print(f"{s.bq_binary} set-iam-policy {bq_table} /dev/stdin")
 
 
 def _apply_dataset_acl(s, additions: list[tuple[str, str]]) -> None:
@@ -308,15 +325,27 @@ def _apply_table_iam(s, table_ref: str, members: list[tuple[str, str]]) -> None:
     )
 
 
+_ACL_ROLE_BY_IAM_ROLE = {
+    "roles/bigquery.dataViewer": "READER",
+    "roles/bigquery.dataEditor": "WRITER",
+    "roles/bigquery.dataOwner": "OWNER",
+}
+
+
 def _bq_acl_role(iam_role: str) -> str:
-    """Convert an IAM role string to the BigQuery dataset ACL role name."""
-    mapping = {
-        "roles/bigquery.dataViewer": "READER",
-        "roles/bigquery.dataEditor": "WRITER",
-        "roles/bigquery.dataOwner": "OWNER",
-        "roles/bigquery.jobUser": "roles/bigquery.jobUser",  # not an ACL role; skip
-    }
-    return mapping.get(iam_role, iam_role)
+    """Convert an IAM role to its BigQuery dataset ACL role name.
+
+    Raises on any role with no ACL form. Falling back to the IAM string would
+    write an entry BigQuery rejects with a 400 — and the rejection would name
+    the whole ACL, not the offending role.
+    """
+    try:
+        return _ACL_ROLE_BY_IAM_ROLE[iam_role]
+    except KeyError:
+        raise ValueError(
+            f"{iam_role!r} has no BigQuery dataset ACL equivalent; it must be "
+            f"bound at project or table scope. Check _resource_kind()."
+        ) from None
 
 
 if __name__ == "__main__":
