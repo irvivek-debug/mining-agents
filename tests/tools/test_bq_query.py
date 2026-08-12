@@ -1,6 +1,7 @@
 import pytest
 from agents.envelope import Envelope
 from agents.safety.output_filter import REDACTION
+from agents.safety.untrusted import UNTRUSTED_PREFIX
 from agents.tools.bq_query import (
     assert_no_interpolation, assert_reads_only_declared_tables, make_bq_query,
     run_query, SqlInterpolationError, UndeclaredTableError,
@@ -250,6 +251,42 @@ def test_the_fatigue_band_view_is_readable_and_carries_no_raw_columns():
     assert len(rows) == 3
     assert {r["fatigue_band"] for r in rows} <= {"LOW", "ELEVATED", "HIGH"}
     assert all(REDACTION not in str(v) for r in rows for v in r.values())
+
+
+def test_run_query_wraps_free_text_so_the_prompt_instruction_is_true():
+    """agents/patterns/deep.py tells every agent that free text arrives wrapped.
+    This is the test that makes that claim true rather than aspirational."""
+    rows, _ = run_query(
+        "SELECT log_entry_id, technician_notes FROM `mining_data.maintenance_logs` "
+        "WHERE technician_notes IS NOT NULL LIMIT 3",
+        {},
+        ["mining_data.maintenance_logs"],
+    )
+    assert len(rows) == 3
+    for row in rows:
+        assert row["technician_notes"].startswith(UNTRUSTED_PREFIX)
+        assert "mining_data.maintenance_logs.technician_notes" in (
+            row["technician_notes"]
+        )
+        assert UNTRUSTED_PREFIX not in row["log_entry_id"], (
+            "only the declared free-text columns may be wrapped"
+        )
+
+
+def test_wrapping_is_keyed_on_what_was_read_not_on_what_was_declared():
+    """An agent declaring four tables and reading one must not have the other
+    three's columns wrapped by name. Here `description` is a free-text column of
+    erp_work_orders, but the query reads only safety_incidents — so the label
+    must name safety_incidents alone."""
+    rows, _ = run_query(
+        "SELECT description FROM `mining_data.safety_incidents` "
+        "WHERE description IS NOT NULL LIMIT 1",
+        {},
+        ["mining_data.safety_incidents", "mining_data.erp_work_orders",
+         "mining_data.maintenance_logs", "mining_data.assets"],
+    )
+    assert "mining_data.safety_incidents.description" in rows[0]["description"]
+    assert "mining_data.erp_work_orders" not in rows[0]["description"]
 
 
 def test_an_alias_survives_row_masking_and_is_left_to_the_output_scrub():

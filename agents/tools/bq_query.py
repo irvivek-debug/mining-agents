@@ -36,6 +36,7 @@ from google.cloud import bigquery
 
 from agents.config import settings
 from agents.safety.output_filter import mask_rows
+from agents.safety.untrusted import wrap_rows
 from agents.tools.base import ToolFailure, tool
 
 # A quoted literal or a bare number appearing on the right of a comparison or
@@ -192,7 +193,7 @@ def run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict
     say one thing while the query does another.
     """
     assert_no_interpolation(sql)
-    assert_reads_only_declared_tables(sql, params, tables_read)
+    referenced = assert_reads_only_declared_tables(sql, params, tables_read)
     job_config = bigquery.QueryJobConfig(
         query_parameters=[_to_param(k, v) for k, v in params.items()],
         use_query_cache=False,
@@ -203,11 +204,12 @@ def run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict
         raise ToolFailure(
             "QUERY_FAILED", str(exc), tables_read=list(tables_read)
         ) from exc
-    # Masking happens here, not in each tool, for the same reason the declared
-    # table check does: every path that returns BigQuery rows to a model goes
-    # through this function. row_count is taken before masking because masking
-    # replaces values and never removes a row.
-    return mask_rows(rows), len(rows)
+    # Masking and untrusted-text wrapping happen here, not in each tool, for
+    # the same reason the declared-table check does: every path that returns
+    # BigQuery rows to a model goes through this function. Both are keyed on
+    # `referenced` — what the query actually read — not on what was declared.
+    # row_count is taken before either, since neither adds or removes a row.
+    return wrap_rows(mask_rows(rows), referenced), len(rows)
 
 
 def make_bq_query(tables_read: list[str]):
