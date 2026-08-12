@@ -89,6 +89,10 @@ def test_make_graph_traverse_rejects_empty_allowed_list():
             f"{settings().dataset}.erp_work_orders",
             f"{settings().dataset}.work_order_parts_edge",
             f"{settings().dataset}.assets",
+            # Not walked by the MATCH pattern, but part of the graph's DDL and
+            # therefore resolved by BigQuery — see the note in graph_traverse.py.
+            f"{settings().dataset}.procurement_bids",
+            f"{settings().dataset}.bid_parts_edge",
         },
     ),
     (
@@ -111,10 +115,14 @@ def test_make_graph_traverse_rejects_empty_allowed_list():
     ),
 ])
 def test_traversal_tables_read_matches_graph_backing_tables(name, expected_tables):
-    """Pin each traversal's tables_read to the DDL-verified backing tables.
+    """Pin each traversal's tables_read to its graph's backing tables.
 
-    This catches provenance drift: if the graph DDL changes, or a table is
-    renamed, the mismatch is caught here rather than silently producing a wrong
-    meta.tables_read in every agent envelope.
+    These sets are hand-written, so this test documents the expectation rather
+    than deriving it. It was wrong for stockout_exposure until the dry-run
+    check in run_query caught the gap: the set listed the tables the MATCH
+    pattern walks, not the tables the graph is built from. What actually
+    verifies these now is assert_reads_only_declared_tables, which asks
+    BigQuery on every call and refuses the query if a traversal reads beyond
+    what it declares.
     """
     assert set(TRAVERSALS[name].tables_read) == expected_tables

@@ -89,9 +89,17 @@ TRAVERSALS: dict[str, Traversal] = {
         graph="MiningSupplyChainGraph",
         sql=_sql(_STOCKOUT_EXPOSURE_TMPL),
         params=("below_rop_parts", "asset_id"),
+        # procurement_bids and bid_parts_edge appear in no part of this MATCH
+        # pattern. They are declared because BigQuery resolves a GRAPH_TABLE
+        # query to every table backing the graph, not to the subset the pattern
+        # walks — confirmed by dry run against MiningSupplyChainGraph. The other
+        # three traversals happen to walk their whole graph, so this is the only
+        # one where the gap is visible. Declaring the pattern's tables alone made
+        # meta.tables_read understate what the query actually reaches.
         tables_read=_tables(
             "inventory_levels", "erp_work_orders",
             "work_order_parts_edge", "assets",
+            "procurement_bids", "bid_parts_edge",
         ),
     ),
     "fatigue_to_incident": Traversal(
