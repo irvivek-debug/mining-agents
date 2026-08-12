@@ -1,13 +1,38 @@
-"""Deploy the 52 entrypoints to Agent Engine and attach their runtime identity.
+"""Deploy the 52 entrypoints to Cloud Run and attach their runtime identity.
 
 Ruling 1: the ADK 2.6.3 deploy verb takes an agent DIRECTORY, not an agent id:
-  python -m google.adk.cli deploy agent_engine \\
-    --project=<PROJECT> --region=<REGION> --display_name=<NAME> <AGENT_DIRECTORY>
-It has no --service-account flag, so the runtime identity is attached in a
-second step (see `attach_service_account`).
+  python -m google.adk.cli deploy cloud_run \\
+    --project=<PROJECT> --region=<REGION> --service_name=<NAME> <AGENT_DIRECTORY>
 
 Ruling 3: DOMAIN_BINDING_COMMAND is NEVER executed by this module. It is
 printed with a warning and the caller is required to run it manually if approved.
+
+WHY CLOUD RUN AND NOT AGENT ENGINE — ruled 2026-08-12
+------------------------------------------------------
+Agent Engine bills memory continuously whether or not anyone calls the agent.
+Measured via Cloud Monitoring on this project: `reasoning_engine/cpu/
+allocation_time` scales to zero, but `reasoning_engine/memory/allocation_time`
+holds a flat 14,400 GiB-seconds per hour — exactly 4 GiB — across six-hour
+windows with zero requests. At the catalogued rate of $0.009/GiB-hour that is
+$26.28 per agent per month, idle, forever; $1,366/month for all 52. ADK exposes
+no memory or CPU knob for the `agent_engine` verb, so the 4 GiB is not
+negotiable.
+
+Cloud Run scales to zero: idle cost is $0, and a 30-second query on 1 vCPU /
+2 GiB costs about $0.0009. The standing cost becomes the container images in
+Artifact Registry, roughly $6/month for 52.
+
+Two things got simpler in the move, both of which had been real defects:
+
+  * Identity is attached AT DEPLOY, via `--service-account`. The Agent Engine
+    path had no such flag and needed a follow-up PATCH, which left a window
+    where the agent ran as the shared Vertex service agent — holding none of
+    the per-tier limits the access model is built on.
+  * Instances are keyed by a real NAME. The Agent Engine path had to key on
+    displayName, the only field this repo controlled, so renaming a deployed
+    agent silently created a second billing instance. `gcloud run deploy
+    <service>` is create-or-update on the name, so re-running is idempotent by
+    construction and no read-back of live state is needed.
 
 The dry run prints the exact argv the real run executes, because both come from
 `deploy_command`. A dry run that renders a command by hand is worse than no dry
@@ -21,49 +46,59 @@ import subprocess
 import sys
 import tempfile
 
-import google.auth
-import google.auth.transport.requests
-import requests
-
 from mining_agents.config import settings
 from mining_agents.registry import registrations
 
-# Agent Engine has its own regions; `settings().location` is the BigQuery
-# dataset location ("US") and is not one of them.
+# Cloud Run has its own regions; `settings().location` is the BigQuery dataset
+# location ("US") and is not one of them.
 REGION = "us-central1"
 
-# Directories that must travel to the container alongside the agent package.
+# Cloud Run service names are RFC1035: lowercase alphanumerics and hyphens,
+# starting with a letter, 63 characters max. Agent ids ("D01", "S07") are
+# uppercase, so they cannot be used raw. The prefix keeps the 52 agents
+# identifiable among the unrelated services already in this project.
+SERVICE_PREFIX = "mag-"
+
+# WHAT THIS COSTS YOU AND WHY IT IS NOT A DATABASE.
 #
-# ADK copies each entry to /app/<basename> and puts /app on PYTHONPATH, so the
-# container reproduces the repo's top-level layout. That is what makes
-# `config._repo_root()` — which is `parents[1]` of the config module — resolve
-# to /app in the container exactly as it resolves to the checkout locally.
+# ADK defaults `session_service_uri` to 'memory://' (cli_deploy.py:710). With
+# scale-to-zero that means conversation history is lost whenever the container
+# spins down — which, on an idle demo project, is minutes after each session.
 #
-# `references` is here because it is read at RUNTIME, not just by tooling:
-# `model_for_tier` parses references/model-policy.md on every agent build. Omit
-# it and the deploy still succeeds, the container still builds, and the agent
-# then dies on its first query with FileNotFoundError — a failure that costs a
-# full container build to discover. `test_deploy.py` pins this.
-EXTRA_PACKAGES = ("./mining_agents", "./references")
+# That is acceptable for a showcase, where each demo is one short conversation,
+# and it is the only option here that adds no recurring cost. It is NOT
+# acceptable for a fork running real traffic, so the value is a named constant
+# rather than an omitted flag: the alternatives are one line each.
+#
+#   "agentengine://<engine_id>"  one shared Agent Engine, ~$26/month TOTAL for
+#                                all 52 — not per agent
+#   "postgresql://..."           any SQLAlchemy URL; Cloud SQL smallest ~$9/mo
+#
+# `deploy` prints a warning on every real run while this is in-memory, so the
+# choice cannot be inherited silently by someone who forked the repo.
+SESSION_SERVICE_URI = "memory://"
 
 # Passing dry_run=False is not enough to deploy; the caller must also pass this
 # phrase. A boolean is too easy to reach by accident, and the accident is
 # expensive: a unit test that asserted `deploy(dry_run=False)` raised — written
 # when it did — kept calling it after the implementation landed, and spent
-# twenty-six minutes creating eight billable Agent Engine instances before
-# anyone noticed. Nothing about the call site looked dangerous.
+# twenty-six minutes creating eight billable instances before anyone noticed.
+# Nothing about the call site looked dangerous.
 CONFIRM_PHRASE = "yes-deploy-for-real"
-
-_API = f"https://{REGION}-aiplatform.googleapis.com/v1beta1"
 
 # ---------------------------------------------------------------------------
 # The single copy of this command lives in docs/phase-3-design.md §5.5.
 # This module NEVER executes it — see Ruling 3.
+#
+# The role is `roles/run.invoker`, not `roles/aiplatform.user`: on Cloud Run
+# that is the permission that admits a caller to an agent endpoint. Granting
+# aiplatform.user here would give the domain Vertex access while leaving every
+# agent unreachable — wrong in both directions at once.
 # ---------------------------------------------------------------------------
 DOMAIN_BINDING_COMMAND = (
     "gcloud projects add-iam-policy-binding ${GOOGLE_CLOUD_PROJECT} \\\n"
     '  --member="domain:${GOOGLE_DOMAIN}" \\\n'
-    '  --role="roles/aiplatform.user"'
+    '  --role="roles/run.invoker"'
 )
 
 
@@ -88,95 +123,61 @@ def print_domain_binding_warning() -> None:
     print("=" * 72)
 
 
-def deploy_command(
-    agent_id: str, display_name: str, engine_id: str | None = None
-) -> list[str]:
+def service_name(agent_id: str) -> str:
+    """The Cloud Run service name for an agent id.
+
+    This is the deployment's identity: `gcloud run deploy` creates the service
+    when the name is new and updates it in place when it is not, so this
+    function is the whole of the no-duplicate-instances guarantee. It is
+    derived from the agent id — which the catalog treats as immutable — rather
+    than from the display name, which is prose and gets edited.
+    """
+    return f"{SERVICE_PREFIX}{agent_id.lower()}"
+
+
+def deploy_command(agent_id: str, service_account: str) -> list[str]:
     """The argv that deploys one entrypoint.
 
-    *engine_id*, when given, makes the deploy UPDATE that instance instead of
-    creating another one. Without it a second run of this script would leave
-    two instances per agent, each billing, with nothing naming which is live.
+    Everything after the bare `--` is forwarded verbatim to `gcloud run
+    deploy`; everything before it is consumed by ADK. That separator is ADK's
+    documented interface for gcloud passthrough, and it is the only way to
+    reach `--service-account`, which ADK itself does not expose.
     """
     s = settings()
-    argv = [
+    return [
         # The interpreter running this script, not whatever `python` resolves
         # to on PATH — the ADK CLI and its deps live in this one.
         sys.executable,
         "-m",
         "google.adk.cli",
         "deploy",
-        "agent_engine",
+        "cloud_run",
         f"--project={s.project_id}",
         f"--region={REGION}",
-        f"--display_name={display_name}",
+        f"--service_name={service_name(agent_id)}",
+        # Names the module ADK imports from the staged directory, and so also
+        # the app name a caller addresses. Without it ADK uses the temp
+        # folder's basename, which is a timestamp.
+        f"--app_name={agent_id}",
+        f"--session_service_uri={SESSION_SERVICE_URI}",
+        # Without this, ADK stages into a timestamped folder under its working
+        # directory, which is `packages/` — the tree this repo regenerates and
+        # scans. An interrupted deploy then leaves a half-copy of the repo
+        # sitting inside it, which the model-policy scan reads as a stray
+        # model id.
+        f"--temp_folder={tempfile.gettempdir()}/adk-stage-{agent_id}",
+        f"./packages/{agent_id}",
+        "--",
+        # The runtime identity. Set here, at create time, so there is no window
+        # in which the agent runs as the project's default compute account —
+        # which is Editor on this project and would make the tiering
+        # decorative.
+        f"--service-account={service_account}",
+        # Private by default. A public agent endpoint on a project holding
+        # biometric tables is not a risk worth taking for demo convenience;
+        # callers authenticate with an identity token.
+        "--no-allow-unauthenticated",
     ]
-    if engine_id:
-        argv.append(f"--agent_engine_id={engine_id}")
-    argv += [f"--extra_packages={pkg}" for pkg in EXTRA_PACKAGES]
-    # Without this, ADK stages into a timestamped folder under its working
-    # directory, which is `packages/` — the tree this repo regenerates and
-    # scans. An interrupted deploy then leaves a half-copy of the repo sitting
-    # inside it, which the model-policy scan reads as a stray model id.
-    argv.append(f"--temp_folder={tempfile.gettempdir()}/adk-stage-{agent_id}")
-    argv.append(f"./packages/{agent_id}")
-    return argv
-
-
-def _auth_headers() -> dict[str, str]:
-    creds, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
-    creds.refresh(google.auth.transport.requests.Request())
-    return {
-        "Authorization": f"Bearer {creds.token}",
-        "Content-Type": "application/json",
-    }
-
-
-def existing_engines() -> dict[str, str]:
-    """Map display name -> engine id for every deployed instance.
-
-    Deployment state is read back from the API rather than cached in a local
-    file, so re-running from a different machine — or after a `git clean` —
-    still updates the live instances instead of duplicating them.
-
-    The identity key is the DISPLAY NAME, because a reasoningEngine carries no
-    other field this repo controls: the API returns only name, displayName,
-    spec, contextSpec, trafficConfig and timestamps, and the ADK deploy verb
-    exposes no way to set a label. So the guarantee above holds exactly as long
-    as `registrations()` keeps returning the same display name for an agent.
-    Rename one in the catalog and the next deploy will not recognise its live
-    instance: it creates a second one and the old keeps running and billing
-    under the old name. Renaming an already-deployed agent therefore means
-    deleting its old instance by hand.
-    """
-    s = settings()
-    parent = f"projects/{s.project_id}/locations/{REGION}"
-    response = requests.get(f"{_API}/{parent}/reasoningEngines", headers=_auth_headers())
-    response.raise_for_status()
-    return {
-        engine["displayName"]: engine["name"].rsplit("/", 1)[1]
-        for engine in response.json().get("reasoningEngines", [])
-        if engine.get("displayName")
-    }
-
-
-def attach_service_account(engine_id: str, service_account: str) -> None:
-    """Point one deployed engine at its tier service account.
-
-    The deploy verb has no flag for this, and an engine left unpatched runs as
-    the shared Vertex service agent — which holds none of the per-tier limits
-    the access model is built on, so the whole tiering would be decorative.
-    """
-    s = settings()
-    name = f"projects/{s.project_id}/locations/{REGION}/reasoningEngines/{engine_id}"
-    response = requests.patch(
-        f"{_API}/{name}",
-        headers=_auth_headers(),
-        params={"updateMask": "spec.service_account"},
-        data=json.dumps({"spec": {"serviceAccount": service_account}}),
-    )
-    response.raise_for_status()
 
 
 def deploy(
@@ -184,13 +185,12 @@ def deploy(
     only: tuple[str, ...] | None = None,
     confirm: str = "",
 ) -> None:
-    """Deploy the externally-callable agents and attach their identities.
+    """Deploy the externally-callable agents under their tier identities.
 
     dry_run=True (default) prints the argv and the full registration payload
-    per agent and touches no cloud state. dry_run=False runs each deploy, then
-    patches the runtime service account onto the resulting instance — but only
-    when *confirm* is CONFIRM_PHRASE, so that reaching this by accident takes
-    two deliberate arguments rather than one flipped boolean.
+    per agent and touches no cloud state. dry_run=False runs each deploy — but
+    only when *confirm* is CONFIRM_PHRASE, so that reaching this by accident
+    takes two deliberate arguments rather than one flipped boolean.
 
     *only* restricts the run to the given agent ids, which is what makes a
     representative-subset demo possible without editing the catalog.
@@ -199,9 +199,10 @@ def deploy(
     """
     if not dry_run and confirm != CONFIRM_PHRASE:
         raise PermissionError(
-            "deploy(dry_run=False) creates billable, always-on Agent Engine "
-            f"instances. Pass confirm={CONFIRM_PHRASE!r} to proceed. If you are "
-            "reading this from a test, the test should be calling dry_run=True."
+            "deploy(dry_run=False) builds containers and creates public-facing "
+            f"Cloud Run services. Pass confirm={CONFIRM_PHRASE!r} to proceed. "
+            "If you are reading this from a test, the test should be calling "
+            "dry_run=True."
         )
 
     entries = list(registrations())
@@ -212,13 +213,18 @@ def deploy(
             raise KeyError(f"not externally-callable entrypoints: {sorted(unknown)}")
         entries = [e for e in entries if e["agent_id"] in wanted]
 
-    deployed = {} if dry_run else existing_engines()
+    if not dry_run and SESSION_SERVICE_URI == "memory://":
+        print(
+            "WARNING: sessions are in-memory. Cloud Run scales to zero, so "
+            "conversation history is discarded when a container spins down. "
+            "Fine for a demo; set SESSION_SERVICE_URI before running real "
+            "traffic."
+        )
 
     for entry in entries:
         agent_id = entry["agent_id"]
-        display_name = entry["display_name"]
         service_account = entry["service_account"]
-        argv = deploy_command(agent_id, display_name, deployed.get(display_name))
+        argv = deploy_command(agent_id, service_account)
 
         print(f"# --- {agent_id} ---")
         print(" \\\n  ".join(argv))
@@ -233,9 +239,10 @@ def deploy(
             continue
 
         subprocess.run(argv, check=True)
-        engine_id = existing_engines()[display_name]
-        attach_service_account(engine_id, service_account)
-        print(f"# deployed {agent_id} as {engine_id}, running as {service_account}")
+        print(
+            f"# deployed {agent_id} as {service_name(agent_id)}, "
+            f"running as {service_account}"
+        )
         print()
 
     if dry_run:
