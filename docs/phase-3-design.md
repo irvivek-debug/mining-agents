@@ -357,30 +357,45 @@ Forced by §0.2. Agent count remains exactly 100.
 
 ### 5.1 Agent Identity
 
-One dedicated service account per agent — never shared. The SOP does not mandate a naming scheme, so this is ours:
+~~One dedicated service account per agent — never shared.~~ The SOP does not mandate a naming scheme, so this is ours:
 
 ```
-mag-<pattern><nn>[-<role>]@genial-union-475913-i7.iam.gserviceaccount.com
+mag-agent-<tier>@genial-union-475913-i7.iam.gserviceaccount.com
 
-  mag-s01-coord@…        S01 coordinator
-  mag-s01-critic@…       S01 critic
-  mag-s01-sp1@…          S01 specialist 1
-  mag-d27@…              D27 deep agent
+  mag-agent-base@…         83 read-only agents
+  mag-agent-approver@…      5 HITL deep agents (D07, D14, D25, D30, D37)
+  mag-agent-coordinator@…  12 swarm coordinators
 ```
 
-100 service accounts. The 30-character GCP limit is why the scheme is terse.
+**Three service accounts, not 100 — ruled 2026-08-12.** The original scheme was `mag-<pattern><nn>[-<role>]` (`mag-s01-coord`, `mag-d27`), one per agent. It was replaced because the artefact is a demo run repeatedly and a reference accelerator a customer forks: 100 accounts is most of a project's default service-account quota, spent on an identity model whose only distinctions are the three privilege tiers below. Agents within a tier are indistinguishable to IAM anyway, so the extra 97 accounts bought separation that no binding expressed.
+
+The 30-character GCP account-ID limit still binds and is asserted in `tests/infra/test_service_accounts.py`. What the collapse costs — an over-grant to three agents, and the loss of any IAM-level biometric control — is recorded in the two correction notes below and pinned by tests in that same file, not left to be rediscovered.
 
 **Least privilege, three tiers:**
 
 | Agent class | Roles |
 |---|---|
-| Read-only analysts (80) | `roles/bigquery.dataViewer` on `mining_data`, `roles/bigquery.jobUser` |
-| HITL agents (20) | above, plus `roles/bigquery.dataEditor` scoped to `agent_approvals` **only** |
+| Read-only analysts (86) | `roles/bigquery.dataViewer` on `mining_data`, `roles/bigquery.jobUser` |
+| HITL agents (14) | above, plus `roles/bigquery.dataEditor` scoped to `agent_approvals` **only** |
 | Coordinators (12) | above, plus `roles/aiplatform.user` for A2A invocation |
 
-No agent gets project-level `dataEditor`. The 20 HITL agents can write to exactly one table.
+No agent gets project-level `dataEditor`. The 14 HITL agents can write to exactly one table.
 
-**Biometric access is narrower still.** Only `mag-s10-*`, `mag-s05-sp2`, `mag-d35`, `mag-d36`, `mag-d40` may read `biometric_fatigue_logs` — enforced by an authorised view, not by convention (see §6.3).
+> **Corrected 2026-08-12, twice over.**
+>
+> *The counts.* This table read 80 / 20. The 20 was inherited from a prose paragraph in the PRD that contradicted the PRD's own per-agent tables; the tables mark 14. See PRD §5.5.
+>
+> *The classes are not the accounts.* These three rows describe privilege classes and they overlap — 9 of the 14 HITL agents are also coordinators. The implemented model is three shared service accounts, ruled 2026-08-12: `mag-agent-base` (83), `mag-agent-approver` (5 HITL deep agents), `mag-agent-coordinator` (all 12 coordinators, which is why 9 HITL coordinators land there and not on the approver account). The cost of collapsing four classes into three accounts is that S03, S06 and S12 hold `dataEditor` they do not need. That over-grant is pinned by `tests/infra/test_service_accounts.py` rather than left implicit. See `infra/iam/service_accounts.py`.
+
+**Biometric access.** ~~Only `mag-s10-*`, `mag-s05-sp2`, `mag-d35`, `mag-d36`, `mag-d40` may read `biometric_fatigue_logs` — enforced by an authorised view, not by convention (see §6.3).~~
+
+> **Superseded 2026-08-12.** Every clause above turned out to be wrong, and the paragraph is struck rather than quietly edited because someone planning against it would plan wrong:
+>
+> - **The accounts do not exist.** Per-agent service accounts were replaced by three shared ones, so the 14 agents that read biometric tables and the 86 that do not now share an identity. No IAM binding can separate them. `tests/infra/test_service_accounts.py::test_biometric_access_is_not_restricted_at_the_iam_layer` asserts that absence deliberately.
+> - **The allowlist was wrong.** `mag-d40` is listed, but D40 must *not* reach biometric data — it profiles operator exposure from incidents and assignments only. The catalog test asserts D40 does not declare the table.
+> - **An authorised view cannot be the boundary.** A BigQuery dry run expands a plain view to its base tables and never reports the view itself, so `SELECT * FROM v_fatigue_scored` resolves to `biometric_fatigue_logs`. Declaring the view therefore authorises nothing, and declaring the raw table authorises both. Pinned by `tests/tools/test_bq_query.py::test_a_view_resolves_to_its_base_table_not_the_view`.
+>
+> **What actually enforces it**, in the application layer: `assert_reads_only_declared_tables` gates which agents may reach the tables at all; `mask_rows` redacts the raw columns inbound; `redact_model_response` scrubs them from model output on all 100 agents. `v_fatigue_scored` remains the path agents are told to use — it computes the band in SQL, so nothing needing masking is returned — but it is an ergonomic default, not a control. The known limit is column aliasing: `SELECT heart_rate_bpm AS hr` defeats name-based masking, which is why the outbound scrub exists.
 
 ### 5.2 Authentication — Workload Identity Federation only
 

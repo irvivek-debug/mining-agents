@@ -174,7 +174,9 @@ Swarms spanning two processes are counted once, under the process of the coordin
 
 ### 5.5 HITL summary
 
-**20 agents carry `hitl_required: true`** — 9 swarm coordinators and 11 deep agents. Every one of them either writes to a system of record, changes a physical setpoint, commits spend, or removes a person from duty. All 20 require Hold-to-Confirm plus an audit trail in Phase 2 UX. The remaining 80 are read-only analysis and need no confirmation gate.
+**14 agents carry `hitl_required: true`** — 9 swarm coordinators (S01, S02, S04, S05, S07, S08, S09, S10, S11) and 5 deep agents (D07, D14, D25, D30, D37). Every one of them either writes to a system of record, changes a physical setpoint, commits spend, or removes a person from duty. All 14 require Hold-to-Confirm plus an audit trail in Phase 2 UX. The remaining 86 are read-only analysis and need no confirmation gate.
+
+> **Corrected 2026-08-12.** This paragraph read "20 agents — 9 swarm coordinators and 11 deep agents". The 9 was right; the 11 was not. The per-agent tables in §5.1 and §5.2 above — which are what the build was written from — mark exactly 5 deep agents `true` and 35 `false`, and have done since the first draft. The prose was the only place the number 20 appeared. Counting the tables is authoritative; `tests/catalog/test_definitions.py::test_exactly_fourteen_agents_are_hitl` pins the result so the two cannot drift apart again.
 
 ## 6. Citation Mandate
 
