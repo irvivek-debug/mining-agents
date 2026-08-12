@@ -59,7 +59,9 @@ _COPY_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
 # Packages the container does not need because nothing in `mining_agents/` imports
 # them at runtime. Everything else in the repo's requirements.txt travels, so
 # adding a runtime dependency there is enough — this module needs no edit.
-_TEST_ONLY = ("pytest",)
+# pyyaml is read only by scripts/semantics.py, which is build-time tooling and
+# is deliberately not under mining_agents/ for exactly this reason.
+_TOOLING_ONLY = ("pytest", "pyyaml")
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -104,7 +106,7 @@ def runtime_requirements() -> str:
         line for line in lines
         if line.strip()
         and not line.lstrip().startswith("#")
-        and not line.split("=")[0].split(">")[0].split("<")[0].strip() in _TEST_ONLY
+        and not line.split("=")[0].split(">")[0].split("<")[0].strip() in _TOOLING_ONLY
     ]
     return "\n".join(kept) + "\n"
 

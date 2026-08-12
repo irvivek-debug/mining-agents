@@ -1,0 +1,40 @@
+# Column semantics for the mining_data tables the 100 agents read.
+#
+# This file is the human-owned source of meaning. scripts/annotate_bigquery.py
+# writes it into BigQuery as real table and column descriptions, and
+# scripts/build_context.py reads BigQuery back into the snapshot the agents are
+# given. Editing BigQuery by hand instead of editing this file will be undone
+# by the next annotate run.
+#
+# Every statement here is grounded in the generator that writes the table
+# (data/generator/*.py), in the loaded data, or in the catalog's own comments.
+# Where a unit is not established by one of those, the description says so.
+#
+# Organised into six sections. Every one of the 25 agent-referenced tables
+# appears in exactly one section: 4 + 3 + 4 + 4 + 5 + 5 = 25.
+
+# ---------------------------------------------------------------------------
+# Section 1 — Asset and Telemetry.  APQC 11.0.3.
+# Read by the asset-reliability and site-wide agents (persona P1, P8).
+# ---------------------------------------------------------------------------
+
+mining_data.telemetry_stream:
+  description: >
+    Continuous sensor readings from fixed plant and mobile assets, in long
+    format: one row per asset per metric per reading. Readings are taken every
+    two hours, not hourly, and a small number of slots are missing.
+  columns:
+    asset_id: >
+      The asset this reading was taken from. Joins mining_data.assets.asset_id.
+    metric_name: >
+      Which sensor channel this row reports. The unit is the suffix of the name
+      itself — _c is Celsius, _kmh kilometres per hour, _mps metres per second,
+      _hz hertz, _mw megawatts, _rpm revolutions per minute, _nm newton-metres,
+      _tph tonnes per hour, _kn kilonewtons, _tons tonnes, _pct percent. There
+      is no separate unit column.
+    metric_value: >
+      The reading itself, in the unit implied by metric_name. Comparing values
+      across different metric_name values is meaningless.
+    timestamp: >
+      The instant the reading was taken, UTC. This is the table's only time
+      column.

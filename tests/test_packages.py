@@ -110,10 +110,17 @@ def test_every_package_ships_the_runtime_dependencies_agents_actually_imports(tm
 
 
 def test_test_only_dependencies_do_not_travel_to_the_container(tmp_path):
-    assert "pytest" in (_repo_root() / "requirements.txt").read_text(), (
-        "requirements.txt no longer pins pytest — this test would pass vacuously"
-    )
-    assert "pytest" not in runtime_requirements()
+    requirements = (_repo_root() / "requirements.txt").read_text()
+    for package in ("pytest", "pyyaml"):
+        assert package in requirements, (
+            f"requirements.txt no longer pins {package} — this test would pass "
+            "vacuously"
+        )
+        assert package not in runtime_requirements(), (
+            f"{package} reached the container requirements. Nothing under "
+            "mining_agents/ imports it; shipping it means a container "
+            "dependency no code needs."
+        )
 
 
 def test_regenerating_is_idempotent(tmp_path):
