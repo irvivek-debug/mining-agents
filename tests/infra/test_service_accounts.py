@@ -67,14 +67,16 @@ def test_the_approver_tier_is_the_five_hitl_deep_agents():
 
 
 def test_coordinators_outrank_hitl_when_an_agent_is_both():
-    """S01 is a HITL coordinator. It must land on the coordinator account,
-    which carries dataEditor *and* aiplatform.user — not the approver account,
-    which would leave it unable to invoke its own sub-agents."""
+    """S01 is a HITL coordinator, so both branches of `tier_of` match it and
+    the order of the checks decides the answer.
+
+    This no longer changes S01's privileges — the two accounts carry identical
+    roles — but it decides which identity its calls are attributed to, and the
+    catalog's coordinators should be recognisable as such in an audit trail."""
     s01 = _by_id("S01")
     assert s01.hitl_required is True
     assert s01.swarm_role == "coordinator"
     assert tier_of(s01) == "coordinator"
-    assert "roles/aiplatform.user" in tier_roles(s01)
 
 
 def test_every_account_id_fits_the_thirty_character_limit():
@@ -93,21 +95,49 @@ def test_emails_resolve_to_the_argolis_project():
 # Roles per account
 # ---------------------------------------------------------------------------
 
-def test_read_only_analysts_get_exactly_two_roles():
+def test_read_only_analysts_get_exactly_three_roles():
     assert set(tier_roles(_by_id("D01"))) == {
         "roles/bigquery.dataViewer", "roles/bigquery.jobUser",
+        "roles/aiplatform.user",
     }
 
 
 def test_the_approver_account_adds_dataeditor_and_nothing_else():
     assert set(tier_roles(_by_id("D07"))) == {
         "roles/bigquery.dataViewer", "roles/bigquery.jobUser",
-        "roles/bigquery.dataEditor",
+        "roles/aiplatform.user", "roles/bigquery.dataEditor",
     }
 
 
-def test_the_coordinator_account_adds_aiplatform_user():
-    assert "roles/aiplatform.user" in tier_roles(_by_id("S03"))
+def test_every_agent_can_reach_a_model():
+    """Without aiplatform.user an agent cannot call Gemini, so it cannot
+    answer anything — a total failure, not a degraded one.
+
+    This role used to be granted to the 12 coordinators alone, on the stated
+    rationale that they needed it to invoke sub-agents. There is no such call
+    to authorise: a swarm's specialists are nodes in the coordinator's own
+    Workflow graph, in the coordinator's process. The 88 non-coordinators were
+    left unable to reach a model at all, and the live project masked it because
+    the role had been granted by hand outside this module. Asserted across all
+    100 rather than a sample, because the old bug was exactly a per-tier gap.
+    """
+    assert len(ALL_AGENTS) == 100
+    missing = [
+        a.agent_id for a in ALL_AGENTS
+        if "roles/aiplatform.user" not in tier_roles(a)
+    ]
+    assert missing == []
+
+
+def test_the_coordinator_and_approver_accounts_now_hold_identical_roles():
+    """A consequence worth stating out loud rather than leaving to be noticed.
+
+    The coordinator account is retained for attribution — it is the identity
+    that logs, traces and BigQuery job history show — but it is no longer a
+    privilege boundary. Anyone reading `tier_of` as a security control needs
+    to see that the top two tiers grant exactly the same thing.
+    """
+    assert set(tier_roles(_by_id("S03"))) == set(tier_roles(_by_id("D07")))
 
 
 def test_the_coordinator_account_over_grants_dataeditor_to_three():

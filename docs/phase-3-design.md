@@ -375,9 +375,17 @@ The 30-character GCP account-ID limit still binds and is asserted in `tests/infr
 
 | Agent class | Roles |
 |---|---|
-| Read-only analysts (86) | `roles/bigquery.dataViewer` on `mining_data`, `roles/bigquery.jobUser` |
+| Read-only analysts (86) | `roles/bigquery.dataViewer` on `mining_data`, `roles/bigquery.jobUser`, `roles/aiplatform.user` |
 | HITL agents (14) | above, plus `roles/bigquery.dataEditor` scoped to `agent_approvals` **only** |
-| Coordinators (12) | above, plus `roles/aiplatform.user` for A2A invocation |
+| Coordinators (12) | same as HITL agents — no additional role |
+
+> **Corrected 2026-08-12 (third revision), during the Cloud Run deploy.** The third row read "above, plus `roles/aiplatform.user` for A2A invocation". Both halves were wrong, and together they shipped a build that could not answer a query from a clean fork.
+>
+> *There is no A2A call to authorise.* A swarm's specialists and critic are nodes in the coordinator's own `Workflow` graph (`mining_agents/patterns/swarm.py::build_swarm`) and run in the coordinator's process. Nothing invokes anything over the wire, so no invoker role was ever needed for it.
+>
+> *Every agent needs the role, not just coordinators.* `roles/aiplatform.user` is the only one of these roles carrying `aiplatform.endpoints.predict`, which is what lets an agent call its Gemini model on the Vertex backend. Granting it to the 12 coordinators alone left the other 88 unable to reach a model at all. The live project masked this because the role had been granted to all three accounts by hand, outside `infra/iam/service_accounts.py` — so `apply()` on a fresh project would have produced 88 agents that fail on their first query. Confirmed by D01 running as `mag-agent-base`, whose only project-level roles are `aiplatform.user` and `jobUser`.
+>
+> *Consequence: three accounts, two distinct role sets.* With the model role in the baseline, the approver and coordinator accounts carry identical grants. The third account is kept for **attribution** — it is the identity in Cloud Run logs, traces and BigQuery job history — but it is no longer a privilege boundary, and `test_the_coordinator_and_approver_accounts_now_hold_identical_roles` pins that so it cannot be mistaken for a security control.
 
 No agent gets project-level `dataEditor`. The 14 HITL agents can write to exactly one table.
 
@@ -397,12 +405,16 @@ No agent gets project-level `dataEditor`. The 14 HITL agents can write to exactl
 >
 > **What actually enforces it**, in the application layer: `assert_reads_only_declared_tables` gates which agents may reach the tables at all; `mask_rows` redacts the raw columns inbound; `redact_model_response` scrubs them from model output on all 100 agents. `v_fatigue_scored` remains the path agents are told to use — it computes the band in SQL, so nothing needing masking is returned — but it is an ergonomic default, not a control. The known limit is column aliasing: `SELECT heart_rate_bpm AS hr` defeats name-based masking, which is why the outbound scrub exists.
 
-### 5.2 Authentication — Workload Identity Federation only
+### 5.2 Authentication — no service-account keys
 
-- Each service account binds to a Workload Identity Pool.
-- Agent Runtime issues short-lived OIDC tokens automatically.
-- **No service-account JSON key is ever created, downloaded, or stored.** A key file in GCS or in source control is a critical security failure, and this build has zero of them by construction.
+- Each agent runs as its tier service account, attached to its Cloud Run service at deploy time via `--service-account`. The container obtains short-lived credentials from the metadata server; nothing is issued, stored or rotated by this build.
+- Callers reach an agent with a Google-issued **OIDC identity token** whose audience is the service URL, and must hold `roles/run.invoker`. Every service is deployed `--no-allow-unauthenticated`, so an unauthenticated request is rejected at the edge, before any agent code runs.
+- **No service-account JSON key is ever created, downloaded, or stored.** A key file in GCS or in source control is a critical security failure, and this build has zero of them by construction — pinned by `test_no_code_path_creates_a_service_account_key`.
 - Tokens travel in `Authorization: Bearer <token>` headers. Never in query strings.
+
+> **Revised 2026-08-12 with the move to Cloud Run.** This section previously read "Workload Identity Federation only" and said "Agent Runtime issues short-lived OIDC tokens automatically". WIF federates *external* identities into GCP; nothing here is external, and no Workload Identity Pool was ever created. The property that actually holds — and the one that mattered — is the last two bullets: no keys exist, and credentials are short-lived and issued by the platform. That is now stated in terms of the mechanism that really provides it.
+
+**Deploy target: Cloud Run, ruled 2026-08-12.** Agent Engine bills memory continuously regardless of traffic — measured on this project at a flat 4 GiB with zero requests over six-hour windows, which is $26.28 per agent per month idle and $1,366/month for all 52. ADK exposes no memory or CPU knob for its `agent_engine` verb, so that floor cannot be lowered. Cloud Run scales to zero: idle cost is nil, a query costs about $0.0009, and the standing cost is the container images in Artifact Registry (~$6/month for 52). Measured cold start is 12 seconds, which a warm-up request before a demo hides. The trade recorded honestly: ADK defaults sessions to `memory://`, which does not survive scale-to-zero, so conversation history is lost between demos. `scripts/deploy.py::SESSION_SERVICE_URI` names the alternatives (one shared Agent Engine at ~$26/month total, or any SQLAlchemy database) and a real deploy prints a warning while the in-memory default is in force.
 
 ### 5.3 Agent Registry
 
@@ -429,10 +441,12 @@ Declared per agent at registration so the Gateway rejects malformed payloads bef
 ```
 gcloud projects add-iam-policy-binding ${GOOGLE_CLOUD_PROJECT} \
   --member="domain:${GOOGLE_DOMAIN}" \
-  --role="roles/aiplatform.user"
+  --role="roles/run.invoker"
 ```
 
 This is the single copy of the command; Phase 6 reads it from here and never retypes it.
+
+> **Role corrected 2026-08-12 with the move to Cloud Run.** This read `roles/aiplatform.user`, which on Cloud Run is wrong in both directions at once: it would grant the whole domain access to Vertex AI while leaving every agent endpoint unreachable, since admission to a Cloud Run service is `roles/run.invoker`. Mirrored in `scripts/deploy.py::DOMAIN_BINDING_COMMAND` and pinned by `test_dry_run_never_executes_the_domain_binding`.
 
 > **This grants access to every user in the domain in one action.** Phase 6 must display the resolved command and wait for explicit confirmation before running it. Acceptable **only** because Argolis is a sandbox. **Do not copy this binding into a production project** — production access must be scoped to named groups. Anyone forking this accelerator inherits this warning.
 

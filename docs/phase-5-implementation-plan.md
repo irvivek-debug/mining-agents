@@ -84,7 +84,7 @@ Read these before Task 1; they resolve ambiguities the source documents leave op
 | `mining_agents/runlog.py` | Writes `agent_run_log` rows around every agent invocation. |
 | `mining_agents/registry.py` | Registers the 52 externally-callable agents with Gateway guardrails. |
 | `mining_agents/build.py` | Instantiates all 100 agents from the catalog. The single entry point. |
-| `scripts/deploy.py` | Deploys to Agent Engine; prints the domain-wide binding for human approval. |
+| `scripts/deploy.py` | Deploys to Cloud Run (was Agent Engine — see design §5.2, ruled 2026-08-12 on idle cost); prints the domain-wide binding for human approval. |
 | `tests/` | Mirrors `mining_agents/` and `infra/`. |
 
 ---

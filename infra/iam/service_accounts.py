@@ -41,9 +41,24 @@ from mining_agents.config import settings
 # ---------------------------------------------------------------------------
 # Role constants
 # ---------------------------------------------------------------------------
-BASE_ROLES = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser"]
+# `aiplatform.user` is what lets an agent call its own Gemini model: it is the
+# only one of these roles carrying `aiplatform.endpoints.predict`, and ADK's
+# containers run against the Vertex backend. It is therefore a baseline for all
+# 100 agents, not a privilege tier.
+#
+# It was previously granted to coordinators alone, on the rationale that they
+# needed it "for A2A invocation". Both halves were wrong. There is no A2A call
+# to authorise — a swarm's specialists are nodes in the coordinator's own
+# `Workflow` graph and share its process — and every agent, coordinator or not,
+# needs the role to reach a model at all. A fork running `apply()` under the
+# old table produced base and approver accounts that could not answer a single
+# query; the live project only worked because the role had been granted by hand
+# outside this module. D01 running as `mag-agent-base` is the proof: its only
+# project-level roles are this one and jobUser, and jobUser carries no
+# aiplatform permission.
+MODEL_ROLE = "roles/aiplatform.user"
+BASE_ROLES = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser", MODEL_ROLE]
 HITL_ROLE = "roles/bigquery.dataEditor"
-COORDINATOR_ROLE = "roles/aiplatform.user"
 
 # bigquery.* roles that BigQuery only accepts at project level. A dataset ACL
 # accepts READER/WRITER/OWNER (and the IAM roles that map onto them); jobUser
@@ -67,10 +82,20 @@ TIER_ACCOUNT_ID: dict[Tier, str] = {
 # collapsing four distinct role combinations onto three accounts; it is
 # pinned by test_the_coordinator_account_over_grants_dataeditor_to_three so
 # it cannot become invisible.
+#
+# THREE ACCOUNTS, TWO DISTINCT ROLE SETS. Once MODEL_ROLE moved to the baseline
+# (see above), `approver` and `coordinator` became identical grants. The third
+# account is kept anyway, because the accounts are no longer only a privilege
+# boundary: they are the identity Cloud Run logs, traces and BigQuery job
+# history attribute a call to, so collapsing them would make a coordinator's
+# queries indistinguishable from a deep agent's in the audit trail. What it
+# does NOT do is confer any extra privilege, and
+# test_the_coordinator_and_approver_accounts_now_hold_identical_roles pins that
+# so the distinction cannot be mistaken for a security control.
 TIER_ROLES: dict[Tier, list[str]] = {
     "base": [*BASE_ROLES],
     "approver": [*BASE_ROLES, HITL_ROLE],
-    "coordinator": [*BASE_ROLES, HITL_ROLE, COORDINATOR_ROLE],
+    "coordinator": [*BASE_ROLES, HITL_ROLE],
 }
 
 # Resource-kind tag — derivable from the plan entry; never re-decided in apply().
@@ -84,8 +109,10 @@ ResourceKind = Literal["project", "dataset", "table"]
 def tier_of(agent: AgentDef) -> Tier:
     """Which of the three accounts this agent runs as.
 
-    Coordinators outrank HITL: a coordinator that is also HITL needs
-    aiplatform.user *and* dataEditor, and the coordinator account carries both.
+    Coordinators are checked first so that a coordinator which is also HITL
+    lands on the coordinator account. Since MODEL_ROLE moved to the baseline
+    the two accounts carry the same grants, so this ordering no longer changes
+    what the agent can do — it decides which identity the audit trail shows.
     """
     if agent.swarm_role == "coordinator":
         return "coordinator"

@@ -116,9 +116,16 @@ def test_no_raw_model_id_outside_model_policy():
     # docs/ is excluded because planning documents are expected to name model
     # IDs for discussion purposes (the same reason references/ is excluded).
     # .superpowers/ is excluded because it contains internal SDD working files.
+    # packages/ is gitignored build output: since the Cloud Run move each
+    # deployable package carries its own copy of references/model-policy.md,
+    # because Cloud Run has no --extra_packages and only the agent folder is
+    # copied into the image. Scanning those copies would report one offender
+    # per agent for a file that is legitimately exempt at its source. The rule
+    # still bites where it matters — scripts/packages.py, which generates the
+    # tree, remains in scope.
     _SKIP_DIRS = {".git", ".superpowers", ".venv", "venv", "env", ".env",
                   "site-packages", "__pycache__", ".pytest_cache", ".mypy_cache",
-                  "docs"}
+                  "docs", "packages"}
 
     def _should_skip(path: pathlib.Path) -> bool:
         for part in path.relative_to(root).parts[:-1]:
