@@ -197,6 +197,27 @@ def test_the_critic_instruction_requires_flagging_unverified_inputs():
     assert "BLOCKED" in text
 
 
+def test_every_swarm_node_inherits_the_no_fabrication_clause():
+    """The clause lives in build_instruction; critic_instruction and
+    coordinator_instruction prepend it. This checks the composition held —
+    a critic or coordinator built from a hand-written instruction instead
+    would silently lose it, and those two are the nodes whose output the
+    demo actually shows.
+    """
+    nodes = {}
+    for workflow in (build_swarm(s) for s in SWARMS):
+        for edge in workflow.edges:
+            for end in edge:
+                if isinstance(end, LlmAgent):
+                    nodes[end.name] = end
+    assert len(nodes) == 60, "12 swarms x 5 members"
+    missing = sorted(
+        name for name, a in nodes.items()
+        if "NEVER supply a value a tool did not return" not in a.instruction
+    )
+    assert missing == []
+
+
 def test_the_critic_instruction_is_injection_aware():
     text = critic_instruction(SWARMS[0])
     assert "steered" in text.lower() or "injection" in text.lower()

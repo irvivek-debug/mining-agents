@@ -53,6 +53,7 @@ _LITERAL_PREDICATE = re.compile(
 READ_ONLY_STATEMENT_TYPES = frozenset({"SELECT"})
 
 _client: bigquery.Client | None = None
+_home_projects: frozenset[str] | None = None
 
 
 class SqlInterpolationError(ToolFailure):
@@ -87,6 +88,32 @@ def assert_no_interpolation(sql: str) -> None:
         )
 
 
+def _home_project_aliases() -> frozenset[str]:
+    """Every spelling of "this project" that normalisation has to absorb.
+
+    `settings().project_id` is whatever GOOGLE_CLOUD_PROJECT holds, and Agent
+    Engine sets that variable to the project NUMBER, not the project id.
+    BigQuery accepts the number when a job is submitted — it posts to
+    `bigquery/v2/projects/<number>/jobs` quite happily — but it reports
+    `referenced_tables` with the project ID. A prefix strip keyed on the
+    number alone therefore strips nothing from the referenced side while the
+    declared side is already short-form, so the subset check refuses every
+    query an agent makes. That is not hypothetical: it is what the first live
+    run did, raising UNDECLARED_TABLE naming the very table the agent declared.
+
+    `SELECT @@project_id` resolves the id from the same engine that resolves
+    `referenced_tables`, which is the move this whole module is built on — ask
+    the thing that will run the query rather than deriving the answer. The
+    result is cached for the process, and the probe scans zero bytes.
+    """
+    global _home_projects
+    if _home_projects is None:
+        rows = _bq_client().query("SELECT @@project_id AS project_id").result()
+        resolved = next(iter(rows))["project_id"]
+        _home_projects = frozenset({settings().project_id, resolved})
+    return _home_projects
+
+
 def _strip_home_project(name: str) -> str:
     """Reduce `<this project>.dataset.table` to `dataset.table`, leave the rest.
 
@@ -99,8 +126,11 @@ def _strip_home_project(name: str) -> str:
     A prefix strip is used rather than counting dotted parts because the part
     count is ambiguous: `mining_data.INFORMATION_SCHEMA.TABLES` has three.
     """
-    prefix = f"{settings().project_id}."
-    return name[len(prefix):] if name.startswith(prefix) else name
+    for alias in _home_project_aliases():
+        prefix = f"{alias}."
+        if name.startswith(prefix):
+            return name[len(prefix):]
+    return name
 
 
 def _table_name(ref) -> str:

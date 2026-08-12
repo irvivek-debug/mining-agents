@@ -68,6 +68,23 @@ def build_instruction(agent: AgentDef) -> str:
         "CITATION MANDATE — every factual claim you make must cite the table it "
         "came from. Your tool results carry meta.tables_read; quote those names. "
         "An uncited number is a defect.",
+        "",
+        # The failure this clause exists for: on the first live run every
+        # bq_query call was refused, and the agent answered with fabricated
+        # asset ids and vibration readings while its own envelope reported
+        # rows_scanned 0. The tool contract was already correct — success=false
+        # carried a code and a message — but nothing told the model what to do
+        # with it, so it filled the gap with plausible-looking invention.
+        "TOOL FAILURE — a result with success=false carries NO data. So does one "
+        "whose meta.rows_scanned is 0. In either case you have nothing to report "
+        "from that call. Say which call failed, quote error.code and "
+        "error.message, and stop.",
+        "NEVER supply a value a tool did not return — not an asset id, a "
+        "measurement, a date, a count, or a name. Not as an example, not as an "
+        "illustration, not hedged with 'typically' or 'would likely be'. A "
+        "plausible invented figure is worse than an error, because the reader "
+        "cannot tell it from a real one. If every call fails, then your entire "
+        "answer is that you could not retrieve the data, and why.",
     ]
 
     # Only describe tools this agent actually holds. Naming a tool it was not

@@ -1,4 +1,7 @@
+import os
+
 import pytest
+from mining_agents.config import settings
 from mining_agents.envelope import Envelope
 from mining_agents.safety.output_filter import REDACTION
 from mining_agents.safety.untrusted import UNTRUSTED_PREFIX
@@ -168,6 +171,59 @@ def test_a_declaration_written_with_the_project_prefix_still_matches():
         ["genial-union-475913-i7.mining_data.assets"],
     )
     assert read == ["mining_data.assets"]
+
+
+def test_the_check_survives_being_given_the_project_number_as_agent_engine_does():
+    """The bug that made every live query fail, pinned against real BigQuery.
+
+    Agent Engine sets GOOGLE_CLOUD_PROJECT to the project NUMBER. BigQuery
+    accepts the number when the job is submitted but reports
+    `referenced_tables` with the project ID, so normalisation keyed on the
+    number strips nothing: the declared side stayed short-form, the referenced
+    side stayed fully qualified, and D01's first live query was refused as
+    UNDECLARED_TABLE naming the table it had declared.
+
+    Nothing in this suite caught it because tests run with GOOGLE_CLOUD_PROJECT
+    unset, where the default id and the id BigQuery reports are the same
+    string. This test reproduces the container's configuration instead.
+    """
+    import mining_agents.tools.bq_query as module
+
+    # The number is INPUT here — it stands in for the container's environment,
+    # not for the value under test. The guard below is what keeps it honest: if
+    # it ever equalled the project id, this test would exercise nothing.
+    project_number = "297934069315"
+    assert project_number != settings().project_id, (
+        "the stand-in for GOOGLE_CLOUD_PROJECT must be a DIFFERENT spelling of "
+        "the project than the id, or this test reproduces nothing"
+    )
+
+    saved_client, saved_projects = module._client, module._home_projects
+    os.environ["GOOGLE_CLOUD_PROJECT"] = project_number
+    module._client = None
+    module._home_projects = None
+    try:
+        assert settings().project_id == project_number, "env override did not take"
+        read = assert_reads_only_declared_tables(
+            "SELECT asset_id FROM `mining_data.assets` LIMIT 1",
+            {},
+            ["mining_data.assets"],
+        )
+        assert read == ["mining_data.assets"]
+
+        # The cross-project refusal must not have been widened to buy this.
+        with pytest.raises(UndeclaredTableError) as exc:
+            assert_reads_only_declared_tables(
+                "SELECT word FROM `bigquery-public-data.samples.shakespeare` LIMIT 1",
+                {},
+                ["mining_data.assets"],
+            )
+        assert exc.value.details["undeclared"] == [
+            "bigquery-public-data.samples.shakespeare"
+        ]
+    finally:
+        os.environ.pop("GOOGLE_CLOUD_PROJECT", None)
+        module._client, module._home_projects = saved_client, saved_projects
 
 
 def test_a_view_resolves_to_its_base_table_not_the_view():

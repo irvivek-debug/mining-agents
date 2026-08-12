@@ -56,6 +56,28 @@ def test_the_instruction_carries_the_citation_mandate():
     assert "cite" in text.lower()
 
 
+def test_every_agent_is_told_not_to_invent_data_when_a_tool_fails():
+    """The clause exists because an agent did exactly this in production.
+
+    D01's first live run had every bq_query call refused. It answered with a
+    fabricated asset id and a fabricated vibration reading, presented as
+    queried fact, while its own envelope reported rows_scanned 0. For a
+    showcase that is the worst available failure mode: a reader cannot
+    distinguish the invention from a real result.
+
+    Checked across all 40 rather than a sample, because the clause is
+    unconditional and a per-agent branch that skipped it would be invisible.
+    """
+    assert len(DEEP) == 40
+    missing = [a.agent_id for a in DEEP if "TOOL FAILURE" not in build_instruction(a)]
+    assert missing == []
+    for agent in DEEP:
+        text = build_instruction(agent)
+        assert "success=false" in text, agent.agent_id
+        assert "rows_scanned" in text, agent.agent_id
+        assert "NEVER supply a value a tool did not return" in text, agent.agent_id
+
+
 def test_the_instruction_warns_about_untrusted_field_content():
     text = build_instruction(_by_id("D37"))   # reads radio_communications
     assert "UNTRUSTED" in text
