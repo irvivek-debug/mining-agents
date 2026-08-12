@@ -139,6 +139,16 @@ def existing_engines() -> dict[str, str]:
     Deployment state is read back from the API rather than cached in a local
     file, so re-running from a different machine — or after a `git clean` —
     still updates the live instances instead of duplicating them.
+
+    The identity key is the DISPLAY NAME, because a reasoningEngine carries no
+    other field this repo controls: the API returns only name, displayName,
+    spec, contextSpec, trafficConfig and timestamps, and the ADK deploy verb
+    exposes no way to set a label. So the guarantee above holds exactly as long
+    as `registrations()` keeps returning the same display name for an agent.
+    Rename one in the catalog and the next deploy will not recognise its live
+    instance: it creates a second one and the old keeps running and billing
+    under the old name. Renaming an already-deployed agent therefore means
+    deleting its old instance by hand.
     """
     s = settings()
     parent = f"projects/{s.project_id}/locations/{REGION}"
