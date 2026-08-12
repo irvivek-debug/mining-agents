@@ -1,0 +1,26 @@
+{
+  "captured_at": "2026-08-12T14:44:54.403182+00:00",
+  "column_descriptions": {
+    "incident_involvements": {
+      "incident_id": "Incident reference code",
+      "involvement_id": "Unique involvement code",
+      "operator_id": "Operator employee code",
+      "vehicle_id": "Vehicle reference ID"
+    },
+    "operator_vehicle_assignments": {
+      "assignment_id": "Unique assignment hash",
+      "operator_id": "Operator employee code",
+      "shift_date": "Shift date",
+      "shift_type": "DAY, NIGHT",
+      "vehicle_id": "Haul truck identifier"
+    },
+    "rfp_items": {
+      "part_number": "Catalog part number SKU",
+      "rfp_id": "Procurement RFP identifier"
+    }
+  },
+  "dataset": "mining_data",
+  "note": "State before scripts/annotate_bigquery.py first ran. table_descriptions values are raw SQL string literals from TABLE_OPTIONS (quotes included); column descriptions are plain text.",
+  "project": "genial-union-475913-i7",
+  "table_descriptions": {}
+}
