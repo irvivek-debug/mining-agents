@@ -6,6 +6,7 @@ Ruling references:
   R3 - Strengthen three brief tests: vacuous-pass guards.
   R4 - Partition check: 52 registrable + 48 sub-agents = all 100, no overlap.
 """
+from agents.build import build_all
 from agents.catalog.definitions import ALL_AGENTS, SWARMS
 from infra.iam.service_accounts import sa_email
 from agents.registry import (
@@ -41,25 +42,51 @@ def test_the_guardrails_match_the_design_numbers():
 
 
 # ---------------------------------------------------------------------------
-# R3 — Strengthened: loop all 12 swarms, derive coordinator email from swarm,
-#      keep explicit S01 assertion to pin the naming scheme.
+# Sub-agent caller allowlists under the three-account model.
+#
+# Under one-account-per-agent this test proved a coordinator could invoke only
+# its OWN specialists. That is no longer true by identity: all 12 coordinators
+# share mag-agent-coordinator, so IAM cannot tell S01's coordinator from S07's.
+#
+# Asserting `allowed == [sa_email(swarm.coordinator)]` in a loop would still
+# pass — and prove nothing, because every iteration compares the same string to
+# itself. The tests below pin what is actually true instead.
 # ---------------------------------------------------------------------------
-def test_a_coordinator_may_invoke_only_its_own_sub_agents():
-    # Explicit S01 assertion pins the naming scheme itself.
-    swarm_s01 = SWARMS[0]
-    assert swarm_s01.swarm_id == "S01"
-    for member in [*swarm_s01.specialists, swarm_s01.critic]:
-        allowed = caller_allowlist(member)
-        assert allowed == ["mag-s01-coord@genial-union-475913-i7.iam.gserviceaccount.com"]
+COORDINATOR_SA = "mag-agent-coordinator@genial-union-475913-i7.iam.gserviceaccount.com"
 
-    # Loop all 12 swarms — derive the expected email from the swarm, not hardcoded.
+
+def test_every_sub_agent_is_callable_only_by_the_coordinator_account():
+    sub_agents = [m for swarm in SWARMS
+                  for m in [*swarm.specialists, swarm.critic]]
+    assert len(sub_agents) == 48
+
+    wrong = {m.agent_id: caller_allowlist(m) for m in sub_agents
+             if caller_allowlist(m) != [COORDINATOR_SA]}
+    assert wrong == {}
+
+
+def test_identity_does_not_separate_one_swarm_from_another():
+    """Pin the cost of the three-account model at the registry layer.
+
+    S01's coordinator and S07's coordinator present the same SA, so the
+    caller allowlist cannot distinguish them. This is acceptable only because
+    sub-agents are not deployed: they are nodes inside their coordinator's
+    Workflow graph and have no endpoint for another coordinator to call. The
+    allowlist is descriptive metadata here, not an enforced boundary.
+
+    If sub-agents ever become separately deployed, this test fails to say so —
+    at that point the allowlist would need real per-swarm identities.
+    """
+    assert sa_email(SWARMS[0].coordinator) == sa_email(SWARMS[6].coordinator)
+    assert SWARMS[0].swarm_id != SWARMS[6].swarm_id
+
+    built = build_all()
     for swarm in SWARMS:
-        coord_email = sa_email(swarm.coordinator)
+        assert swarm.swarm_id in built
         for member in [*swarm.specialists, swarm.critic]:
-            allowed = caller_allowlist(member)
-            assert allowed == [coord_email], (
-                f"Sub-agent {member.agent_id} should only be callable by "
-                f"{coord_email}, got {allowed}"
+            assert member.agent_id not in built, (
+                f"{member.agent_id} is now separately deployed; the shared "
+                f"coordinator account no longer suffices as its allowlist"
             )
 
 
@@ -87,7 +114,10 @@ def test_a_registration_carries_the_framework_and_capability_tags():
     assert entry["display_name"] == "Safety Stock & Reorder Point Calculator"
     assert set(entry["capability_tags"]) >= {"pattern", "apqc_code", "persona",
                                              "value_branch"}
-    assert entry["service_account"].startswith("mag-d27@")
+    # D27 is a non-HITL deep agent, so it runs as the shared base-tier account.
+    assert entry["service_account"] == (
+        "mag-agent-base@genial-union-475913-i7.iam.gserviceaccount.com"
+    )
     assert entry["guardrails"] == GUARDRAILS
 
 

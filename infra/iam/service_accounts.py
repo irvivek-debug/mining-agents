@@ -1,4 +1,26 @@
-"""One dedicated service account per agent. Three least-privilege tiers.
+"""Three shared service accounts, one per least-privilege tier.
+
+Every agent runs as one of exactly three accounts. This is a deliberate
+departure from one-account-per-agent, ruled on 2026-08-12:
+
+  1. Only 52 things actually deploy — 12 `Workflow` graphs and 40 `LlmAgent`s.
+     A swarm's 4 sub-agents are nodes inside their coordinator's graph and
+     share its process, so they can never hold a separate runtime identity.
+     48 of the original 100 accounts could not have been attached to anything.
+  2. This build is a functional showcase that is demonstrated repeatedly. The
+     default quota is 100 service accounts per project; a 100-account build
+     exhausts a fresh project on its first run and cannot be repeated.
+
+WHAT THIS COSTS, accepted knowingly: an agent runs with its whole tier's
+access rather than its own. There is no intra-tier isolation — a prompt
+injection that reaches one agent's query tool reaches every table its tier
+can read. Per-agent (or per-swarm) accounts are the documented hardening
+path for a customer taking this to production.
+
+WHAT THIS DISSOLVES: biometric table access can no longer be restricted by
+IAM, because the agents that read biometric data and the agents that do not
+now share an account. See `test_biometric_access_is_not_restricted_at_the_iam_layer`
+— the control has to live in the application layer or it does not exist.
 
 No service-account credential file is ever created, downloaded, or stored —
 Workload Identity Federation supplies credentials at runtime. This file
@@ -7,6 +29,7 @@ contains no credential-management calls of any kind.
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 from typing import Literal
 
@@ -25,19 +48,27 @@ COORDINATOR_ROLE = "roles/aiplatform.user"
 # grants query execution against the project's billing and has no ACL form.
 _PROJECT_LEVEL_BQ_ROLES = frozenset({"roles/bigquery.jobUser"})
 
-# ---------------------------------------------------------------------------
-# Biometric table access — exactly five patterns, copied from §5.1.
-# mag-s10-* is a wildcard covering all five S10 accounts.
-# Do not derive this from the catalog; it is a separate approved access list.
-# ---------------------------------------------------------------------------
-BIOMETRIC_READERS: frozenset[str] = frozenset({
-    "mag-s10-*", "mag-s05-sp2", "mag-d35", "mag-d36", "mag-d40",
-})
+Tier = Literal["base", "approver", "coordinator"]
 
-# Mapping swarm_role → account-ID suffix for Pattern A agents.
-_ROLE_SUFFIX: dict[str, str] = {
-    "coordinator": "coord",
-    "critic": "critic",
+# The three accounts. Ordered least- to most-privileged.
+TIER_ACCOUNT_ID: dict[Tier, str] = {
+    "base": "mag-agent-base",
+    "approver": "mag-agent-approver",
+    "coordinator": "mag-agent-coordinator",
+}
+
+# Roles held by each ACCOUNT — the union over every agent assigned to it.
+#
+# The coordinator account carries dataEditor because 9 of the 12 coordinators
+# are HITL. S03, S06, and S12 are not, and therefore gain write access to
+# agent_approvals that they do not need. That over-grant is the price of
+# collapsing four distinct role combinations onto three accounts; it is
+# pinned by test_the_coordinator_account_over_grants_dataeditor_to_three so
+# it cannot become invisible.
+TIER_ROLES: dict[Tier, list[str]] = {
+    "base": [*BASE_ROLES],
+    "approver": [*BASE_ROLES, HITL_ROLE],
+    "coordinator": [*BASE_ROLES, HITL_ROLE, COORDINATOR_ROLE],
 }
 
 # Resource-kind tag — derivable from the plan entry; never re-decided in apply().
@@ -48,21 +79,25 @@ ResourceKind = Literal["project", "dataset", "table"]
 # Public interface
 # ---------------------------------------------------------------------------
 
-def sa_id(agent: AgentDef) -> str:
-    """The GCP service-account ID (≤30 chars).
+def tier_of(agent: AgentDef) -> Tier:
+    """Which of the three accounts this agent runs as.
 
-    Pattern B: mag-<lowercase-agent_id>  e.g. mag-d27
-    Pattern A coordinator: mag-<swarm>-coord  e.g. mag-s01-coord
-    Pattern A critic:      mag-<swarm>-critic e.g. mag-s01-critic
-    Pattern A specialist:  mag-<swarm>-<sp-suffix> e.g. mag-s01-sp1
+    Coordinators outrank HITL: a coordinator that is also HITL needs
+    aiplatform.user *and* dataEditor, and the coordinator account carries both.
     """
-    if agent.pattern == "B":
-        return f"mag-{agent.agent_id.lower()}"
-    swarm = agent.swarm_id.lower()
-    if agent.swarm_role in _ROLE_SUFFIX:
-        return f"mag-{swarm}-{_ROLE_SUFFIX[agent.swarm_role]}"
-    # specialist: agent_id is like S01-SP1 → suffix is "sp1"
-    return f"mag-{swarm}-{agent.agent_id.split('-')[-1].lower()}"
+    if agent.swarm_role == "coordinator":
+        return "coordinator"
+    if agent.hitl_required:
+        return "approver"
+    return "base"
+
+
+def sa_id(agent: AgentDef) -> str:
+    """The GCP service-account ID (≤30 chars) this agent runs as.
+
+    Shared per tier — many agents return the same ID by design.
+    """
+    return TIER_ACCOUNT_ID[tier_of(agent)]
 
 
 def sa_email(agent: AgentDef) -> str:
@@ -71,18 +106,13 @@ def sa_email(agent: AgentDef) -> str:
 
 
 def tier_roles(agent: AgentDef) -> list[str]:
-    """Ordered list of IAM roles for this agent's tier.
+    """The IAM roles held by the account this agent runs as.
 
-    Tier 1 (all agents): dataViewer + jobUser on the dataset.
-    Tier 2 (HITL agents): + dataEditor on the agent_approvals table only.
-    Tier 3 (coordinators): + aiplatform.user on the project.
+    These are the ACCOUNT's roles, not the agent's minimum requirement. A
+    non-HITL coordinator returns dataEditor here because it shares an account
+    with nine HITL coordinators — see the TIER_ROLES comment.
     """
-    roles: list[str] = list(BASE_ROLES)
-    if agent.hitl_required:
-        roles.append(HITL_ROLE)
-    if agent.swarm_role == "coordinator":
-        roles.append(COORDINATOR_ROLE)
-    return roles
+    return list(TIER_ROLES[tier_of(agent)])
 
 
 def _resource_kind(role: str) -> ResourceKind:
@@ -106,22 +136,26 @@ def _resource_kind(role: str) -> ResourceKind:
 
 
 def plan() -> list[dict]:
-    """Return the full 100-row create-and-bind plan. Pure data; touches nothing.
+    """Return the three-row create-and-bind plan. Pure data; touches nothing.
 
     Each entry:
       {
-        "agent_id":   str,
-        "account_id": str,   # the ≤30-char GCP account ID
-        "email":      str,   # full SA email
+        "tier":       str,        # "base" | "approver" | "coordinator"
+        "account_id": str,        # the ≤30-char GCP account ID
+        "email":      str,        # full SA email
+        "agents":     [str, ...], # every agent_id that runs as this account
         "bindings": [
           {
-            "role":          str,         # e.g. "roles/bigquery.dataViewer"
-            "resource":      str,         # project / dataset / table reference
-            "resource_kind": str,         # "project" | "dataset" | "table"
+            "role":          str,   # e.g. "roles/bigquery.dataViewer"
+            "resource":      str,   # project / dataset / table reference
+            "resource_kind": str,   # "project" | "dataset" | "table"
           },
           ...
         ],
       }
+
+    `agents` is carried so the plan stays auditable: a reader can see which of
+    the 100 catalog agents each account speaks for without re-deriving it.
 
     resource_kind is stored in the plan so that apply() routes each binding to
     the correct GCP API without re-deciding scope inside apply().
@@ -129,10 +163,15 @@ def plan() -> list[dict]:
     s = settings()
     dataset_ref = f"{s.project_id}:{s.dataset}"
     table_ref = f"{s.project_id}.{s.dataset}.agent_approvals"
-    entries = []
+
+    members: dict[Tier, list[str]] = {tier: [] for tier in TIER_ACCOUNT_ID}
     for agent in ALL_AGENTS:
+        members[tier_of(agent)].append(agent.agent_id)
+
+    entries = []
+    for tier, account_id in TIER_ACCOUNT_ID.items():
         bindings = []
-        for role in tier_roles(agent):
+        for role in TIER_ROLES[tier]:
             kind = _resource_kind(role)
             if kind == "table":
                 resource = table_ref
@@ -146,9 +185,10 @@ def plan() -> list[dict]:
                 "resource_kind": kind,
             })
         entries.append({
-            "agent_id": agent.agent_id,
-            "account_id": sa_id(agent),
-            "email": sa_email(agent),
+            "tier": tier,
+            "account_id": account_id,
+            "email": f"{account_id}@{s.project_id}.iam.gserviceaccount.com",
+            "agents": members[tier],
             "bindings": bindings,
         })
     return entries
@@ -165,7 +205,8 @@ def _fmt_create(entry: dict, project_id: str) -> list[str]:
         "gcloud", "iam", "service-accounts", "create",
         entry["account_id"],
         f"--project={project_id}",
-        f"--display-name={entry['agent_id']}",
+        f"--display-name=Mining agents — {entry['tier']} tier "
+        f"({len(entry['agents'])} agents)",
     ]
 
 
@@ -178,13 +219,12 @@ def _fmt_project_binding(email: str, role: str, project_id: str) -> list[str]:
 
 
 def apply(dry_run: bool = True) -> None:
-    """Create 100 service accounts and bind their roles across three resource scopes.
+    """Create the three tier service accounts and bind their roles.
 
     dry_run=True (default): print exactly the operations the live path performs;
                             touch nothing.
     dry_run=False:          execute them. Do NOT call with dry_run=False until the
-                            customer has given explicit approval and the
-                            service-account quota has been confirmed sufficient.
+                            customer has given explicit approval.
 
     Both branches walk plan() and accumulate identically; only the final step
     differs. Dataset and table scopes have no single-command CLI form — they are
@@ -197,14 +237,17 @@ def apply(dry_run: bool = True) -> None:
 
     # dataset ACL and table IAM are read-modify-write: accumulate every addition,
     # then apply each policy once. Applying per-binding would re-read and
-    # overwrite the policy 100 times and lose concurrent edits.
+    # overwrite the policy on every pass and lose concurrent edits.
     dataset_additions: list[tuple[str, str]] = []   # (email, role)
     table_additions: dict[str, list[tuple[str, str]]] = {}  # table_ref -> [(email, role)]
 
     for entry in plan():
         create_cmd = _fmt_create(entry, s.project_id)
         if dry_run:
-            print(" ".join(create_cmd))
+            # shlex.join, not " ".join: the display name contains spaces and
+            # parentheses. A dry run exists to be pasted into a shell and
+            # audited, so it has to survive being pasted into a shell.
+            print(shlex.join(create_cmd))
         else:
             subprocess.run(create_cmd, check=False)  # already-exists is not an error
 
@@ -216,7 +259,7 @@ def apply(dry_run: bool = True) -> None:
             if kind == "project":
                 cmd = _fmt_project_binding(email, role, s.project_id)
                 if dry_run:
-                    print(" ".join(cmd))
+                    print(shlex.join(cmd))
                 else:
                     subprocess.run(cmd, check=True)
 
