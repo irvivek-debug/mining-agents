@@ -65,9 +65,15 @@ This is a correctness defect that happens to also cost latency.
 
 ### 1.2 There is nothing to discover even if it asked well
 
-`mining_data` has **258 columns. Eleven carry a description. Zero tables do.**
-The eleven are clustered in `incident_involvements`,
-`operator_vehicle_assignments` and `rfp_items`.
+`mining_data` has 258 columns in total, of which **eleven carry a description
+and no table carries one at all.** The eleven are clustered in
+`incident_involvements` (4), `operator_vehicle_assignments` (5) and
+`rfp_items` (2).
+
+The surface that actually matters is smaller. Across all 100 agents only **25
+distinct tables are ever declared, totalling 141 columns** — the remaining 117
+belong to backup snapshots and tables no agent reads. Those 25 tables and 141
+columns are the scope of the semantics work.
 
 So schema discovery today returns names and types with no meaning attached.
 `metric_value FLOAT64` does not tell an agent whether 4.2 is a normal bearing
@@ -190,10 +196,11 @@ Reads back from BigQuery and writes `data/context_snapshot.json`:
 - **Meaning** — the descriptions, from the same view and from `TABLE_OPTIONS`.
 - **Statistics** — row count; min/max of the table's time column; and the
   distinct values of any column whose cardinality is ≤ 25. The time column is
-  the one named in `column-semantics.yaml` under `time_column`, falling back to
-  the table's only TIMESTAMP/DATETIME/DATE column. A table with several and no
-  declaration is an error, not a guess — `operator_vehicle_assignments` and
-  `fleet_vehicles` both carry more than one date-typed column.
+  the table's single TIMESTAMP/DATETIME/DATE column. Verified 2026-08-12: of
+  the 25 agent-referenced tables, sixteen have exactly one and nine have none.
+  None has two. A table with no time column simply carries no coverage range.
+  If a future table carries two, that is an error rather than a guess — the
+  builder raises and the YAML must declare `time_column`.
 - **Site clock** — the maximum timestamp across operational tables, excluding
   `agent_approvals` and `agent_run_log`, which the agents write themselves and
   which would otherwise pull the clock to the present.
@@ -218,8 +225,14 @@ DATA SCOPE — you may read only these objects:
   and mobile assets, one row per asset per metric per hour.
   25,946 rows, covering 2026-01-01 → 2026-06-16 22:00.
       asset_id      STRING     asset this reading belongs to; joins assets.asset_id
-      metric_name   STRING     one of: vibration_mm_s, bearing_temp_c, ...
-      metric_value  FLOAT64    the reading, in the unit given by `unit`
+      metric_name   STRING     sensor channel. The unit is the name's suffix
+                               (_c Celsius, _kmh, _hz, _mw, _rpm, _tph, _kn,
+                               _mps, _tons, _pct). One of: belt_tension_kn,
+                               engine_temp_c, feed_rate_tph, load_pct,
+                               payload_tons, power_draw_mw, rotational_speed_rpm,
+                               rotational_torque_nm, speed_kmh, speed_mps,
+                               temperature_c, vibration_hz
+      metric_value  FLOAT64    the reading, in the unit implied by metric_name
       timestamp     TIMESTAMP  hour the reading was taken, UTC
 
 SITE CLOCK — operational data ends 2026-06-16 22:00 UTC. Treat that instant as
@@ -283,8 +296,10 @@ Reported, not gated — a wall-clock threshold in CI would be flaky.
    findings.
 4. Opening any `mining_data` table in the BigQuery console shows a table
    description and described columns.
-5. Description coverage rises from 11/258 to complete, with every description
-   traceable to the generator or the data.
+5. Every one of the 141 columns across the 25 agent-referenced tables carries a
+   description, and every one of those 25 tables carries a table description,
+   each traceable to the generator or to the data. Backup snapshots and tables
+   no agent reads are out of scope.
 6. CI fails if the committed snapshot no longer matches BigQuery.
 
 ---
