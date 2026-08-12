@@ -5,7 +5,7 @@ from google.adk.agents import LlmAgent
 
 from agents.catalog.definitions import AgentDef
 from agents.config import model_for_tier
-from agents.safety.output_filter import BIOMETRIC_FIELDS
+from agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
 from agents.safety.untrusted import FREE_TEXT_FIELDS, UNTRUSTED_PREFIX
 from agents.tools.bq_query import make_bq_query
 from agents.tools.bqml_predict import make_bqml_predict
@@ -124,4 +124,7 @@ def build_deep_agent(agent: AgentDef) -> LlmAgent:
         description=agent.display_name,
         instruction=build_instruction(agent),
         tools=bind_tools(agent),
+        # The BIOMETRIC instruction above asks the model to band; this makes it
+        # true whether or not the model complied.
+        after_model_callback=redact_model_response,
     )

@@ -1,8 +1,11 @@
 import pytest
 from agents.safety.output_filter import (
     BIOMETRIC_FIELDS,
+    REDACTION,
     RawBiometricLeak,
     assert_clean,
+    mask_rows,
+    redact_model_response,
     scrub,
 )
 
@@ -180,3 +183,154 @@ def test_prose_coverage_matches_biometric_fields():
         assert "[REDACTED:BIOMETRIC]" in out, (
             f"Field '{field}' in BIOMETRIC_FIELDS produced no redaction token"
         )
+
+
+# ---------------------------------------------------------------------------
+# mask_rows — the inbound control. Redacts raw columns before rows reach a
+# model, so the value never enters the context window in the common case.
+# ---------------------------------------------------------------------------
+
+def test_every_biometric_field_is_redacted_in_a_row():
+    """Driven off BIOMETRIC_FIELDS, so adding a fourth field fails here if
+    mask_rows stops covering it."""
+    row = {field: 42 for field in BIOMETRIC_FIELDS}
+    row["operator_id"] = "OP-014"
+
+    masked = mask_rows([row])[0]
+
+    assert len(BIOMETRIC_FIELDS) == 3
+    for field in BIOMETRIC_FIELDS:
+        assert masked[field] == REDACTION, f"{field} was not redacted"
+    assert masked["operator_id"] == "OP-014", "the pseudonym must be preserved"
+
+
+def test_masking_keeps_the_column_rather_than_dropping_it():
+    """A column that vanishes reads as a failed query and invites a retry."""
+    masked = mask_rows([{"heart_rate_bpm": 118}])[0]
+    assert "heart_rate_bpm" in masked
+    assert masked["heart_rate_bpm"] == REDACTION
+
+
+def test_masking_preserves_row_count_and_row_order():
+    rows = [{"operator_id": f"OP-{n:03d}", "heart_rate_bpm": n} for n in range(5)]
+    masked = mask_rows(rows)
+    assert len(masked) == 5
+    assert [r["operator_id"] for r in masked] == [f"OP-{n:03d}" for n in range(5)]
+
+
+def test_masking_does_not_mutate_the_rows_it_was_given():
+    original = [{"heart_rate_bpm": 118}]
+    mask_rows(original)
+    assert original[0]["heart_rate_bpm"] == 118
+
+
+def test_a_biometric_field_nested_in_a_struct_is_redacted():
+    """BigQuery returns a STRUCT as a nested dict. A flat pass over top-level
+    keys would miss this, and the value would reach the model intact."""
+    masked = mask_rows([{
+        "operator_id": "OP-014",
+        "vitals": {"heart_rate_bpm": 118, "shift": "night"},
+    }])[0]
+    assert masked["vitals"]["heart_rate_bpm"] == REDACTION
+    assert masked["vitals"]["shift"] == "night"
+
+
+def test_a_biometric_field_inside_an_array_of_structs_is_redacted():
+    masked = mask_rows([{
+        "readings": [{"heart_rate_bpm": 118}, {"heart_rate_bpm": 121}],
+    }])[0]
+    assert [r["heart_rate_bpm"] for r in masked["readings"]] == [REDACTION] * 2
+
+
+def test_a_repeated_biometric_column_is_replaced_whole_not_element_by_element():
+    """The key is checked before the value is walked, so an ARRAY of readings
+    collapses to a single token. Redacting element-wise would preserve the
+    array's length, which leaks how many readings the operator has."""
+    masked = mask_rows([{"heart_rate_bpm": [118, 121]}])[0]
+    assert masked["heart_rate_bpm"] == REDACTION
+
+
+def test_column_matching_is_case_insensitive():
+    masked = mask_rows([{"Heart_Rate_BPM": 118}])[0]
+    assert masked["Heart_Rate_BPM"] == REDACTION
+
+
+def test_an_alias_defeats_row_masking_which_is_why_the_output_scrub_exists():
+    """Pin the known hole rather than imply mask_rows is complete.
+
+    `SELECT heart_rate_bpm AS hr` returns a column named `hr`, and nothing
+    about the returned row says where it came from. This is the case
+    redact_model_response is there to catch on the way out.
+    """
+    masked = mask_rows([{"hr": 118}])[0]
+    assert masked["hr"] == 118  # NOT redacted — by design, documented above
+
+
+def test_masking_an_empty_result_set_is_not_an_error():
+    assert mask_rows([]) == []
+
+
+# ---------------------------------------------------------------------------
+# redact_model_response — the outbound control, wired as an ADK
+# after_model_callback on all 100 agents.
+# ---------------------------------------------------------------------------
+
+class _Part:
+    """Stands in for google.genai.types.Part: text is optional and mutable."""
+
+    def __init__(self, text=None, function_call=None):
+        self.text = text
+        self.function_call = function_call
+
+
+class _Content:
+    def __init__(self, parts):
+        self.parts = parts
+
+
+class _Response:
+    def __init__(self, parts):
+        self.content = _Content(parts) if parts is not None else None
+
+
+def test_a_raw_value_in_a_model_response_is_redacted_in_place():
+    response = _Response([_Part(text="OP-014 heart rate was 118 bpm.")])
+
+    returned = redact_model_response(None, response)
+
+    assert returned is response, "a modified response must be returned to ADK"
+    assert "118" not in response.content.parts[0].text
+    assert REDACTION in response.content.parts[0].text
+    assert "OP-014" in response.content.parts[0].text
+
+
+def test_a_clean_response_returns_none_so_adk_keeps_the_original():
+    """Returning the response unchanged would claim a modification we did not
+    make. None is ADK's signal to keep what the model produced."""
+    response = _Response([_Part(text="OP-014 is HIGH fatigue risk.")])
+    assert redact_model_response(None, response) is None
+    assert response.content.parts[0].text == "OP-014 is HIGH fatigue risk."
+
+
+def test_a_function_call_part_carrying_no_text_is_skipped():
+    """Tool-call turns produce parts with text=None. Scrubbing must not crash
+    on them, and must not report a redaction it did not perform."""
+    response = _Response([_Part(function_call={"name": "bq_query"})])
+    assert redact_model_response(None, response) is None
+
+
+def test_only_the_offending_part_of_a_multi_part_response_changes():
+    clean, dirty = _Part(text="Fatigue band: HIGH."), _Part(text="heart_rate_bpm 118")
+    response = _Response([clean, dirty])
+
+    assert redact_model_response(None, response) is response
+    assert clean.text == "Fatigue band: HIGH."
+    assert REDACTION in dirty.text
+
+
+def test_a_response_with_no_content_is_handled():
+    assert redact_model_response(None, _Response(None)) is None
+
+
+def test_a_response_with_an_empty_parts_list_is_handled():
+    assert redact_model_response(None, _Response([])) is None

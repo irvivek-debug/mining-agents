@@ -26,7 +26,7 @@ from google.adk.workflow import JoinNode, Workflow, START
 from agents.catalog.definitions import AgentDef, SwarmDef
 from agents.config import model_for_tier
 from agents.patterns.deep import BIOMETRIC_TABLES, bind_tools, build_instruction
-from agents.safety.output_filter import BIOMETRIC_FIELDS
+from agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
 
 
 @dataclass(frozen=True)
@@ -120,6 +120,10 @@ def _llm(agent: AgentDef, instruction: str) -> LlmAgent:
         description=agent.display_name,
         instruction=instruction,
         tools=bind_tools(agent),
+        # Every node of the graph, not just the coordinator: a specialist's
+        # output is read by the coordinator and the critic, so a raw value it
+        # emits has already leaked by the time the swarm concludes.
+        after_model_callback=redact_model_response,
     )
 
 

@@ -228,10 +228,11 @@ def test_biometric_access_is_not_restricted_at_the_iam_layer():
     identity, so no IAM binding can separate them — every account holds
     dataViewer across the whole dataset, biometric tables included.
 
-    This test asserts that absence deliberately. Biometric masking has to be
-    enforced in the application layer (declared source_tables, the
-    v_fatigue_scored view, and output scrubbing) or it does not exist at all.
-    It is currently NOT enforced there either — that is finding C1/I2, open.
+    This test asserts that absence deliberately. Biometric masking is enforced
+    in the application layer instead: assert_reads_only_declared_tables gates
+    which agents may reach the tables at all, and mask_rows plus
+    redact_model_response (agents/safety/output_filter.py) limit what leaks
+    from the 14 that may.
 
     If someone reintroduces an IAM-level biometric control, this test fails and
     sends them here to read why it cannot work.

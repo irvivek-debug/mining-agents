@@ -18,9 +18,12 @@ from unittest.mock import patch
 
 import pytest
 
+from google.adk.agents import LlmAgent
+
 from agents.build import build_all
 from agents.catalog.definitions import ALL_AGENTS
 from agents.registry import registrable
+from agents.safety.output_filter import redact_model_response
 import scripts.deploy as deploy_module
 from scripts.deploy import DOMAIN_BINDING_COMMAND, deploy
 
@@ -176,3 +179,64 @@ def test_deploy_module_source_never_subprocess_executes_domain_binding_command()
     # Also confirm DOMAIN_BINDING_COMMAND is defined (it must exist for the audit).
     assert DOMAIN_BINDING_COMMAND
     assert "gcloud projects add-iam-policy-binding" in DOMAIN_BINDING_COMMAND
+
+
+# ---------------------------------------------------------------------------
+# Biometric masking must be attached to what actually runs, not just defined.
+#
+# The failure this guards against is the one it was written to fix: scrub()
+# existed with full test coverage for a year and was wired to a single log
+# column, so the agent execution path had no masking at all. A test that only
+# exercises redact_model_response proves the function works, not that anything
+# calls it.
+# ---------------------------------------------------------------------------
+
+def _llm_nodes(built) -> dict:
+    """Every LlmAgent that build_all() produces, including swarm graph nodes.
+
+    A Pattern A swarm deploys as one Workflow, so its 5 LlmAgents are reachable
+    only through the graph's edges — iterating build_all() alone would check 40
+    of the 100 agents and silently skip the other 60.
+    """
+    nodes = {}
+    for agent in built.values():
+        if isinstance(agent, LlmAgent):
+            nodes[agent.name] = agent
+            continue
+        for edge in agent.edges:
+            for end in edge:
+                if isinstance(end, LlmAgent):
+                    nodes[end.name] = end
+    return nodes
+
+
+def test_every_built_llm_agent_redacts_biometrics_on_the_way_out():
+    nodes = _llm_nodes(build_all())
+
+    # 40 deep agents + 12 swarms x 5 members. Pinned first: a build that
+    # returned nothing would satisfy "no agent is missing a callback".
+    assert len(nodes) == 100
+
+    missing = sorted(
+        name for name, agent in nodes.items()
+        if redact_model_response not in _callbacks(agent.after_model_callback)
+    )
+    assert missing == []
+
+
+def _callbacks(value) -> list:
+    """after_model_callback accepts a single callable or a list of them."""
+    if value is None:
+        return []
+    return list(value) if isinstance(value, list) else [value]
+
+
+def test_the_swarm_members_are_covered_not_just_the_coordinator():
+    """A specialist's output is read by the coordinator and the critic, so a
+    raw value it emits has already leaked before the swarm concludes."""
+    nodes = _llm_nodes(build_all())
+    for member in ("s05", "s05_sp1", "s05_sp2", "s05_sp3", "s05_critic"):
+        assert member in nodes, f"{member} is not a node of the S05 graph"
+        assert redact_model_response in _callbacks(
+            nodes[member].after_model_callback
+        )

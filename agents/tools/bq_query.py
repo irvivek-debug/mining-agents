@@ -35,6 +35,7 @@ import re
 from google.cloud import bigquery
 
 from agents.config import settings
+from agents.safety.output_filter import mask_rows
 from agents.tools.base import ToolFailure, tool
 
 # A quoted literal or a bare number appearing on the right of a comparison or
@@ -202,7 +203,11 @@ def run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict
         raise ToolFailure(
             "QUERY_FAILED", str(exc), tables_read=list(tables_read)
         ) from exc
-    return rows, len(rows)
+    # Masking happens here, not in each tool, for the same reason the declared
+    # table check does: every path that returns BigQuery rows to a model goes
+    # through this function. row_count is taken before masking because masking
+    # replaces values and never removes a row.
+    return mask_rows(rows), len(rows)
 
 
 def make_bq_query(tables_read: list[str]):

@@ -1,5 +1,6 @@
 import pytest
 from agents.envelope import Envelope
+from agents.safety.output_filter import REDACTION
 from agents.tools.bq_query import (
     assert_no_interpolation, assert_reads_only_declared_tables, make_bq_query,
     run_query, SqlInterpolationError, UndeclaredTableError,
@@ -213,3 +214,57 @@ def test_an_undeclared_read_fails_inside_the_envelope_not_as_a_crash():
     assert env["success"] is False
     assert env["error"]["code"] == "UNDECLARED_TABLE"
     assert env["meta"]["tables_read"] == ["mining_data.assets"]
+
+
+# ---------------------------------------------------------------------------
+# Inbound biometric masking, applied in run_query for the same reason the
+# declared-table check is: every tool that returns BigQuery rows goes through
+# it, so none of the five can be left out by omission.
+# ---------------------------------------------------------------------------
+
+def test_run_query_masks_raw_biometric_columns():
+    rows, scanned = run_query(
+        "SELECT operator_id, heart_rate_bpm, sleep_deficit_hours, "
+        "microsleep_events_detected FROM `mining_data.biometric_fatigue_logs` "
+        "LIMIT 3",
+        {},
+        ["mining_data.biometric_fatigue_logs"],
+    )
+    assert scanned == 3, "masking must not change the row count"
+    for row in rows:
+        assert row["heart_rate_bpm"] == REDACTION
+        assert row["sleep_deficit_hours"] == REDACTION
+        assert row["microsleep_events_detected"] == REDACTION
+        assert row["operator_id"].startswith("OP-"), "pseudonym must survive"
+
+
+def test_the_fatigue_band_view_is_readable_and_carries_no_raw_columns():
+    """The path agents are told to use. v_fatigue_scored computes the band in
+    SQL, so nothing needing masking is returned in the first place."""
+    rows, _ = run_query(
+        "SELECT operator_id, fatigue_band FROM `mining_data.v_fatigue_scored` "
+        "LIMIT 3",
+        {},
+        ["mining_data.biometric_fatigue_logs"],
+    )
+    assert len(rows) == 3
+    assert {r["fatigue_band"] for r in rows} <= {"LOW", "ELEVATED", "HIGH"}
+    assert all(REDACTION not in str(v) for r in rows for v in r.values())
+
+
+def test_an_alias_survives_row_masking_and_is_left_to_the_output_scrub():
+    """Pin the hole against live BigQuery, not just in a unit test.
+
+    `SELECT heart_rate_bpm AS hr` returns a column named `hr` — the dry run
+    confirms the output schema is ['hr'] — so nothing in the returned row
+    identifies it as biometric. redact_model_response is what catches this,
+    on the way out, if the model labels the value in its answer.
+    """
+    rows, _ = run_query(
+        "SELECT heart_rate_bpm AS hr FROM `mining_data.biometric_fatigue_logs` "
+        "LIMIT 1",
+        {},
+        ["mining_data.biometric_fatigue_logs"],
+    )
+    assert isinstance(rows[0]["hr"], int)
+    assert rows[0]["hr"] != REDACTION
