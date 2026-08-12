@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from google.cloud import bigquery
 
-from agents.catalog.definitions import ALL_AGENTS
-from agents.config import settings
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.config import settings
 
 
 def _rows() -> list[dict]:

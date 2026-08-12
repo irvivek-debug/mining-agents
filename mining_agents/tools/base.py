@@ -4,7 +4,7 @@ from __future__ import annotations
 import functools
 import logging
 
-from agents.envelope import fail, ok
+from mining_agents.envelope import fail, ok
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ def tool(tables_read: list[str]):
                 # Build the minimum valid Envelope dict by hand so the ADK
                 # runtime always receives a structured response.
                 log.exception("envelope construction failed in tool %s", fn.__name__)
-                from agents.envelope import _now  # local import avoids circularity risk
+                from mining_agents.envelope import _now  # local import avoids circularity risk
                 return {
                     "success": False,
                     "data": {},

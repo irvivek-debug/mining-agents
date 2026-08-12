@@ -35,8 +35,8 @@ import subprocess
 import tempfile
 from typing import Literal
 
-from agents.catalog.definitions import AgentDef, ALL_AGENTS
-from agents.config import settings
+from mining_agents.catalog.definitions import AgentDef, ALL_AGENTS
+from mining_agents.config import settings
 
 # ---------------------------------------------------------------------------
 # Role constants

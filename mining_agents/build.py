@@ -1,9 +1,9 @@
 """The single entry point. Builds every agent from the catalog."""
 from __future__ import annotations
 
-from agents.catalog.definitions import DEEP, SWARMS
-from agents.patterns.deep import build_deep_agent
-from agents.patterns.swarm import build_swarm
+from mining_agents.catalog.definitions import DEEP, SWARMS
+from mining_agents.patterns.deep import build_deep_agent
+from mining_agents.patterns.swarm import build_swarm
 
 
 _SWARM_BY_ID = {s.swarm_id: s for s in SWARMS}
@@ -43,7 +43,7 @@ def build_all() -> dict[str, object]:
 
     Swarms are keyed by swarm.swarm_id ("S01".."S12").
     Deep agents are keyed by agent.agent_id ("D01".."D40").
-    Total: 52 keys, matching agents.registry.registrable().
+    Total: 52 keys, matching mining_agents.registry.registrable().
     """
     return {
         entry_id: build_one(entry_id)

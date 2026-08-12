@@ -1,6 +1,6 @@
 import pytest
-from agents.envelope import Envelope, ok, fail
-from agents.tools.base import tool, ToolFailure
+from mining_agents.envelope import Envelope, ok, fail
+from mining_agents.tools.base import tool, ToolFailure
 
 
 def test_ok_produces_a_valid_envelope():

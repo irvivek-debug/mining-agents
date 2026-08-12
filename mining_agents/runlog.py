@@ -16,9 +16,9 @@ Rules applied:
   - Ruling A: ended_at (not finished_at), blocked_reason (not error_message),
               no duration_ms (derivable from timestamps).
   - Ruling B: status vocabulary is DONE / BLOCKED / ERROR; no SUCCESS.
-  - Ruling C: pattern is derived from agents.catalog.definitions.ALL_AGENTS;
+  - Ruling C: pattern is derived from mining_agents.catalog.definitions.ALL_AGENTS;
               an unknown agent_id raises ValueError before writing any row.
-  - Ruling D: blocked_reason is passed through agents.safety.output_filter.scrub
+  - Ruling D: blocked_reason is passed through mining_agents.safety.output_filter.scrub
               before it is written.
   - Ruling E: RunRecord carries mutable rows_scanned (default 0), and
               logged_run / record_run accept an optional parent_run_id.
@@ -33,9 +33,9 @@ from datetime import datetime, timezone
 
 from google.cloud import bigquery
 
-from agents.catalog.definitions import ALL_AGENTS
-from agents.config import settings
-from agents.safety.output_filter import scrub
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.config import settings
+from mining_agents.safety.output_filter import scrub
 
 TABLE = "mining_data.agent_run_log"
 

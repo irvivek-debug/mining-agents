@@ -1,4 +1,4 @@
-"""Tests for agents.registry — 52-agent registration payloads and gateway guardrails.
+"""Tests for mining_agents.registry — 52-agent registration payloads and gateway guardrails.
 
 Ruling references:
   R1 - GATEWAY_SERVICE_ACCOUNT constant must be an external SA not in the 100 per-agent set.
@@ -6,10 +6,10 @@ Ruling references:
   R3 - Strengthen three brief tests: vacuous-pass guards.
   R4 - Partition check: 52 registrable + 48 sub-agents = all 100, no overlap.
 """
-from agents.build import build_all
-from agents.catalog.definitions import ALL_AGENTS, SWARMS
+from mining_agents.build import build_all
+from mining_agents.catalog.definitions import ALL_AGENTS, SWARMS
 from infra.iam.service_accounts import sa_email
-from agents.registry import (
+from mining_agents.registry import (
     GATEWAY_SERVICE_ACCOUNT,
     GUARDRAILS,
     VERSION,

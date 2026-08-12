@@ -1,5 +1,5 @@
 import pytest
-from agents.safety.output_filter import (
+from mining_agents.safety.output_filter import (
     BIOMETRIC_FIELDS,
     REDACTION,
     RawBiometricLeak,

@@ -1,7 +1,7 @@
 # Model Policy
 
 This is the **only** file in the repository permitted to contain a raw model ID.
-All agent code refers to tiers. `agents.config.model_for_tier()` parses the table below.
+All agent code refers to tiers. `mining_agents.config.model_for_tier()` parses the table below.
 
 | Tier | Model ID | Used by |
 |---|---|---|

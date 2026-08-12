@@ -9,9 +9,9 @@ from __future__ import annotations
 import re
 import subprocess
 
-from agents.config import settings
-from agents.tools.base import ToolFailure, tool
-from agents.tools.bq_query import run_query
+from mining_agents.config import settings
+from mining_agents.tools.base import ToolFailure, tool
+from mining_agents.tools.bq_query import run_query
 
 # Matches a mining_data table reference inside backticks or bare, e.g.
 # `mining_data.telemetry_stream` or mining_data.telemetry_stream

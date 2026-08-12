@@ -18,7 +18,7 @@ Two controls, because neither one is sufficient alone:
 
 Neither is an access control. What stops an agent reading a biometric table
 it has no business in is `assert_reads_only_declared_tables` in
-agents/tools/bq_query.py. These two limit what leaks from a table the agent
+mining_agents/tools/bq_query.py. These two limit what leaks from a table the agent
 IS allowed to read — the 14 agents that legitimately analyse fatigue and are
 required to report it as a band.
 

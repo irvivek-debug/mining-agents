@@ -11,7 +11,7 @@ from pathlib import Path
 
 SEED = 20260810
 # Overridable so a fork can regenerate its own data without editing this file.
-# The default is the demo project; agents/config.py reads the same variable, so
+# The default is the demo project; mining_agents/config.py reads the same variable, so
 # one export points the generator and the agents at the same place.
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "genial-union-475913-i7")
 DATASET = os.environ.get("MINING_DATASET", "mining_data")

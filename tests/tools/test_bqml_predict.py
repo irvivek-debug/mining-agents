@@ -18,8 +18,8 @@ model returns a number, but that number is not interpretable.  No agent may
 call this model directly off telemetry_stream until a feature-engineering step
 computes real z-scores.  See Task 10 (catalog) and Task 16 (demo scenarios).
 """
-from agents.envelope import Envelope
-from agents.tools.bqml_predict import list_models, make_bqml_predict
+from mining_agents.envelope import Envelope
+from mining_agents.tools.bqml_predict import list_models, make_bqml_predict
 
 # The six feature columns required by telemetry_alarm_risk_model, projected
 # from telemetry_stream via CAST/constant expressions.

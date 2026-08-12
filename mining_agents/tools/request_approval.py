@@ -25,9 +25,9 @@ from datetime import datetime, timezone
 
 from google.cloud import bigquery
 
-from agents.config import settings
-from agents.tools.base import ToolFailure, tool
-from agents.tools.bq_query import run_query
+from mining_agents.config import settings
+from mining_agents.tools.base import ToolFailure, tool
+from mining_agents.tools.bq_query import run_query
 
 # The only table this tool touches — declared as a module constant so
 # _tables() helpers in downstream modules can import it rather than duplicate.

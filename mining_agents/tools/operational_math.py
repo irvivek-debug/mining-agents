@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass
 from typing import Callable
 
-from agents.tools.base import ToolFailure, tool
+from mining_agents.tools.base import ToolFailure, tool
 
 NO_TABLES = ["(none — deterministic computation)"]
 

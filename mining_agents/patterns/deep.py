@@ -3,16 +3,16 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
-from agents.catalog.definitions import AgentDef
-from agents.config import model_for_tier
-from agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
-from agents.safety.untrusted import FREE_TEXT_FIELDS, UNTRUSTED_PREFIX
-from agents.tools.bq_query import make_bq_query
-from agents.tools.bqml_predict import make_bqml_predict
-from agents.tools.graph_traverse import make_graph_traverse
-from agents.tools.ontology_lookup import ontology_lookup
-from agents.tools.operational_math import operational_math
-from agents.tools.request_approval import make_request_approval
+from mining_agents.catalog.definitions import AgentDef
+from mining_agents.config import model_for_tier
+from mining_agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
+from mining_agents.safety.untrusted import FREE_TEXT_FIELDS, UNTRUSTED_PREFIX
+from mining_agents.tools.bq_query import make_bq_query
+from mining_agents.tools.bqml_predict import make_bqml_predict
+from mining_agents.tools.graph_traverse import make_graph_traverse
+from mining_agents.tools.ontology_lookup import ontology_lookup
+from mining_agents.tools.operational_math import operational_math
+from mining_agents.tools.request_approval import make_request_approval
 
 # Both tables that carry raw biometric readings. The biometric instruction
 # section is triggered if an agent's source_tables intersects this set.

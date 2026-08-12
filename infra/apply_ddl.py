@@ -5,7 +5,7 @@ import pathlib
 import subprocess
 import sys
 
-from agents.config import settings
+from mining_agents.config import settings
 
 DDL_FILES = ("agent_tables.sql", "v_fatigue_scored.sql")
 REQUIRED = ("agent_catalog", "agent_approvals", "agent_run_log", "v_fatigue_scored")

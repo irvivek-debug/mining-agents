@@ -1,4 +1,4 @@
-"""Tests for agents.catalog.loader.
+"""Tests for mining_agents.catalog.loader.
 
 These tests require BigQuery and CANNOT be run without valid gcloud credentials.
 Each test writes to a uniquely-named scratch table that is dropped on teardown —
@@ -14,10 +14,10 @@ import uuid
 import pytest
 from google.cloud import bigquery
 
-from agents.catalog.definitions import ALL_AGENTS
-from agents.catalog.loader import upsert_catalog
-from agents.config import settings
-from agents.tools.bq_query import run_query
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.catalog.loader import upsert_catalog
+from mining_agents.config import settings
+from mining_agents.tools.bq_query import run_query
 
 
 # ---------------------------------------------------------------------------

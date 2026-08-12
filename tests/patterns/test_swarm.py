@@ -4,8 +4,8 @@ import pytest
 from google.adk.agents import LlmAgent
 from google.adk.workflow import JoinNode, Workflow
 
-from agents.catalog.definitions import SWARMS
-from agents.patterns.swarm import (
+from mining_agents.catalog.definitions import SWARMS
+from mining_agents.patterns.swarm import (
     SpecialistResult, barrier, build_swarm, critic_instruction,
 )
 
@@ -291,7 +291,7 @@ def test_built_hitl_coordinators_carry_bound_request_approval():
 
 def test_no_deprecation_warning_from_build_swarm():
     """Building any swarm must emit zero DeprecationWarnings originating from
-    agents/patterns/swarm.py.  We capture ALL warnings and filter by category
+    mining_agents/patterns/swarm.py.  We capture ALL warnings and filter by category
     and source filename so that unrelated framework deprecations do not fail
     this test.
 

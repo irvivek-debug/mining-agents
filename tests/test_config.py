@@ -1,5 +1,5 @@
 import pytest
-from agents.config import settings, model_for_tier
+from mining_agents.config import settings, model_for_tier
 
 
 def test_settings_defaults_to_the_argolis_project():

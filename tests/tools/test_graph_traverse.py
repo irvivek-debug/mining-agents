@@ -1,7 +1,7 @@
 import pytest
-from agents.config import settings
-from agents.envelope import Envelope
-from agents.tools.graph_traverse import TRAVERSALS, make_graph_traverse
+from mining_agents.config import settings
+from mining_agents.envelope import Envelope
+from mining_agents.tools.graph_traverse import TRAVERSALS, make_graph_traverse
 
 
 def test_all_four_graphs_are_covered():

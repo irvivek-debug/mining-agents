@@ -1,7 +1,7 @@
 import pytest
-from agents.catalog.definitions import ALL_AGENTS, DEEP, SWARMS
-from agents.tools.bqml_predict import list_models
-from agents.tools.graph_traverse import TRAVERSALS
+from mining_agents.catalog.definitions import ALL_AGENTS, DEEP, SWARMS
+from mining_agents.tools.bqml_predict import list_models
+from mining_agents.tools.graph_traverse import TRAVERSALS
 
 HITL_COORDINATORS = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S11"}
 HITL_DEEP = {"D07", "D14", "D25", "D30", "D37"}

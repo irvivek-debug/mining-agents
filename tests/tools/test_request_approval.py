@@ -17,9 +17,9 @@ import pytest
 from google.api_core.exceptions import BadRequest
 from google.cloud import bigquery
 
-from agents.config import settings
-from agents.envelope import Envelope
-from agents.tools.request_approval import approval_status, make_request_approval
+from mining_agents.config import settings
+from mining_agents.envelope import Envelope
+from mining_agents.tools.request_approval import approval_status, make_request_approval
 
 # Tests must supply source_tables explicitly; the tool has no default.
 SOURCES = ["mining_data.inventory_levels"]
@@ -172,7 +172,7 @@ def test_the_tool_never_returns_approved():
     """Nothing in this codebase may self-approve. Only a human sets APPROVED."""
     import pathlib
 
-    from agents.tools import request_approval as module
+    from mining_agents.tools import request_approval as module
 
     source = pathlib.Path(module.__file__).read_text()
     assert "'APPROVED'" not in source and '"APPROVED"' not in source

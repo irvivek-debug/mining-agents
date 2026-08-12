@@ -1,6 +1,6 @@
 import pytest
-from agents.catalog.definitions import DEEP
-from agents.patterns.deep import bind_tools, build_deep_agent, build_instruction
+from mining_agents.catalog.definitions import DEEP
+from mining_agents.patterns.deep import bind_tools, build_deep_agent, build_instruction
 
 
 def _by_id(agent_id):
@@ -70,7 +70,7 @@ def test_biometric_agents_are_told_to_use_bands_not_raw_values():
 
 def test_the_agent_resolves_its_model_from_the_tier_not_a_literal():
     import inspect
-    import agents.patterns.deep as module
+    import mining_agents.patterns.deep as module
     source = inspect.getsource(module)
     assert "gemini" not in source
     assert "model_for_tier" in source

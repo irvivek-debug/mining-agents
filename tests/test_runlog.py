@@ -1,4 +1,4 @@
-"""Tests for agents.runlog — every agent invocation writes exactly one row.
+"""Tests for mining_agents.runlog — every agent invocation writes exactly one row.
 
 Schema (from infra/ddl/agent_tables.sql):
   run_id, agent_id, parent_run_id, pattern, status, blocked_reason,
@@ -15,8 +15,8 @@ import pytest
 from google.api_core.exceptions import BadRequest
 from google.cloud import bigquery
 
-from agents.config import settings
-from agents.runlog import logged_run, record_run
+from mining_agents.config import settings
+from mining_agents.runlog import logged_run, record_run
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

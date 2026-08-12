@@ -11,8 +11,8 @@ things it costs, so neither can become invisible:
 import pathlib
 
 import pytest
-from agents.catalog.definitions import ALL_AGENTS
-from agents.patterns.deep import BIOMETRIC_TABLES
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.patterns.deep import BIOMETRIC_TABLES
 from infra.iam import service_accounts
 from infra.iam.service_accounts import (
     TIER_ACCOUNT_ID, TIER_ROLES, plan, sa_email, sa_id, tier_of, tier_roles,
@@ -231,7 +231,7 @@ def test_biometric_access_is_not_restricted_at_the_iam_layer():
     This test asserts that absence deliberately. Biometric masking is enforced
     in the application layer instead: assert_reads_only_declared_tables gates
     which agents may reach the tables at all, and mask_rows plus
-    redact_model_response (agents/safety/output_filter.py) limit what leaks
+    redact_model_response (mining_agents/safety/output_filter.py) limit what leaks
     from the 14 that may.
 
     If someone reintroduces an IAM-level biometric control, this test fails and

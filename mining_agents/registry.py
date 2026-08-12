@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import copy
 
-from agents.catalog.definitions import ALL_AGENTS, SWARMS, AgentDef
-from agents.config import settings
+from mining_agents.catalog.definitions import ALL_AGENTS, SWARMS, AgentDef
+from mining_agents.config import settings
 from infra.iam.service_accounts import sa_email
 
 VERSION = "1.0.0"

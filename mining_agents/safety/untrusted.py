@@ -3,14 +3,14 @@
 A technician typing "ignore previous instructions" into a notes field is a
 plausible attack. This wrapper is control #1 of the five in design §6.2.
 
-Applied in agents.tools.bq_query.run_query, keyed on the tables the BigQuery
+Applied in mining_agents.tools.bq_query.run_query, keyed on the tables the BigQuery
 dry run says the query ACTUALLY resolved to rather than on what the agent
 declared — a query that declares four tables and reads one should not have the
 other three's columns wrapped by name.
 
 Like the biometric mask it sits beside, this matches on column name, so
 `SELECT technician_notes AS n` escapes it. The prompt instruction in
-agents/patterns/deep.py tells agents free text arrives wrapped; that is true
+mining_agents/patterns/deep.py tells agents free text arrives wrapped; that is true
 for any query that returns the column under its own name.
 """
 from __future__ import annotations

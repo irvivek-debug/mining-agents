@@ -23,10 +23,10 @@ from typing import Literal
 from google.adk.agents import LlmAgent
 from google.adk.workflow import JoinNode, Workflow, START
 
-from agents.catalog.definitions import AgentDef, SwarmDef
-from agents.config import model_for_tier
-from agents.patterns.deep import BIOMETRIC_TABLES, bind_tools, build_instruction
-from agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
+from mining_agents.catalog.definitions import AgentDef, SwarmDef
+from mining_agents.config import model_for_tier
+from mining_agents.patterns.deep import BIOMETRIC_TABLES, bind_tools, build_instruction
+from mining_agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
 
 
 @dataclass(frozen=True)

@@ -66,26 +66,26 @@ Read these before Task 1; they resolve ambiguities the source documents leave op
 | `infra/ddl/v_fatigue_scored.sql` | Authorised view banding biometric data. |
 | `infra/apply_ddl.py` | Idempotent DDL applier; asserts objects exist afterwards. |
 | `infra/iam/service_accounts.py` | Derives 100 SA names from the catalog; creates them; binds the three role tiers. |
-| `agents/config.py` | Environment-driven settings; tier → model ID resolution by reading model-policy. |
-| `agents/envelope.py` | `Envelope`, `ToolError` (RFC 7807), `ok()`, `fail()`. The one envelope definition. |
-| `agents/tools/base.py` | `@tool` decorator: enforces envelope, stamps `meta`, converts exceptions to RFC 7807. |
-| `agents/tools/bq_query.py` | Parameterised BigQuery read with interpolation guard. |
-| `agents/tools/graph_traverse.py` | The §3.2 `GRAPH_TABLE` traversals, parameter-bound. |
-| `agents/tools/operational_math.py` | Deterministic ROP, EOQ, Cpk, OEE, Little's Law. |
-| `agents/tools/bqml_predict.py` | `ML.PREDICT` over the 8 allowlisted models. |
-| `agents/tools/ontology_lookup.py` | `MiningOntologyGraph` + `unstructured_docs_metadata`. |
-| `agents/tools/request_approval.py` | Writes `agent_approvals`; returns `PENDING`, never auto-approves. |
-| `agents/safety/untrusted.py` | Wraps free-text field values in the untrusted-data delimiter. |
-| `agents/safety/output_filter.py` | Strips raw biometric values from agent output. |
-| `agents/patterns/deep.py` | `build_deep_agent()` — Pattern B factory. |
-| `agents/patterns/swarm.py` | `build_swarm()` — Pattern A fan-out / barrier / critic. |
-| `agents/catalog/definitions.py` | The 100 agent definitions as data. |
-| `agents/catalog/loader.py` | Validates definitions; upserts to `mining_data.agent_catalog`. |
-| `agents/runlog.py` | Writes `agent_run_log` rows around every agent invocation. |
-| `agents/registry.py` | Registers the 52 externally-callable agents with Gateway guardrails. |
-| `agents/build.py` | Instantiates all 100 agents from the catalog. The single entry point. |
+| `mining_agents/config.py` | Environment-driven settings; tier → model ID resolution by reading model-policy. |
+| `mining_agents/envelope.py` | `Envelope`, `ToolError` (RFC 7807), `ok()`, `fail()`. The one envelope definition. |
+| `mining_agents/tools/base.py` | `@tool` decorator: enforces envelope, stamps `meta`, converts exceptions to RFC 7807. |
+| `mining_agents/tools/bq_query.py` | Parameterised BigQuery read with interpolation guard. |
+| `mining_agents/tools/graph_traverse.py` | The §3.2 `GRAPH_TABLE` traversals, parameter-bound. |
+| `mining_agents/tools/operational_math.py` | Deterministic ROP, EOQ, Cpk, OEE, Little's Law. |
+| `mining_agents/tools/bqml_predict.py` | `ML.PREDICT` over the 8 allowlisted models. |
+| `mining_agents/tools/ontology_lookup.py` | `MiningOntologyGraph` + `unstructured_docs_metadata`. |
+| `mining_agents/tools/request_approval.py` | Writes `agent_approvals`; returns `PENDING`, never auto-approves. |
+| `mining_agents/safety/untrusted.py` | Wraps free-text field values in the untrusted-data delimiter. |
+| `mining_agents/safety/output_filter.py` | Strips raw biometric values from agent output. |
+| `mining_agents/patterns/deep.py` | `build_deep_agent()` — Pattern B factory. |
+| `mining_agents/patterns/swarm.py` | `build_swarm()` — Pattern A fan-out / barrier / critic. |
+| `mining_agents/catalog/definitions.py` | The 100 agent definitions as data. |
+| `mining_agents/catalog/loader.py` | Validates definitions; upserts to `mining_data.agent_catalog`. |
+| `mining_agents/runlog.py` | Writes `agent_run_log` rows around every agent invocation. |
+| `mining_agents/registry.py` | Registers the 52 externally-callable agents with Gateway guardrails. |
+| `mining_agents/build.py` | Instantiates all 100 agents from the catalog. The single entry point. |
 | `scripts/deploy.py` | Deploys to Agent Engine; prints the domain-wide binding for human approval. |
-| `tests/` | Mirrors `agents/` and `infra/`. |
+| `tests/` | Mirrors `mining_agents/` and `infra/`. |
 
 ---
 
@@ -97,15 +97,15 @@ Read these before Task 1; they resolve ambiguities the source documents leave op
 - Create: `infra/ddl/agent_tables.sql`
 - Create: `infra/ddl/v_fatigue_scored.sql`
 - Create: `infra/apply_ddl.py`
-- Create: `agents/__init__.py`, `agents/config.py`
+- Create: `mining_agents/__init__.py`, `mining_agents/config.py`
 - Test: `tests/test_config.py`, `tests/test_infra_ddl.py`
 
 **Interfaces:**
 - Consumes: nothing (first task).
 - Produces:
-  - `agents.config.Settings` — a frozen dataclass with fields `project_id: str`, `dataset: str`, `location: str`, `bq_binary: str`, `model_policy_path: pathlib.Path`.
-  - `agents.config.settings() -> Settings` — reads env with defaults `GOOGLE_CLOUD_PROJECT=genial-union-475913-i7`, `MINING_DATASET=mining_data`, `MINING_LOCATION=US`.
-  - `agents.config.model_for_tier(tier: str) -> str` — parses `references/model-policy.md` and returns the model ID for `"reasoning"` or `"balanced"`. Raises `ValueError` for any other tier.
+  - `mining_agents.config.Settings` — a frozen dataclass with fields `project_id: str`, `dataset: str`, `location: str`, `bq_binary: str`, `model_policy_path: pathlib.Path`.
+  - `mining_agents.config.settings() -> Settings` — reads env with defaults `GOOGLE_CLOUD_PROJECT=genial-union-475913-i7`, `MINING_DATASET=mining_data`, `MINING_LOCATION=US`.
+  - `mining_agents.config.model_for_tier(tier: str) -> str` — parses `references/model-policy.md` and returns the model ID for `"reasoning"` or `"balanced"`. Raises `ValueError` for any other tier.
   - BigQuery objects `mining_data.agent_catalog`, `mining_data.agent_approvals`, `mining_data.agent_run_log`, `mining_data.v_fatigue_scored`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -114,7 +114,7 @@ Create `tests/test_config.py`:
 
 ```python
 import pytest
-from agents.config import settings, model_for_tier
+from mining_agents.config import settings, model_for_tier
 
 
 def test_settings_defaults_to_the_argolis_project():
@@ -143,7 +143,7 @@ def test_no_raw_model_id_outside_model_policy():
     policy = root / "references" / "model-policy.md"
     pattern = re.compile(r"gemini-[0-9]")
     offenders = []
-    for path in list(root.glob("agents/**/*.py")) + list(root.glob("tests/**/*.py")):
+    for path in list(root.glob("mining_agents/**/*.py")) + list(root.glob("tests/**/*.py")):
         if path == policy:
             continue
         if pattern.search(path.read_text()):
@@ -155,7 +155,7 @@ Create `tests/test_infra_ddl.py`:
 
 ```python
 import subprocess
-from agents.config import settings
+from mining_agents.config import settings
 
 REQUIRED = ["agent_catalog", "agent_approvals", "agent_run_log", "v_fatigue_scored"]
 
@@ -194,7 +194,7 @@ def test_v_fatigue_scored_never_exposes_raw_heart_rate():
 cd /Users/amritharajendran/VivekWork/src/mining-agents
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/test_config.py tests/test_infra_ddl.py -v
 ```
-Expected: collection error — `ModuleNotFoundError: No module named 'agents'`.
+Expected: collection error — `ModuleNotFoundError: No module named 'mining_agents'`.
 
 - [ ] **Step 3: Create `requirements.txt` and install**
 
@@ -218,7 +218,7 @@ If `google-adk` fails to resolve on this interpreter, report the exact pip error
 # Model Policy
 
 This is the **only** file in the repository permitted to contain a raw model ID.
-All agent code refers to tiers. `agents.config.model_for_tier()` parses the table below.
+All agent code refers to tiers. `mining_agents.config.model_for_tier()` parses the table below.
 
 | Tier | Model ID | Used by |
 |---|---|---|
@@ -230,7 +230,7 @@ There is no `high-volume-subagent` tier. No Pattern C agent is in scope for this
 To change a model, edit this table only. No code change is required.
 ```
 
-- [ ] **Step 5: Create `agents/__init__.py` (empty) and `agents/config.py`**
+- [ ] **Step 5: Create `mining_agents/__init__.py` (empty) and `mining_agents/config.py`**
 
 ```python
 """Environment-driven settings and tier-to-model resolution."""
@@ -336,7 +336,7 @@ import pathlib
 import subprocess
 import sys
 
-from agents.config import settings
+from mining_agents.config import settings
 
 DDL_FILES = ("agent_tables.sql", "v_fatigue_scored.sql")
 REQUIRED = ("agent_catalog", "agent_approvals", "agent_run_log", "v_fatigue_scored")
@@ -389,7 +389,7 @@ Expected: 6 passed.
 
 ```bash
 git checkout -b feat/agents-phase-5
-git add requirements.txt references/model-policy.md infra/ agents/__init__.py agents/config.py tests/test_config.py tests/test_infra_ddl.py
+git add requirements.txt references/model-policy.md infra/ mining_agents/__init__.py mining_agents/config.py tests/test_config.py tests/test_infra_ddl.py
 git commit -m "feat(agents): phase 5 foundations — config, model policy, additive tables"
 ```
 
@@ -398,20 +398,20 @@ git commit -m "feat(agents): phase 5 foundations — config, model policy, addit
 ## Task 2: The tool envelope and the `@tool` decorator
 
 **Files:**
-- Create: `agents/envelope.py`
-- Create: `agents/tools/__init__.py`, `agents/tools/base.py`
+- Create: `mining_agents/envelope.py`
+- Create: `mining_agents/tools/__init__.py`, `mining_agents/tools/base.py`
 - Test: `tests/test_envelope.py`
 
 **Interfaces:**
 - Consumes: nothing from Task 1 beyond the package layout.
 - Produces:
-  - `agents.envelope.ToolError` — pydantic model, fields `code: str`, `message: str`, `details: dict`.
-  - `agents.envelope.Meta` — fields `timestamp: str` (ISO-8601 Z), `tables_read: list[str]`, `rows_scanned: int`.
-  - `agents.envelope.Envelope` — fields `success: bool`, `data: dict`, `error: ToolError | None`, `meta: Meta`.
-  - `agents.envelope.ok(data: dict, tables_read: list[str], rows_scanned: int) -> dict`
-  - `agents.envelope.fail(code: str, message: str, details: dict, tables_read: list[str]) -> dict`
-  - `agents.tools.base.tool(tables_read: list[str])` — a decorator. The wrapped function returns `(data: dict, rows_scanned: int)`; the decorator emits the full envelope dict. Any exception becomes an RFC 7807 failure envelope that still carries `meta.tables_read`.
-  - `agents.tools.base.ToolFailure(code, message, **details)` — the exception tools raise for expected failures.
+  - `mining_agents.envelope.ToolError` — pydantic model, fields `code: str`, `message: str`, `details: dict`.
+  - `mining_agents.envelope.Meta` — fields `timestamp: str` (ISO-8601 Z), `tables_read: list[str]`, `rows_scanned: int`.
+  - `mining_agents.envelope.Envelope` — fields `success: bool`, `data: dict`, `error: ToolError | None`, `meta: Meta`.
+  - `mining_agents.envelope.ok(data: dict, tables_read: list[str], rows_scanned: int) -> dict`
+  - `mining_agents.envelope.fail(code: str, message: str, details: dict, tables_read: list[str]) -> dict`
+  - `mining_agents.tools.base.tool(tables_read: list[str])` — a decorator. The wrapped function returns `(data: dict, rows_scanned: int)`; the decorator emits the full envelope dict. Any exception becomes an RFC 7807 failure envelope that still carries `meta.tables_read`.
+  - `mining_agents.tools.base.ToolFailure(code, message, **details)` — the exception tools raise for expected failures.
 
 Every later tool task uses `@tool([...])`. No tool builds an envelope by hand.
 
@@ -421,8 +421,8 @@ Create `tests/test_envelope.py`:
 
 ```python
 import pytest
-from agents.envelope import Envelope, ok, fail
-from agents.tools.base import tool, ToolFailure
+from mining_agents.envelope import Envelope, ok, fail
+from mining_agents.tools.base import tool, ToolFailure
 
 
 def test_ok_produces_a_valid_envelope():
@@ -495,9 +495,9 @@ def test_tool_requires_a_nonempty_tables_read_declaration():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/test_envelope.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.envelope'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.envelope'`.
 
-- [ ] **Step 3: Write `agents/envelope.py`**
+- [ ] **Step 3: Write `mining_agents/envelope.py`**
 
 ```python
 """The one SOP tool envelope. Every tool in this build returns this shape."""
@@ -548,7 +548,7 @@ def fail(code: str, message: str, details: dict, tables_read: list[str]) -> dict
     ).model_dump()
 ```
 
-- [ ] **Step 4: Write `agents/tools/base.py`** (and empty `agents/tools/__init__.py`)
+- [ ] **Step 4: Write `mining_agents/tools/base.py`** (and empty `mining_agents/tools/__init__.py`)
 
 ```python
 """The @tool decorator: the only place a tool envelope is constructed."""
@@ -557,7 +557,7 @@ from __future__ import annotations
 import functools
 import logging
 
-from agents.envelope import fail, ok
+from mining_agents.envelope import fail, ok
 
 log = logging.getLogger(__name__)
 
@@ -612,7 +612,7 @@ Expected: 6 passed.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add agents/envelope.py agents/tools/ tests/test_envelope.py
+git add mining_agents/envelope.py mining_agents/tools/ tests/test_envelope.py
 git commit -m "feat(agents): SOP tool envelope and @tool decorator"
 ```
 
@@ -621,16 +621,16 @@ git commit -m "feat(agents): SOP tool envelope and @tool decorator"
 ## Task 3: `bq_query` — parameterised BigQuery reads
 
 **Files:**
-- Create: `agents/tools/bq_query.py`
+- Create: `mining_agents/tools/bq_query.py`
 - Test: `tests/tools/test_bq_query.py`
 
 **Interfaces:**
-- Consumes: `agents.config.settings`, `agents.tools.base.tool`, `agents.tools.base.ToolFailure`.
+- Consumes: `mining_agents.config.settings`, `mining_agents.tools.base.tool`, `mining_agents.tools.base.ToolFailure`.
 - Produces:
-  - `agents.tools.bq_query.SqlInterpolationError` — a `ToolFailure` subclass with code `SQL_INTERPOLATION`.
-  - `agents.tools.bq_query.assert_no_interpolation(sql: str) -> None`
-  - `agents.tools.bq_query.run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict], int]` — the raw, un-enveloped runner other tools reuse.
-  - `agents.tools.bq_query.make_bq_query(tables_read: list[str])` — returns an enveloped tool callable bound to that table list. Agents get a tool bound to the tables they are allowed to read.
+  - `mining_agents.tools.bq_query.SqlInterpolationError` — a `ToolFailure` subclass with code `SQL_INTERPOLATION`.
+  - `mining_agents.tools.bq_query.assert_no_interpolation(sql: str) -> None`
+  - `mining_agents.tools.bq_query.run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict], int]` — the raw, un-enveloped runner other tools reuse.
+  - `mining_agents.tools.bq_query.make_bq_query(tables_read: list[str])` — returns an enveloped tool callable bound to that table list. Agents get a tool bound to the tables they are allowed to read.
 
 Later tools (`graph_traverse`, `bqml_predict`, `ontology_lookup`) call `run_query`, not `make_bq_query`, so they own their own envelope declaration.
 
@@ -640,8 +640,8 @@ Create `tests/tools/__init__.py` (empty) and `tests/tools/test_bq_query.py`:
 
 ```python
 import pytest
-from agents.envelope import Envelope
-from agents.tools.bq_query import (
+from mining_agents.envelope import Envelope
+from mining_agents.tools.bq_query import (
     assert_no_interpolation, make_bq_query, run_query, SqlInterpolationError,
 )
 
@@ -696,9 +696,9 @@ def test_interpolated_sql_fails_inside_the_envelope_not_as_a_crash():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/tools/test_bq_query.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.tools.bq_query'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.tools.bq_query'`.
 
-- [ ] **Step 3: Write `agents/tools/bq_query.py`**
+- [ ] **Step 3: Write `mining_agents/tools/bq_query.py`**
 
 ```python
 """Parameterised BigQuery reads. String-interpolated SQL never executes."""
@@ -708,8 +708,8 @@ import re
 
 from google.cloud import bigquery
 
-from agents.config import settings
-from agents.tools.base import ToolFailure, tool
+from mining_agents.config import settings
+from mining_agents.tools.base import ToolFailure, tool
 
 # A quoted literal or a bare number appearing on the right of a comparison or
 # inside an IN list. Table names in backticks and @parameters are unaffected.
@@ -808,7 +808,7 @@ and use a real one. Do not weaken the assertion to `>= 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/tools/bq_query.py tests/tools/
+git add mining_agents/tools/bq_query.py tests/tools/
 git commit -m "feat(agents): bq_query tool with SQL interpolation guard"
 ```
 
@@ -817,15 +817,15 @@ git commit -m "feat(agents): bq_query tool with SQL interpolation guard"
 ## Task 4: `graph_traverse` — the four canonical property-graph traversals
 
 **Files:**
-- Create: `agents/tools/graph_traverse.py`
+- Create: `mining_agents/tools/graph_traverse.py`
 - Test: `tests/tools/test_graph_traverse.py`
 
 **Interfaces:**
-- Consumes: `agents.tools.bq_query.run_query`, `agents.tools.base.tool`, `agents.tools.base.ToolFailure`.
+- Consumes: `mining_agents.tools.bq_query.run_query`, `mining_agents.tools.base.tool`, `mining_agents.tools.base.ToolFailure`.
 - Produces:
-  - `agents.tools.graph_traverse.TRAVERSALS: dict[str, Traversal]` — keys `"blast_radius"`, `"stockout_exposure"`, `"fatigue_to_incident"`, `"ontology_related"`.
-  - `agents.tools.graph_traverse.Traversal` — dataclass with `sql: str`, `params: tuple[str, ...]`, `tables_read: list[str]`, `graph: str`.
-  - `agents.tools.graph_traverse.make_graph_traverse(allowed: list[str])` — enveloped tool taking `(traversal: str, params: dict)`.
+  - `mining_agents.tools.graph_traverse.TRAVERSALS: dict[str, Traversal]` — keys `"blast_radius"`, `"stockout_exposure"`, `"fatigue_to_incident"`, `"ontology_related"`.
+  - `mining_agents.tools.graph_traverse.Traversal` — dataclass with `sql: str`, `params: tuple[str, ...]`, `tables_read: list[str]`, `graph: str`.
+  - `mining_agents.tools.graph_traverse.make_graph_traverse(allowed: list[str])` — enveloped tool taking `(traversal: str, params: dict)`.
 
 **Critical:** edge **labels**, never table names. A property graph over unmatched tables returns zero rows with no error — so a zero-row result on a known-good key is a failure, and the tests below assert real row counts, not `>= 0`.
 
@@ -835,8 +835,8 @@ Create `tests/tools/test_graph_traverse.py`:
 
 ```python
 import pytest
-from agents.envelope import Envelope
-from agents.tools.graph_traverse import TRAVERSALS, make_graph_traverse
+from mining_agents.envelope import Envelope
+from mining_agents.tools.graph_traverse import TRAVERSALS, make_graph_traverse
 
 
 def test_all_four_graphs_are_covered():
@@ -908,9 +908,9 @@ def test_an_unallowed_traversal_is_refused_inside_the_envelope():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/tools/test_graph_traverse.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.tools.graph_traverse'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.tools.graph_traverse'`.
 
-- [ ] **Step 3: Write `agents/tools/graph_traverse.py`**
+- [ ] **Step 3: Write `mining_agents/tools/graph_traverse.py`**
 
 The SQL bodies are the verified §3.2 forms. Copy them exactly — the edge labels and directions below are the deployed ones, and reversing any arrow silently returns zero rows.
 
@@ -924,8 +924,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from agents.tools.base import ToolFailure, tool
-from agents.tools.bq_query import run_query
+from mining_agents.tools.base import ToolFailure, tool
+from mining_agents.tools.bq_query import run_query
 
 
 @dataclass(frozen=True)
@@ -1055,7 +1055,7 @@ If a row count differs from the pinned value, **do not change the assertion.** F
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/tools/graph_traverse.py tests/tools/test_graph_traverse.py
+git add mining_agents/tools/graph_traverse.py tests/tools/test_graph_traverse.py
 git commit -m "feat(agents): graph_traverse tool over the four canonical traversals"
 ```
 
@@ -1064,14 +1064,14 @@ git commit -m "feat(agents): graph_traverse tool over the four canonical travers
 ## Task 5: `operational_math` — deterministic formulas in Python
 
 **Files:**
-- Create: `agents/tools/operational_math.py`
+- Create: `mining_agents/tools/operational_math.py`
 - Test: `tests/tools/test_operational_math.py`
 
 **Interfaces:**
-- Consumes: `agents.tools.base.tool`, `agents.tools.base.ToolFailure`.
+- Consumes: `mining_agents.tools.base.tool`, `mining_agents.tools.base.ToolFailure`.
 - Produces:
-  - `agents.tools.operational_math.FORMULAS: dict[str, callable]` — keys `"rop"`, `"eoq"`, `"cpk"`, `"oee"`, `"littles_law"`.
-  - `agents.tools.operational_math.operational_math(formula: str, inputs: dict)` — the enveloped tool. It is not table-bound, so it declares `tables_read=["(none — deterministic computation)"]` to satisfy the mandatory-field rule honestly.
+  - `mining_agents.tools.operational_math.FORMULAS: dict[str, callable]` — keys `"rop"`, `"eoq"`, `"cpk"`, `"oee"`, `"littles_law"`.
+  - `mining_agents.tools.operational_math.operational_math(formula: str, inputs: dict)` — the enveloped tool. It is not table-bound, so it declares `tables_read=["(none — deterministic computation)"]` to satisfy the mandatory-field rule honestly.
 
 The model chooses the formula and the inputs. Python computes the number. There is no model call in this file.
 
@@ -1083,8 +1083,8 @@ Create `tests/tools/test_operational_math.py`:
 import math
 
 import pytest
-from agents.envelope import Envelope
-from agents.tools.operational_math import FORMULAS, operational_math
+from mining_agents.envelope import Envelope
+from mining_agents.tools.operational_math import FORMULAS, operational_math
 
 
 def test_all_five_formulas_are_present():
@@ -1159,9 +1159,9 @@ def test_the_result_reports_the_formula_it_used():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/tools/test_operational_math.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.tools.operational_math'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.tools.operational_math'`.
 
-- [ ] **Step 3: Write `agents/tools/operational_math.py`**
+- [ ] **Step 3: Write `mining_agents/tools/operational_math.py`**
 
 ```python
 """Deterministic operational formulas. The model picks; Python computes."""
@@ -1171,7 +1171,7 @@ import math
 from dataclasses import dataclass
 from typing import Callable
 
-from agents.tools.base import ToolFailure, tool
+from mining_agents.tools.base import ToolFailure, tool
 
 NO_TABLES = ["(none — deterministic computation)"]
 
@@ -1257,7 +1257,7 @@ Expected: 10 passed, in well under a second — this task touches no network.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/tools/operational_math.py tests/tools/test_operational_math.py
+git add mining_agents/tools/operational_math.py tests/tools/test_operational_math.py
 git commit -m "feat(agents): deterministic operational_math tool"
 ```
 
@@ -1266,14 +1266,14 @@ git commit -m "feat(agents): deterministic operational_math tool"
 ## Task 6: `bqml_predict` — `ML.PREDICT` over the allowlisted models
 
 **Files:**
-- Create: `agents/tools/bqml_predict.py`
+- Create: `mining_agents/tools/bqml_predict.py`
 - Test: `tests/tools/test_bqml_predict.py`
 
 **Interfaces:**
-- Consumes: `agents.tools.bq_query.run_query`, `agents.tools.base.tool`, `agents.config.settings`.
+- Consumes: `mining_agents.tools.bq_query.run_query`, `mining_agents.tools.base.tool`, `mining_agents.config.settings`.
 - Produces:
-  - `agents.tools.bqml_predict.list_models() -> list[str]` — live model names from `bq ls --models`.
-  - `agents.tools.bqml_predict.make_bqml_predict(allowed_models: list[str])` — enveloped tool `(model: str, input_sql: str, params: dict)`.
+  - `mining_agents.tools.bqml_predict.list_models() -> list[str]` — live model names from `bq ls --models`.
+  - `mining_agents.tools.bqml_predict.make_bqml_predict(allowed_models: list[str])` — enveloped tool `(model: str, input_sql: str, params: dict)`.
 
 There are **8** models after Phase 4, not the 7 the design doc names. Enumerate them; do not hard-code a count.
 
@@ -1291,8 +1291,8 @@ Create `tests/tools/test_bqml_predict.py`:
 
 ```python
 import pytest
-from agents.envelope import Envelope
-from agents.tools.bqml_predict import list_models, make_bqml_predict
+from mining_agents.envelope import Envelope
+from mining_agents.tools.bqml_predict import list_models, make_bqml_predict
 
 
 def test_the_dataset_exposes_eight_models():
@@ -1356,9 +1356,9 @@ If `telemetry_alarm_risk_model`'s feature columns are not all present in `teleme
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/tools/test_bqml_predict.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.tools.bqml_predict'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.tools.bqml_predict'`.
 
-- [ ] **Step 4: Write `agents/tools/bqml_predict.py`**
+- [ ] **Step 4: Write `mining_agents/tools/bqml_predict.py`**
 
 ```python
 """ML.PREDICT over the allowlisted BQML models in mining_data."""
@@ -1367,9 +1367,9 @@ from __future__ import annotations
 import re
 import subprocess
 
-from agents.config import settings
-from agents.tools.base import ToolFailure, tool
-from agents.tools.bq_query import run_query
+from mining_agents.config import settings
+from mining_agents.tools.base import ToolFailure, tool
+from mining_agents.tools.bq_query import run_query
 
 _TABLE_REF = re.compile(r"`?(?:[\w-]+\.)?(mining_data\.\w+)`?")
 
@@ -1443,7 +1443,7 @@ Expected: 6 passed.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add agents/tools/bqml_predict.py tests/tools/test_bqml_predict.py
+git add mining_agents/tools/bqml_predict.py tests/tools/test_bqml_predict.py
 git commit -m "feat(agents): bqml_predict tool over the 8 allowlisted models"
 ```
 
@@ -1452,12 +1452,12 @@ git commit -m "feat(agents): bqml_predict tool over the 8 allowlisted models"
 ## Task 7: `ontology_lookup` — concepts and unstructured document metadata
 
 **Files:**
-- Create: `agents/tools/ontology_lookup.py`
+- Create: `mining_agents/tools/ontology_lookup.py`
 - Test: `tests/tools/test_ontology_lookup.py`
 
 **Interfaces:**
-- Consumes: `agents.tools.graph_traverse.TRAVERSALS` (the `ontology_related` entry), `agents.tools.bq_query.run_query`, `agents.tools.base.tool`.
-- Produces: `agents.tools.ontology_lookup.ontology_lookup(concept: str, include_docs: bool = True)` — a module-level enveloped tool. There is no per-agent binding: every agent that gets this tool gets the same one.
+- Consumes: `mining_agents.tools.graph_traverse.TRAVERSALS` (the `ontology_related` entry), `mining_agents.tools.bq_query.run_query`, `mining_agents.tools.base.tool`.
+- Produces: `mining_agents.tools.ontology_lookup.ontology_lookup(concept: str, include_docs: bool = True)` — a module-level enveloped tool. There is no per-agent binding: every agent that gets this tool gets the same one.
 
 This is where Pattern C capability enters the build as a **tool**, not as an agent.
 
@@ -1475,8 +1475,8 @@ Use the real column names in Step 3. If the table has no `concept_name`-like col
 Create `tests/tools/test_ontology_lookup.py`:
 
 ```python
-from agents.envelope import Envelope
-from agents.tools.ontology_lookup import ontology_lookup
+from mining_agents.envelope import Envelope
+from mining_agents.tools.ontology_lookup import ontology_lookup
 
 
 def test_a_known_concept_returns_its_related_concepts():
@@ -1507,7 +1507,7 @@ def test_an_unknown_concept_succeeds_with_empty_results():
     assert env["data"]["related"] == []
 ```
 
-- [ ] **Step 3: Write `agents/tools/ontology_lookup.py`**
+- [ ] **Step 3: Write `mining_agents/tools/ontology_lookup.py`**
 
 ```python
 """Ontology concept expansion plus unstructured-document metadata.
@@ -1516,9 +1516,9 @@ Pattern C capability enters this build here — as a tool, not as an agent.
 """
 from __future__ import annotations
 
-from agents.tools.base import tool
-from agents.tools.bq_query import run_query
-from agents.tools.graph_traverse import TRAVERSALS
+from mining_agents.tools.base import tool
+from mining_agents.tools.bq_query import run_query
+from mining_agents.tools.graph_traverse import TRAVERSALS
 
 TABLES = ["mining_data.ontology_concepts", "mining_data.unstructured_docs_metadata"]
 
@@ -1561,7 +1561,7 @@ Expected: 4 passed.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/tools/ontology_lookup.py tests/tools/test_ontology_lookup.py
+git add mining_agents/tools/ontology_lookup.py tests/tools/test_ontology_lookup.py
 git commit -m "feat(agents): ontology_lookup tool"
 ```
 
@@ -1570,14 +1570,14 @@ git commit -m "feat(agents): ontology_lookup tool"
 ## Task 8: `request_approval` — the HITL write path
 
 **Files:**
-- Create: `agents/tools/request_approval.py`
+- Create: `mining_agents/tools/request_approval.py`
 - Test: `tests/tools/test_request_approval.py`
 
 **Interfaces:**
-- Consumes: `agents.config.settings`, `agents.tools.base.tool`, `agents.tools.bq_query.run_query`.
+- Consumes: `mining_agents.config.settings`, `mining_agents.tools.base.tool`, `mining_agents.tools.bq_query.run_query`.
 - Produces:
-  - `agents.tools.request_approval.make_request_approval(agent_id: str)` — enveloped tool `(action_type: str, payload: dict, reasoning: str)`.
-  - `agents.tools.request_approval.approval_status(approval_id: str) -> str` — reads back `PENDING` / `APPROVED` / `REJECTED`.
+  - `mining_agents.tools.request_approval.make_request_approval(agent_id: str)` — enveloped tool `(action_type: str, payload: dict, reasoning: str)`.
+  - `mining_agents.tools.request_approval.approval_status(approval_id: str) -> str` — reads back `PENDING` / `APPROVED` / `REJECTED`.
 
 `agent_approvals` is the **only** table any agent may write. The tool always returns `PENDING`; nothing in this codebase sets `APPROVED`. A human does that through SC-4.
 
@@ -1597,8 +1597,8 @@ Create `tests/tools/test_request_approval.py`:
 ```python
 import uuid
 
-from agents.envelope import Envelope
-from agents.tools.request_approval import approval_status, make_request_approval
+from mining_agents.envelope import Envelope
+from mining_agents.tools.request_approval import approval_status, make_request_approval
 
 
 def test_a_request_is_written_and_comes_back_pending():
@@ -1638,11 +1638,11 @@ def test_reasoning_is_required():
 def test_the_tool_never_returns_approved():
     """Nothing in this codebase may self-approve. Only a human sets APPROVED."""
     import pathlib
-    source = pathlib.Path("agents/tools/request_approval.py").read_text()
+    source = pathlib.Path("mining_agents/tools/request_approval.py").read_text()
     assert "'APPROVED'" not in source and '"APPROVED"' not in source
 ```
 
-- [ ] **Step 3: Write `agents/tools/request_approval.py`**
+- [ ] **Step 3: Write `mining_agents/tools/request_approval.py`**
 
 ```python
 """The HITL write path. agent_approvals is the only table an agent may write."""
@@ -1654,9 +1654,9 @@ from datetime import datetime, timezone
 
 from google.cloud import bigquery
 
-from agents.config import settings
-from agents.tools.base import ToolFailure, tool
-from agents.tools.bq_query import run_query
+from mining_agents.config import settings
+from mining_agents.tools.base import ToolFailure, tool
+from mining_agents.tools.bq_query import run_query
 
 TABLE = "mining_data.agent_approvals"
 
@@ -1729,7 +1729,7 @@ Expected: 5 passed. Streaming inserts can take a moment to be readable; if `appr
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/tools/request_approval.py tests/tools/test_request_approval.py
+git add mining_agents/tools/request_approval.py tests/tools/test_request_approval.py
 git commit -m "feat(agents): request_approval HITL write path"
 ```
 
@@ -1738,20 +1738,20 @@ git commit -m "feat(agents): request_approval HITL write path"
 ## Task 9: Safety — untrusted-text wrapper and biometric output filter
 
 **Files:**
-- Create: `agents/safety/__init__.py`, `agents/safety/untrusted.py`, `agents/safety/output_filter.py`
+- Create: `mining_agents/safety/__init__.py`, `mining_agents/safety/untrusted.py`, `mining_agents/safety/output_filter.py`
 - Test: `tests/safety/test_untrusted.py`, `tests/safety/test_output_filter.py`
 
 **Interfaces:**
 - Consumes: nothing.
 - Produces:
-  - `agents.safety.untrusted.UNTRUSTED_PREFIX: str` — the literal banner.
-  - `agents.safety.untrusted.FREE_TEXT_FIELDS: dict[str, tuple[str, ...]]` — table → free-text column names.
-  - `agents.safety.untrusted.wrap(value: str, source: str) -> str`
-  - `agents.safety.untrusted.wrap_rows(rows: list[dict], table: str) -> list[dict]` — wraps every free-text column of `table` in place on a copy.
-  - `agents.safety.output_filter.BIOMETRIC_FIELDS: tuple[str, ...]`
-  - `agents.safety.output_filter.scrub(text: str) -> str`
-  - `agents.safety.output_filter.RawBiometricLeak` — exception raised by `assert_clean`.
-  - `agents.safety.output_filter.assert_clean(text: str) -> None`
+  - `mining_agents.safety.untrusted.UNTRUSTED_PREFIX: str` — the literal banner.
+  - `mining_agents.safety.untrusted.FREE_TEXT_FIELDS: dict[str, tuple[str, ...]]` — table → free-text column names.
+  - `mining_agents.safety.untrusted.wrap(value: str, source: str) -> str`
+  - `mining_agents.safety.untrusted.wrap_rows(rows: list[dict], table: str) -> list[dict]` — wraps every free-text column of `table` in place on a copy.
+  - `mining_agents.safety.output_filter.BIOMETRIC_FIELDS: tuple[str, ...]`
+  - `mining_agents.safety.output_filter.scrub(text: str) -> str`
+  - `mining_agents.safety.output_filter.RawBiometricLeak` — exception raised by `assert_clean`.
+  - `mining_agents.safety.output_filter.assert_clean(text: str) -> None`
 
 The design is explicit that this is enforced by code, not by prompt instruction. `scrub` is what runs on every agent output; `assert_clean` is what the S05 and S10 critics call.
 
@@ -1760,7 +1760,7 @@ The design is explicit that this is enforced by code, not by prompt instruction.
 Create `tests/safety/__init__.py` (empty) and `tests/safety/test_untrusted.py`:
 
 ```python
-from agents.safety.untrusted import (
+from mining_agents.safety.untrusted import (
     FREE_TEXT_FIELDS, UNTRUSTED_PREFIX, wrap, wrap_rows,
 )
 
@@ -1820,7 +1820,7 @@ Create `tests/safety/test_output_filter.py`:
 
 ```python
 import pytest
-from agents.safety.output_filter import RawBiometricLeak, assert_clean, scrub
+from mining_agents.safety.output_filter import RawBiometricLeak, assert_clean, scrub
 
 
 def test_a_banded_statement_is_left_alone():
@@ -1862,9 +1862,9 @@ def test_assert_clean_raises_on_a_leak():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/safety -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.safety'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.safety'`.
 
-- [ ] **Step 3: Write `agents/safety/untrusted.py`**
+- [ ] **Step 3: Write `mining_agents/safety/untrusted.py`**
 
 ```python
 """Delimited, labelled untrusted context for free text read out of the dataset.
@@ -1910,7 +1910,7 @@ def wrap_rows(rows: list[dict], table: str) -> list[dict]:
     return wrapped
 ```
 
-- [ ] **Step 4: Write `agents/safety/output_filter.py`**
+- [ ] **Step 4: Write `mining_agents/safety/output_filter.py`**
 
 ```python
 """Biometric output masking. Enforced by code, not by prompt instruction.
@@ -1974,7 +1974,7 @@ Expected: 13 passed.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add agents/safety/ tests/safety/
+git add mining_agents/safety/ tests/safety/
 git commit -m "feat(agents): untrusted-text wrapper and biometric output filter"
 ```
 
@@ -1983,17 +1983,17 @@ git commit -m "feat(agents): untrusted-text wrapper and biometric output filter"
 ## Task 10: The agent catalog — 100 definitions as data
 
 **Files:**
-- Create: `agents/catalog/__init__.py`, `agents/catalog/definitions.py`, `agents/catalog/loader.py`
+- Create: `mining_agents/catalog/__init__.py`, `mining_agents/catalog/definitions.py`, `mining_agents/catalog/loader.py`
 - Test: `tests/catalog/test_definitions.py`, `tests/catalog/test_loader.py`
 
 **Interfaces:**
-- Consumes: `agents.config.settings`, `agents.tools.bq_query.run_query`.
+- Consumes: `mining_agents.config.settings`, `mining_agents.tools.bq_query.run_query`.
 - Produces:
-  - `agents.catalog.definitions.AgentDef` — pydantic model with fields `agent_id: str`, `display_name: str`, `pattern: Literal["A","B"]`, `swarm_id: str | None`, `swarm_role: Literal["coordinator","specialist","critic"] | None`, `apqc_code: str`, `persona: str`, `value_branch: str`, `model_tier: Literal["reasoning","balanced"]`, `hitl_required: bool`, `source_tables: list[str]`, `tools: list[str]`, `traversals: list[str]`, `models: list[str]`.
-  - `agents.catalog.definitions.SWARMS: list[SwarmDef]` — 12 entries, each with a coordinator, three specialists and one critic.
-  - `agents.catalog.definitions.DEEP: list[AgentDef]` — 40 entries.
-  - `agents.catalog.definitions.ALL_AGENTS: list[AgentDef]` — exactly 100.
-  - `agents.catalog.loader.upsert_catalog() -> int` — truncate-and-load `mining_data.agent_catalog`; returns row count.
+  - `mining_agents.catalog.definitions.AgentDef` — pydantic model with fields `agent_id: str`, `display_name: str`, `pattern: Literal["A","B"]`, `swarm_id: str | None`, `swarm_role: Literal["coordinator","specialist","critic"] | None`, `apqc_code: str`, `persona: str`, `value_branch: str`, `model_tier: Literal["reasoning","balanced"]`, `hitl_required: bool`, `source_tables: list[str]`, `tools: list[str]`, `traversals: list[str]`, `models: list[str]`.
+  - `mining_agents.catalog.definitions.SWARMS: list[SwarmDef]` — 12 entries, each with a coordinator, three specialists and one critic.
+  - `mining_agents.catalog.definitions.DEEP: list[AgentDef]` — 40 entries.
+  - `mining_agents.catalog.definitions.ALL_AGENTS: list[AgentDef]` — exactly 100.
+  - `mining_agents.catalog.loader.upsert_catalog() -> int` — truncate-and-load `mining_data.agent_catalog`; returns row count.
 
 **The source of truth for the inventory is `docs/phase-1-prd.md` §5.1 (12 swarms) and §5.2 (40 deep agents).** Transcribe every row. Do not invent agents, do not abbreviate, do not stop at a sample.
 
@@ -2013,7 +2013,7 @@ Create `tests/catalog/__init__.py` (empty) and `tests/catalog/test_definitions.p
 
 ```python
 import pytest
-from agents.catalog.definitions import ALL_AGENTS, DEEP, SWARMS
+from mining_agents.catalog.definitions import ALL_AGENTS, DEEP, SWARMS
 
 HITL_COORDINATORS = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S11"}
 HITL_DEEP = {"D07", "D14", "D25", "D30", "D37"}
@@ -2124,9 +2124,9 @@ def test_graph_traverse_is_never_granted_without_a_traversal():
 Create `tests/catalog/test_loader.py`:
 
 ```python
-from agents.catalog.definitions import ALL_AGENTS
-from agents.catalog.loader import upsert_catalog
-from agents.tools.bq_query import run_query
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.catalog.loader import upsert_catalog
+from mining_agents.tools.bq_query import run_query
 
 
 def test_upsert_writes_every_agent():
@@ -2174,9 +2174,9 @@ def test_every_declared_source_table_exists_in_bigquery():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/catalog -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.catalog'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.catalog'`.
 
-- [ ] **Step 3: Write `agents/catalog/definitions.py`**
+- [ ] **Step 3: Write `mining_agents/catalog/definitions.py`**
 
 Start from this skeleton, then transcribe all 12 swarms from PRD §5.1 and all 40 deep agents from §5.2. Two entries are written out in full below as the pattern to follow — every remaining entry has the same shape.
 
@@ -2311,7 +2311,7 @@ Transcription rules:
 - **The PRD's Data column names columns, not always tables.** Resolve each to its table: `sleep_deficit_hours` / `heart_rate_bpm` / `microsleep_events_detected` → `mining_data.biometric_fatigue_logs`; `vibration_hz` / `temperature_c` / `rotational_torque_nm` / `power_draw_mw` → `mining_data.telemetry_stream`; `emergency_keyword_flag` / `sentiment_score` → `mining_data.radio_communications`; `gap_size_setting_mm` / `feed_rate_tph` / `bypass_valve_open` → `mining_data.crusher_states`; `recovery_rate_pct` / `feed_grade_pct` / `tailings_grade_pct` / `concentrate_grade_pct` → `mining_data.metallurgical_recovery`; `current_payload_tons` / `payload_capacity_tons` → `mining_data.fleet_vehicles`; `average_cycle_time_mins` / `congestion_factor` / `distance_meters` → `mining_data.haulage_routes`; `criticality_rating` → `mining_data.assets`; `unit_price_usd` / `lead_time_days` → `mining_data.inventory_levels`; `vendor_name` / `bid_status` / `proposed_cost` / `compliance_checked` → `mining_data.procurement_bids`; `impact_score` → `mining_data.asset_dependencies`; `specific_gravity` / `geology_code` → `mining_data.drill_assay_logs`; `lithology_type` → `mining_data.geological_block_models`; `severity_level` / `root_cause` → `mining_data.safety_incidents`.
 - **S01 specialists depend on data injections A1 and A2** and **D02 covers `PUMP-104A` and `MILL-01` after A3** — both landed in Phase 4, so no scoping caveat is needed in the catalog.
 
-- [ ] **Step 4: Write `agents/catalog/loader.py`**
+- [ ] **Step 4: Write `mining_agents/catalog/loader.py`**
 
 ```python
 """Validate the definitions and publish them to mining_data.agent_catalog."""
@@ -2319,8 +2319,8 @@ from __future__ import annotations
 
 from google.cloud import bigquery
 
-from agents.catalog.definitions import ALL_AGENTS
-from agents.config import settings
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.config import settings
 
 
 def _rows() -> list[dict]:
@@ -2369,7 +2369,7 @@ if __name__ == "__main__":
 - [ ] **Step 5: Load the catalog and run the tests**
 
 ```bash
-/Users/amritharajendran/.local/pythons/py312/bin/python3 -m agents.catalog.loader
+/Users/amritharajendran/.local/pythons/py312/bin/python3 -m mining_agents.catalog.loader
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/catalog -v
 ```
 Expected: `loaded 100 agents into agent_catalog`, then all catalog tests pass with zero failures. Every failure here is a transcription error — fix the definitions, never the assertion.
@@ -2377,7 +2377,7 @@ Expected: `loaded 100 agents into agent_catalog`, then all catalog tests pass wi
 - [ ] **Step 6: Commit**
 
 ```bash
-git add agents/catalog/ tests/catalog/
+git add mining_agents/catalog/ tests/catalog/
 git commit -m "feat(agents): 100-agent catalog definitions and BigQuery loader"
 ```
 
@@ -2386,15 +2386,15 @@ git commit -m "feat(agents): 100-agent catalog definitions and BigQuery loader"
 ## Task 11: Pattern B — the deep agent factory
 
 **Files:**
-- Create: `agents/patterns/__init__.py`, `agents/patterns/deep.py`
+- Create: `mining_agents/patterns/__init__.py`, `mining_agents/patterns/deep.py`
 - Test: `tests/patterns/test_deep.py`
 
 **Interfaces:**
-- Consumes: `agents.catalog.definitions.AgentDef`, `agents.config.model_for_tier`, all six tool modules, `agents.safety.untrusted.wrap_rows`, `agents.safety.output_filter.scrub`.
+- Consumes: `mining_agents.catalog.definitions.AgentDef`, `mining_agents.config.model_for_tier`, all six tool modules, `mining_agents.safety.untrusted.wrap_rows`, `mining_agents.safety.output_filter.scrub`.
 - Produces:
-  - `agents.patterns.deep.bind_tools(agent: AgentDef) -> list` — resolves an `AgentDef`'s `tools` list into bound callables.
-  - `agents.patterns.deep.build_instruction(agent: AgentDef) -> str`
-  - `agents.patterns.deep.build_deep_agent(agent: AgentDef)` — returns a configured ADK `LlmAgent`.
+  - `mining_agents.patterns.deep.bind_tools(agent: AgentDef) -> list` — resolves an `AgentDef`'s `tools` list into bound callables.
+  - `mining_agents.patterns.deep.build_instruction(agent: AgentDef) -> str`
+  - `mining_agents.patterns.deep.build_deep_agent(agent: AgentDef)` — returns a configured ADK `LlmAgent`.
 
 All 40 Pattern B agents come from this one function. There is no hand-written agent file.
 
@@ -2404,8 +2404,8 @@ Create `tests/patterns/__init__.py` (empty) and `tests/patterns/test_deep.py`:
 
 ```python
 import pytest
-from agents.catalog.definitions import DEEP
-from agents.patterns.deep import bind_tools, build_deep_agent, build_instruction
+from mining_agents.catalog.definitions import DEEP
+from mining_agents.patterns.deep import bind_tools, build_deep_agent, build_instruction
 
 
 def _by_id(agent_id):
@@ -2462,7 +2462,7 @@ def test_biometric_agents_are_told_to_use_bands_not_raw_values():
 
 def test_the_agent_resolves_its_model_from_the_tier_not_a_literal():
     import inspect
-    import agents.patterns.deep as module
+    import mining_agents.patterns.deep as module
     source = inspect.getsource(module)
     assert "gemini" not in source
     assert "model_for_tier" in source
@@ -2473,9 +2473,9 @@ def test_the_agent_resolves_its_model_from_the_tier_not_a_literal():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/patterns/test_deep.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.patterns'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.patterns'`.
 
-- [ ] **Step 3: Write `agents/patterns/deep.py`**
+- [ ] **Step 3: Write `mining_agents/patterns/deep.py`**
 
 ```python
 """Pattern B factory. All 40 deep agents are built by this one function."""
@@ -2483,16 +2483,16 @@ from __future__ import annotations
 
 from google.adk.agents import LlmAgent
 
-from agents.catalog.definitions import AgentDef
-from agents.config import model_for_tier
-from agents.safety.output_filter import BIOMETRIC_FIELDS
-from agents.safety.untrusted import FREE_TEXT_FIELDS, UNTRUSTED_PREFIX
-from agents.tools.bq_query import make_bq_query
-from agents.tools.bqml_predict import make_bqml_predict
-from agents.tools.graph_traverse import make_graph_traverse
-from agents.tools.ontology_lookup import ontology_lookup
-from agents.tools.operational_math import operational_math
-from agents.tools.request_approval import make_request_approval
+from mining_agents.catalog.definitions import AgentDef
+from mining_agents.config import model_for_tier
+from mining_agents.safety.output_filter import BIOMETRIC_FIELDS
+from mining_agents.safety.untrusted import FREE_TEXT_FIELDS, UNTRUSTED_PREFIX
+from mining_agents.tools.bq_query import make_bq_query
+from mining_agents.tools.bqml_predict import make_bqml_predict
+from mining_agents.tools.graph_traverse import make_graph_traverse
+from mining_agents.tools.ontology_lookup import ontology_lookup
+from mining_agents.tools.operational_math import operational_math
+from mining_agents.tools.request_approval import make_request_approval
 
 BIOMETRIC_TABLE = "mining_data.biometric_fatigue_logs"
 
@@ -2600,7 +2600,7 @@ Expected: 9 passed.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/patterns/ tests/patterns/
+git add mining_agents/patterns/ tests/patterns/
 git commit -m "feat(agents): Pattern B deep agent factory"
 ```
 
@@ -2609,16 +2609,16 @@ git commit -m "feat(agents): Pattern B deep agent factory"
 ## Task 12: Pattern A — the swarm with fan-out, barrier, and critic
 
 **Files:**
-- Create: `agents/patterns/swarm.py`
+- Create: `mining_agents/patterns/swarm.py`
 - Test: `tests/patterns/test_swarm.py`
 
 **Interfaces:**
-- Consumes: `agents.catalog.definitions.SwarmDef`, `agents.patterns.deep.bind_tools`, `agents.patterns.deep.build_instruction`, `agents.config.model_for_tier`.
+- Consumes: `mining_agents.catalog.definitions.SwarmDef`, `mining_agents.patterns.deep.bind_tools`, `mining_agents.patterns.deep.build_instruction`, `mining_agents.config.model_for_tier`.
 - Produces:
-  - `agents.patterns.swarm.SpecialistResult` — dataclass `agent_id: str`, `status: Literal["DONE","BLOCKED"]`, `output: dict`, `reason: str | None`.
-  - `agents.patterns.swarm.barrier(results: list[SpecialistResult]) -> dict` — returns `{"completed": [...], "unverified": [...]}`.
-  - `agents.patterns.swarm.critic_instruction(swarm: SwarmDef) -> str`
-  - `agents.patterns.swarm.build_swarm(swarm: SwarmDef)` — returns the coordinator agent with a `ParallelAgent` fan-out and a sequential critic.
+  - `mining_agents.patterns.swarm.SpecialistResult` — dataclass `agent_id: str`, `status: Literal["DONE","BLOCKED"]`, `output: dict`, `reason: str | None`.
+  - `mining_agents.patterns.swarm.barrier(results: list[SpecialistResult]) -> dict` — returns `{"completed": [...], "unverified": [...]}`.
+  - `mining_agents.patterns.swarm.critic_instruction(swarm: SwarmDef) -> str`
+  - `mining_agents.patterns.swarm.build_swarm(swarm: SwarmDef)` — returns the coordinator agent with a `ParallelAgent` fan-out and a sequential critic.
 
 **The ordering is not negotiable:** fan-out in parallel → barrier (all three DONE or BLOCKED) → critic sequentially. A critic that sees partial output is guessing, not auditing. A BLOCKED specialist does not abort the swarm; its contribution is marked `unverified`, which is what populates SC-4's `⚠ UNVERIFIED` band.
 
@@ -2628,8 +2628,8 @@ Create `tests/patterns/test_swarm.py`:
 
 ```python
 import pytest
-from agents.catalog.definitions import SWARMS
-from agents.patterns.swarm import (
+from mining_agents.catalog.definitions import SWARMS
+from mining_agents.patterns.swarm import (
     SpecialistResult, barrier, build_swarm, critic_instruction,
 )
 
@@ -2707,9 +2707,9 @@ def test_only_the_coordinator_holds_the_approval_tool():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/patterns/test_swarm.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.patterns.swarm'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.patterns.swarm'`.
 
-- [ ] **Step 3: Write `agents/patterns/swarm.py`**
+- [ ] **Step 3: Write `mining_agents/patterns/swarm.py`**
 
 ```python
 """Pattern A factory: fan-out in parallel, barrier, then the critic.
@@ -2725,10 +2725,10 @@ from typing import Literal
 
 from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
 
-from agents.catalog.definitions import SwarmDef
-from agents.config import model_for_tier
-from agents.patterns.deep import bind_tools, build_instruction
-from agents.safety.output_filter import BIOMETRIC_FIELDS
+from mining_agents.catalog.definitions import SwarmDef
+from mining_agents.config import model_for_tier
+from mining_agents.patterns.deep import bind_tools, build_instruction
+from mining_agents.safety.output_filter import BIOMETRIC_FIELDS
 
 BIOMETRIC_TABLE = "mining_data.biometric_fatigue_logs"
 
@@ -2831,7 +2831,7 @@ Expected: 9 + 9 = 18 passed.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/patterns/swarm.py tests/patterns/test_swarm.py
+git add mining_agents/patterns/swarm.py tests/patterns/test_swarm.py
 git commit -m "feat(agents): Pattern A swarm factory with barrier and critic"
 ```
 
@@ -2840,17 +2840,17 @@ git commit -m "feat(agents): Pattern A swarm factory with barrier and critic"
 ## Task 13: Run log — every invocation writes `agent_run_log`
 
 **Files:**
-- Create: `agents/runlog.py`
+- Create: `mining_agents/runlog.py`
 - Test: `tests/test_runlog.py`
 
-`logged_run` is the boundary wrapper the deploy runtime applies around each invocation. It is not called from inside `build_deep_agent` — an agent factory that logs would log at construction time, not at run time. Do not modify `agents/patterns/deep.py` in this task.
+`logged_run` is the boundary wrapper the deploy runtime applies around each invocation. It is not called from inside `build_deep_agent` — an agent factory that logs would log at construction time, not at run time. Do not modify `mining_agents/patterns/deep.py` in this task.
 
 **Interfaces:**
-- Consumes: `agents.config.settings`, `agents.safety.output_filter.scrub`, `agents.tools.bq_query.run_query`.
+- Consumes: `mining_agents.config.settings`, `mining_agents.safety.output_filter.scrub`, `mining_agents.tools.bq_query.run_query`.
 - Produces:
-  - `agents.runlog.RunRecord` — dataclass mirroring the `agent_run_log` columns.
-  - `agents.runlog.record_run(agent_id, status, started_at, finished_at, tables_read, reasoning_snapshot, error=None) -> str` — returns the `run_id`.
-  - `agents.runlog.logged_run(agent_id)` — a context manager that times the call, captures the status, scrubs the snapshot, and writes exactly one row on both success and failure.
+  - `mining_agents.runlog.RunRecord` — dataclass mirroring the `agent_run_log` columns.
+  - `mining_agents.runlog.record_run(agent_id, status, started_at, finished_at, tables_read, reasoning_snapshot, error=None) -> str` — returns the `run_id`.
+  - `mining_agents.runlog.logged_run(agent_id)` — a context manager that times the call, captures the status, scrubs the snapshot, and writes exactly one row on both success and failure.
 
 The snapshot is scrubbed before it is written. `agent_run_log` retains reasoning that may quote free text, and §6.3 puts a 90-day expiry on it for exactly that reason — but expiry is not a substitute for not writing a heart rate down in the first place.
 
@@ -2869,8 +2869,8 @@ Create `tests/test_runlog.py`:
 import uuid
 
 import pytest
-from agents.runlog import logged_run, record_run
-from agents.tools.bq_query import run_query
+from mining_agents.runlog import logged_run, record_run
+from mining_agents.tools.bq_query import run_query
 
 
 def _fetch(run_id):
@@ -2937,9 +2937,9 @@ def test_record_run_returns_a_unique_id():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/test_runlog.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.runlog'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.runlog'`.
 
-- [ ] **Step 4: Write `agents/runlog.py`**
+- [ ] **Step 4: Write `mining_agents/runlog.py`**
 
 ```python
 """Every agent invocation writes exactly one agent_run_log row."""
@@ -2952,8 +2952,8 @@ from datetime import datetime, timezone
 
 from google.cloud import bigquery
 
-from agents.config import settings
-from agents.safety.output_filter import scrub
+from mining_agents.config import settings
+from mining_agents.safety.output_filter import scrub
 
 TABLE = "mining_data.agent_run_log"
 
@@ -3034,7 +3034,7 @@ Expected: 5 passed. As with Task 8, streaming reads may lag; retry inside `_fetc
 - [ ] **Step 6: Commit**
 
 ```bash
-git add agents/runlog.py tests/test_runlog.py
+git add mining_agents/runlog.py tests/test_runlog.py
 git commit -m "feat(agents): agent_run_log with scrubbed reasoning snapshots"
 ```
 
@@ -3047,7 +3047,7 @@ git commit -m "feat(agents): agent_run_log with scrubbed reasoning snapshots"
 - Test: `tests/infra/test_service_accounts.py`
 
 **Interfaces:**
-- Consumes: `agents.catalog.definitions.ALL_AGENTS`, `agents.config.settings`.
+- Consumes: `mining_agents.catalog.definitions.ALL_AGENTS`, `mining_agents.config.settings`.
 - Produces:
   - `infra.iam.service_accounts.sa_id(agent) -> str` — the ≤30-char account ID, e.g. `mag-s01-coord`, `mag-s01-sp1`, `mag-s01-critic`, `mag-d27`.
   - `infra.iam.service_accounts.sa_email(agent) -> str`
@@ -3066,7 +3066,7 @@ Create `tests/infra/__init__.py` (empty) and `tests/infra/test_service_accounts.
 import pathlib
 
 import pytest
-from agents.catalog.definitions import ALL_AGENTS
+from mining_agents.catalog.definitions import ALL_AGENTS
 from infra.iam.service_accounts import (
     BIOMETRIC_READERS, plan, sa_email, sa_id, tier_roles,
 )
@@ -3163,8 +3163,8 @@ from __future__ import annotations
 
 import subprocess
 
-from agents.catalog.definitions import AgentDef, ALL_AGENTS
-from agents.config import settings
+from mining_agents.catalog.definitions import AgentDef, ALL_AGENTS
+from mining_agents.config import settings
 
 BASE_ROLES = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser"]
 HITL_ROLE = "roles/bigquery.dataEditor"
@@ -3293,17 +3293,17 @@ git commit -m "feat(infra): 100 per-agent service accounts with three IAM tiers"
 ## Task 15: Registry and Gateway guardrails — 52 externally-callable agents
 
 **Files:**
-- Create: `agents/registry.py`
+- Create: `mining_agents/registry.py`
 - Test: `tests/test_registry.py`
 
 **Interfaces:**
-- Consumes: `agents.catalog.definitions.ALL_AGENTS`, `agents.catalog.definitions.SWARMS`, `infra.iam.service_accounts.sa_email`.
+- Consumes: `mining_agents.catalog.definitions.ALL_AGENTS`, `mining_agents.catalog.definitions.SWARMS`, `infra.iam.service_accounts.sa_email`.
 - Produces:
-  - `agents.registry.GUARDRAILS: dict` — `{"max_input_bytes": 32768, "max_output_bytes": 262144, "rate_limit_per_min": 60}`.
-  - `agents.registry.registrable() -> list[AgentDef]` — the 52.
-  - `agents.registry.caller_allowlist(agent) -> list[str]` — SA emails permitted to invoke this agent.
-  - `agents.registry.registration(agent) -> dict` — the full registration payload.
-  - `agents.registry.registrations() -> list[dict]`
+  - `mining_agents.registry.GUARDRAILS: dict` — `{"max_input_bytes": 32768, "max_output_bytes": 262144, "rate_limit_per_min": 60}`.
+  - `mining_agents.registry.registrable() -> list[AgentDef]` — the 52.
+  - `mining_agents.registry.caller_allowlist(agent) -> list[str]` — SA emails permitted to invoke this agent.
+  - `mining_agents.registry.registration(agent) -> dict` — the full registration payload.
+  - `mining_agents.registry.registrations() -> list[dict]`
 
 Registering 52, not 100: specialists and critics are sub-agents reachable only through their coordinator. Registering them separately would falsely advertise 36 agents as independently callable.
 
@@ -3312,8 +3312,8 @@ Registering 52, not 100: specialists and critics are sub-agents reachable only t
 Create `tests/test_registry.py`:
 
 ```python
-from agents.catalog.definitions import SWARMS
-from agents.registry import (
+from mining_agents.catalog.definitions import SWARMS
+from mining_agents.registry import (
     GUARDRAILS, caller_allowlist, registrable, registration, registrations,
 )
 
@@ -3379,9 +3379,9 @@ def test_all_fifty_two_registrations_build():
 ```bash
 /Users/amritharajendran/.local/pythons/py312/bin/python3 -m pytest tests/test_registry.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'agents.registry'`.
+Expected: `ModuleNotFoundError: No module named 'mining_agents.registry'`.
 
-- [ ] **Step 3: Write `agents/registry.py`**
+- [ ] **Step 3: Write `mining_agents/registry.py`**
 
 ```python
 """Registry payloads for the 52 externally-callable agents.
@@ -3392,7 +3392,7 @@ callable agents.
 """
 from __future__ import annotations
 
-from agents.catalog.definitions import ALL_AGENTS, SWARMS, AgentDef
+from mining_agents.catalog.definitions import ALL_AGENTS, SWARMS, AgentDef
 from infra.iam.service_accounts import sa_email
 
 VERSION = "1.0.0"
@@ -3469,7 +3469,7 @@ Expected: 8 passed.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agents/registry.py tests/test_registry.py
+git add mining_agents/registry.py tests/test_registry.py
 git commit -m "feat(agents): registry payloads and gateway guardrails for 52 agents"
 ```
 
@@ -3478,14 +3478,14 @@ git commit -m "feat(agents): registry payloads and gateway guardrails for 52 age
 ## Task 16: Build, deploy, and verify the demo scenarios
 
 **Files:**
-- Create: `agents/build.py`
+- Create: `mining_agents/build.py`
 - Create: `scripts/deploy.py`
 - Test: `tests/test_build.py`, `tests/test_demo_scenarios.py`
 
 **Interfaces:**
 - Consumes: everything above.
 - Produces:
-  - `agents.build.build_all() -> dict[str, object]` — `agent_id` → built ADK agent, for the 52 registrable entrypoints.
+  - `mining_agents.build.build_all() -> dict[str, object]` — `agent_id` → built ADK agent, for the 52 registrable entrypoints.
   - `scripts.deploy.deploy(dry_run: bool = True) -> None`
   - `scripts.deploy.DOMAIN_BINDING_COMMAND: str`
 
@@ -3496,8 +3496,8 @@ This task is the gate. It proves the 100 agents instantiate, that every one of t
 Create `tests/test_build.py`:
 
 ```python
-from agents.build import build_all
-from agents.catalog.definitions import ALL_AGENTS
+from mining_agents.build import build_all
+from mining_agents.catalog.definitions import ALL_AGENTS
 
 
 def test_all_fifty_two_entrypoints_build():
@@ -3524,9 +3524,9 @@ Create `tests/test_demo_scenarios.py`:
 A property graph over unmatched tables returns zero rows with no error.
 Every assertion below pins a real count for that reason.
 """
-from agents.tools.graph_traverse import make_graph_traverse
-from agents.tools.operational_math import operational_math
-from agents.tools.ontology_lookup import ontology_lookup
+from mining_agents.tools.graph_traverse import make_graph_traverse
+from mining_agents.tools.operational_math import operational_math
+from mining_agents.tools.ontology_lookup import ontology_lookup
 
 
 def test_sc2_blast_radius_from_a_degrading_conveyor():
@@ -3567,15 +3567,15 @@ def test_a_reorder_point_is_computed_in_python_not_by_a_model():
     assert env["data"]["formula"] == "rop"
 ```
 
-- [ ] **Step 2: Write `agents/build.py`**
+- [ ] **Step 2: Write `mining_agents/build.py`**
 
 ```python
 """The single entry point. Builds every agent from the catalog."""
 from __future__ import annotations
 
-from agents.catalog.definitions import DEEP, SWARMS
-from agents.patterns.deep import build_deep_agent
-from agents.patterns.swarm import build_swarm
+from mining_agents.catalog.definitions import DEEP, SWARMS
+from mining_agents.patterns.deep import build_deep_agent
+from mining_agents.patterns.swarm import build_swarm
 
 
 def build_all() -> dict[str, object]:
@@ -3602,9 +3602,9 @@ from __future__ import annotations
 import json
 import subprocess
 
-from agents.build import build_all
-from agents.config import settings
-from agents.registry import registrations
+from mining_agents.build import build_all
+from mining_agents.config import settings
+from mining_agents.registry import registrations
 
 # The single copy of this command lives in docs/phase-3-design.md §5.5.
 DOMAIN_BINDING_COMMAND = (
@@ -3678,7 +3678,7 @@ Expected: `built 52 entrypoints`, 52 registration lines, then the domain-binding
 - [ ] **Step 6: Commit**
 
 ```bash
-git add agents/build.py scripts/deploy.py tests/test_build.py tests/test_demo_scenarios.py
+git add mining_agents/build.py scripts/deploy.py tests/test_build.py tests/test_demo_scenarios.py
 git commit -m "feat(agents): build entry point, deploy script, and demo scenario gate"
 ```
 

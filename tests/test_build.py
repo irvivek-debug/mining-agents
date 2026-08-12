@@ -20,10 +20,10 @@ import pytest
 
 from google.adk.agents import LlmAgent
 
-from agents.build import build_all
-from agents.catalog.definitions import ALL_AGENTS
-from agents.registry import registrable
-from agents.safety.output_filter import redact_model_response
+from mining_agents.build import build_all
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.registry import registrable
+from mining_agents.safety.output_filter import redact_model_response
 import scripts.deploy as deploy_module
 from scripts.deploy import DOMAIN_BINDING_COMMAND, deploy
 

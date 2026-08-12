@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import json
 
-from agents.build import build_all
-from agents.config import settings
-from agents.registry import registrations
+from mining_agents.build import build_all
+from mining_agents.config import settings
+from mining_agents.registry import registrations
 
 # ---------------------------------------------------------------------------
 # The single copy of this command lives in docs/phase-3-design.md §5.5.

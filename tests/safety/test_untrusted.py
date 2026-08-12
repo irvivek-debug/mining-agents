@@ -1,4 +1,4 @@
-from agents.safety.untrusted import (
+from mining_agents.safety.untrusted import (
     FREE_TEXT_FIELDS, UNTRUSTED_PREFIX, free_text_sources, wrap, wrap_rows,
 )
 

@@ -10,9 +10,9 @@ import sys
 
 import pytest
 
-from agents.build import build_one
-from agents.catalog.definitions import ALL_AGENTS, SWARMS
-from agents.registry import registrable
+from mining_agents.build import build_one
+from mining_agents.catalog.definitions import ALL_AGENTS, SWARMS
+from mining_agents.registry import registrable
 from scripts.packages import (
     AGENT_MODULE_NAME,
     REQUIREMENTS_NAME,

@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from agents.config import settings
-from agents.tools.base import ToolFailure, tool
-from agents.tools.bq_query import run_query
+from mining_agents.config import settings
+from mining_agents.tools.base import ToolFailure, tool
+from mining_agents.tools.bq_query import run_query
 
 
 @dataclass(frozen=True)

@@ -34,10 +34,10 @@ import re
 
 from google.cloud import bigquery
 
-from agents.config import settings
-from agents.safety.output_filter import mask_rows
-from agents.safety.untrusted import wrap_rows
-from agents.tools.base import ToolFailure, tool
+from mining_agents.config import settings
+from mining_agents.safety.output_filter import mask_rows
+from mining_agents.safety.untrusted import wrap_rows
+from mining_agents.tools.base import ToolFailure, tool
 
 # A quoted literal or a bare number appearing on the right of a comparison or
 # inside an IN list. Table names in backticks and @parameters are unaffected.

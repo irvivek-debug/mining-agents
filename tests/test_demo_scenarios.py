@@ -15,9 +15,9 @@ verify which agents declare the traversal in their catalog, assert the
 count is non-empty and matches the expected value, then run the traversal
 and pin its row count.
 """
-from agents.catalog.definitions import ALL_AGENTS
-from agents.tools.graph_traverse import make_graph_traverse
-from agents.tools.operational_math import operational_math
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.tools.graph_traverse import make_graph_traverse
+from mining_agents.tools.operational_math import operational_math
 
 
 def test_sc2_blast_radius_from_a_degrading_conveyor():

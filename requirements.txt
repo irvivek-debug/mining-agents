@@ -1,4 +1,9 @@
 google-adk>=2.6.3
+# The deploy verb builds its client with vertexai.Client, not google.genai.Client,
+# and Agent Engine's runtime needs the same extras. ADK appends this line to the
+# staged requirements if it is missing, so pinning it here is what keeps the local
+# deploy environment and the container on one dependency list instead of two.
+google-cloud-aiplatform[adk,agent_engines]>=1.163
 pydantic>=2.7,<3
 google-cloud-bigquery>=3.25
 db-dtypes>=1.2

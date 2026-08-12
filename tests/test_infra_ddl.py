@@ -2,7 +2,7 @@ import pathlib
 import re
 import subprocess
 
-from agents.config import settings
+from mining_agents.config import settings
 
 REQUIRED = ["agent_catalog", "agent_approvals", "agent_run_log", "v_fatigue_scored"]
 

@@ -1,6 +1,6 @@
 """Tests for ontology_lookup tool."""
-from agents.envelope import Envelope
-from agents.tools.ontology_lookup import TABLES, ontology_lookup
+from mining_agents.envelope import Envelope
+from mining_agents.tools.ontology_lookup import TABLES, ontology_lookup
 
 
 def test_a_known_concept_returns_its_related_concepts():
@@ -21,7 +21,7 @@ def test_meta_names_both_graph_element_tables():
 
 
 def test_declared_tables_come_from_the_traversal_not_a_literal():
-    from agents.tools.graph_traverse import TRAVERSALS
+    from mining_agents.tools.graph_traverse import TRAVERSALS
     assert TABLES == list(TRAVERSALS["ontology_related"].tables_read)
 
 

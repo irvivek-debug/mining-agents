@@ -14,9 +14,9 @@ no result. Document linking needs a real join key generated upstream first.
 """
 from __future__ import annotations
 
-from agents.tools.base import tool
-from agents.tools.bq_query import run_query
-from agents.tools.graph_traverse import TRAVERSALS
+from mining_agents.tools.base import tool
+from mining_agents.tools.bq_query import run_query
+from mining_agents.tools.graph_traverse import TRAVERSALS
 
 _SPEC = TRAVERSALS["ontology_related"]
 TABLES = list(_SPEC.tables_read)

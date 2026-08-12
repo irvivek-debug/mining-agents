@@ -1,8 +1,8 @@
 import math
 
 import pytest
-from agents.envelope import Envelope
-from agents.tools.operational_math import FORMULAS, operational_math
+from mining_agents.envelope import Envelope
+from mining_agents.tools.operational_math import FORMULAS, operational_math
 
 
 def test_all_five_formulas_are_present():

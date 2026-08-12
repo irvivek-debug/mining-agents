@@ -1,8 +1,8 @@
 import pytest
-from agents.envelope import Envelope
-from agents.safety.output_filter import REDACTION
-from agents.safety.untrusted import UNTRUSTED_PREFIX
-from agents.tools.bq_query import (
+from mining_agents.envelope import Envelope
+from mining_agents.safety.output_filter import REDACTION
+from mining_agents.safety.untrusted import UNTRUSTED_PREFIX
+from mining_agents.tools.bq_query import (
     assert_no_interpolation, assert_reads_only_declared_tables, make_bq_query,
     run_query, SqlInterpolationError, UndeclaredTableError,
 )
@@ -254,7 +254,7 @@ def test_the_fatigue_band_view_is_readable_and_carries_no_raw_columns():
 
 
 def test_run_query_wraps_free_text_so_the_prompt_instruction_is_true():
-    """agents/patterns/deep.py tells every agent that free text arrives wrapped.
+    """mining_agents/patterns/deep.py tells every agent that free text arrives wrapped.
     This is the test that makes that claim true rather than aspirational."""
     rows, _ = run_query(
         "SELECT log_entry_id, technician_notes FROM `mining_data.maintenance_logs` "
