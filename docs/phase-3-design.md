@@ -408,6 +408,14 @@ No agent gets project-level `dataEditor`. The 14 HITL agents can write to exactl
 
 Each agent registers after deploy with: `agent_id`, version, `framework: ADK`, display name, and capability tags drawn from `agent_catalog` (`pattern`, `apqc_code`, `persona`, `value_branch`).
 
+Three further fields, each carrying a requirement stated elsewhere that has nowhere else to travel:
+
+| Field | Required by |
+|---|---|
+| `service_account` | §5.1. The tier account the agent runs as. The Gateway's caller allowlist below is expressed in these addresses, so a registry that omitted it would describe an allowlist it could not resolve. |
+| `hitl_required` | UX §SC-4. The approval sheet binds to every agent with this flag, so the UX has to read it at registration; it cannot infer which of the 52 need Hold-to-Confirm. |
+| `source_tables` | UX approval record, which persists `source_tables[]` alongside `agent_reasoning_snapshot`. Also what `assert_reads_only_declared_tables` constrains each agent to at runtime, so the registry advertises exactly the reach the tool layer enforces. |
+
 **Registering 52, not 100** — the 12 coordinators plus 40 deep agents. Swarm specialists are sub-agents reachable only through their coordinator; registering them separately would make the registry unnavigable and would falsely advertise 36 agents as independently callable. This resolves the open question raised in the PRD.
 
 ### 5.4 Agent Gateway guardrails

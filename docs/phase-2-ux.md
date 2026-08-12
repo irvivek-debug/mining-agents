@@ -16,7 +16,7 @@
 | Pattern A | 60 (12 swarms) | Yes — swarm console |
 | Pattern B, operator in the loop | 40 | Yes — departmental workbench |
 | Pattern B, headless/scheduled | 0 | — |
-| `hitl_required: true` | 20 | Yes, always — approval surface mandatory |
+| `hitl_required: true` | 14 | Yes, always — approval surface mandatory |
 
 Every agent needs a surface, but they collapse into **5 screen archetypes**. For a reference accelerator this is the load-bearing decision: 100 bespoke screens is unmaintainable and unforkable; 5 templates with data-driven configuration is the thing a customer can actually adopt.
 
@@ -25,7 +25,7 @@ Every agent needs a surface, but they collapse into **5 screen archetypes**. For
 | **SC-1** | Site Cockpit | 1 | Entry point; navigation across all 100 agents |
 | **SC-2** | Swarm Console | 12 configs | All 12 Pattern A swarms (60 agents) |
 | **SC-3** | Departmental Workbench | 7 configs | All 40 Pattern B agents, grouped by persona |
-| **SC-4** | HITL Approval Sheet | 20 bindings | Every `hitl_required: true` agent |
+| **SC-4** | HITL Approval Sheet | 14 bindings | Every `hitl_required: true` agent |
 | **SC-5** | Shift Handover Brief | 1 | S12 only — read-only, cross-branch |
 
 SC-4 is a modal sheet invoked from SC-2 and SC-3, not a standalone destination. An approval that lives on a separate page separates the decision from its evidence, which is exactly the failure Hold-to-Confirm exists to prevent.
@@ -189,7 +189,7 @@ Seven configurations, one per persona. P3's and P7's configurations collapse the
 
 ---
 
-## 6. SC-4 — HITL Approval Sheet (20 bindings)
+## 6. SC-4 — HITL Approval Sheet (14 bindings)
 
 Invoked as a modal over SC-2 or SC-3. `surface-highest`.
 
