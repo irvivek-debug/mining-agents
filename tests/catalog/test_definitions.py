@@ -6,8 +6,20 @@ from agents.tools.graph_traverse import TRAVERSALS
 HITL_COORDINATORS = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S11"}
 HITL_DEEP = {"D07", "D14", "D25", "D30", "D37"}
 
-# Resolved against BigQuery, so a renamed or dropped model fails the catalog.
-LIVE_MODELS = set(list_models())
+
+@pytest.fixture(scope="module")
+def live_models() -> set[str]:
+    """The BQML models that actually exist, so a renamed or dropped one fails.
+
+    A fixture rather than a module-level constant, deliberately. At module
+    level the BigQuery call runs at COLLECTION time, and anything that makes it
+    fail — expired credentials, a fork run against a project with no models yet
+    — takes all twenty tests in this file down as a collection error. That
+    reads as "the catalog is broken" when the truth is "I am not
+    authenticated", and it hides nineteen assertions that need no credentials
+    at all. As a fixture, the blast radius is the one test that needs it.
+    """
+    return set(list_models())
 
 
 def test_the_build_has_exactly_one_hundred_agents():
@@ -117,16 +129,18 @@ def test_agents_reading_free_text_declare_the_source_table():
     assert "mining_data.maintenance_logs" in by_id["D10"].source_tables
 
 
-def test_bqml_predict_is_never_granted_without_a_model():
+def test_bqml_predict_is_never_granted_without_a_model(live_models):
     """make_bqml_predict([]) would raise: a tool must declare tables_read."""
-    for agent in ALL_AGENTS:
-        if "bqml_predict" in agent.tools:
-            assert len(agent.models) >= 1, agent.agent_id
-            assert all(m in LIVE_MODELS for m in agent.models), agent.agent_id
+    granted = [a for a in ALL_AGENTS if "bqml_predict" in a.tools]
+    assert granted, "no agent has bqml_predict — the loop below proves nothing"
+    for agent in granted:
+        assert len(agent.models) >= 1, agent.agent_id
+        assert all(m in live_models for m in agent.models), agent.agent_id
 
 
 def test_graph_traverse_is_never_granted_without_a_traversal():
-    for agent in ALL_AGENTS:
-        if "graph_traverse" in agent.tools:
-            assert len(agent.traversals) >= 1, agent.agent_id
-            assert all(t in TRAVERSALS for t in agent.traversals), agent.agent_id
+    granted = [a for a in ALL_AGENTS if "graph_traverse" in a.tools]
+    assert granted, "no agent has graph_traverse — the loop below proves nothing"
+    for agent in granted:
+        assert len(agent.traversals) >= 1, agent.agent_id
+        assert all(t in TRAVERSALS for t in agent.traversals), agent.agent_id
