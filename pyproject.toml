@@ -1,3 +1,4 @@
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
-testpaths = ["tests"]
+# Both suites, or a bare `pytest` silently skips the 437 Phase 4 data tests.
+testpaths = ["tests", "data/generator/tests", "data/models/tests"]
