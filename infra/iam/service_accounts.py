@@ -29,8 +29,10 @@ contains no credential-management calls of any kind.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import subprocess
+import tempfile
 from typing import Literal
 
 from agents.catalog.definitions import AgentDef, ALL_AGENTS
@@ -292,7 +294,8 @@ def _print_dataset_acl_plan(s, additions: list[tuple[str, str]]) -> None:
     for email, role in additions:
         print(f"#     {{\"role\": \"{_bq_acl_role(role)}\", "
               f"\"userByEmail\": \"{email}\"}}")
-    print(f"{s.bq_binary} update --source=/dev/stdin {dataset_ref}")
+    print("#   (bq will not read the document from a pipe — write it to a file)")
+    print(f"{s.bq_binary} update --source=MERGED_ACL.json {dataset_ref}")
 
 
 def _print_table_iam_plan(s, table_ref: str, members: list[tuple[str, str]]) -> None:
@@ -305,7 +308,29 @@ def _print_table_iam_plan(s, table_ref: str, members: list[tuple[str, str]]) -> 
     print("#   append to .bindings, then write the merged policy back:")
     for email, role in members:
         print(f"#     {role} -> serviceAccount:{email}")
-    print(f"{s.bq_binary} set-iam-policy {bq_table} /dev/stdin")
+    print("#   (bq will not read the policy from a pipe — write it to a file)")
+    print(f"{s.bq_binary} set-iam-policy {bq_table} MERGED_POLICY.json")
+
+
+def _bq_write_json(doc: dict, argv_for) -> None:
+    """Hand a JSON document to bq as a real file on disk.
+
+    bq rejects `/dev/stdin` — it validates the argument with an is-a-regular-file
+    check, and a pipe is not a regular file, so piping the document in fails with
+    "Source path is not a file: /dev/stdin". The merged document therefore goes
+    to a named temp file, which is removed whether or not bq succeeds.
+
+    `argv_for` builds the command from the path because the two callers place it
+    differently: `update` takes `--source=PATH`, `set-iam-policy` takes it
+    positionally.
+    """
+    fd, path = tempfile.mkstemp(suffix=".json")
+    try:
+        with os.fdopen(fd, "w") as handle:
+            json.dump(doc, handle)
+        subprocess.run(argv_for(path), check=True)
+    finally:
+        os.unlink(path)
 
 
 def _apply_dataset_acl(s, additions: list[tuple[str, str]]) -> None:
@@ -329,11 +354,10 @@ def _apply_dataset_acl(s, additions: list[tuple[str, str]]) -> None:
             existing.add((bq_role, email))
 
     meta["access"] = acl
-    policy_json = json.dumps(meta).encode()
 
-    subprocess.run(
-        [s.bq_binary, "update", "--source=/dev/stdin", dataset_ref],
-        input=policy_json, check=True,
+    _bq_write_json(
+        meta,
+        lambda path: [s.bq_binary, "update", f"--source={path}", dataset_ref],
     )
 
 
@@ -360,11 +384,9 @@ def _apply_table_iam(s, table_ref: str, members: list[tuple[str, str]]) -> None:
         {"role": role, "members": sorted(m)}
         for role, m in sorted(role_to_members.items())
     ]
-    policy_json = json.dumps(policy).encode()
-
-    subprocess.run(
-        [s.bq_binary, "set-iam-policy", bq_table, "/dev/stdin"],
-        input=policy_json, check=True,
+    _bq_write_json(
+        policy,
+        lambda path: [s.bq_binary, "set-iam-policy", bq_table, path],
     )
 
 
