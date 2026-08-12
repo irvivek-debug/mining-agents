@@ -6,7 +6,7 @@ agents as top-level Gateway endpoints.
 
 Ruling R1: GATEWAY_SERVICE_ACCOUNT is the identity the Agent Gateway uses when
 it forwards a request to a top-level agent. This account is provisioned outside
-the per-agent set and is NOT created by infra.iam.service_accounts.apply().
+the three tier accounts and is NOT created by infra.iam.service_accounts.apply().
 It must not appear in {sa_email(a) for a in ALL_AGENTS} — a test enforces this.
 """
 from __future__ import annotations
@@ -20,10 +20,22 @@ from infra.iam.service_accounts import sa_email
 VERSION = "1.0.0"
 
 # ---------------------------------------------------------------------------
-# R1: External Gateway identity — provisioned outside Task 14's 100-SA set.
-# If the Gateway project or SA name ever changes, update this constant and the
-# infra runbook; the test will catch any accidental overlap with the per-agent
-# accounts.
+# R1: External Gateway identity — provisioned outside the tier accounts that
+# infra.iam.service_accounts.apply() creates.
+#
+# THE LOCAL PART OF THIS ADDRESS IS A PLACEHOLDER, NOT A CONFIRMED NAME.
+# `gcloud iam service-accounts list` on this project returns no `agent-gateway`
+# account, and the Agent Gateway team has not confirmed what theirs is called.
+# It is written as a named constant precisely so that the guess lives in one
+# place: every caller_allowlist entry for a top-level agent resolves through
+# here, so confirming the real name is a one-line change plus a test run.
+#
+# Until it is confirmed, treat a Gateway call rejected by the allowlist as a
+# likely symptom of this constant rather than of the allowlist logic.
+#
+# The test suite pins the one property that holds regardless of the name: this
+# account must never collide with an agent's own tier account, or the Gateway
+# would be indistinguishable from the agents it invokes.
 # ---------------------------------------------------------------------------
 GATEWAY_SERVICE_ACCOUNT: str = (
     f"agent-gateway@{settings().project_id}.iam.gserviceaccount.com"
