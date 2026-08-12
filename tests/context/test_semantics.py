@@ -81,11 +81,38 @@ def test_each_described_table_is_described_completely(semantics, live_columns):
         assert not missing, f"{table}: columns present in BigQuery but undescribed: {sorted(missing)}"
 
 
-def test_a_short_description_is_refused():
+_LONG = "a description comfortably over the minimum length"
+_SHORT = "x" * (MIN_DESCRIPTION_CHARS - 1)
+
+
+def test_a_short_table_description_is_refused():
+    # The column description here is deliberately valid, so the table
+    # description is the only thing that can raise. The original form of this
+    # test passed a table description of exactly MIN_DESCRIPTION_CHARS -- which
+    # the validator accepts, the bound being `<` -- next to a short column, and
+    # so proved nothing about the table description at all.
     with pytest.raises(ValueError):
         TableSemantics.model_validate(
-            {"description": "x" * MIN_DESCRIPTION_CHARS, "columns": {"a": "too short"}}
+            {"description": _SHORT, "columns": {"a": _LONG}}
         )
+
+
+def test_a_short_column_description_is_refused():
+    with pytest.raises(ValueError):
+        TableSemantics.model_validate(
+            {"description": _LONG, "columns": {"a": _SHORT}}
+        )
+
+
+def test_a_description_of_exactly_the_minimum_length_is_accepted():
+    # Pins the boundary the two tests above straddle, so that tightening the
+    # bound from `<` to `<=` cannot pass silently.
+    at_bound = "x" * MIN_DESCRIPTION_CHARS
+    table = TableSemantics.model_validate(
+        {"description": at_bound, "columns": {"a": at_bound}}
+    )
+    assert table.description == at_bound
+    assert table.columns["a"] == at_bound
 
 
 def test_a_table_with_no_columns_is_refused():
