@@ -62,15 +62,22 @@ prior draft. Screens use catalog codes.
 
 ## The graph, honestly
 
-The repo contains **four real BigQuery property graphs**, defined in
-`mining_agents/tools/graph_traverse.py` and traversed by seven agents:
+`mining_agents/tools/graph_traverse.py` defines four BigQuery property graphs,
+but only **three are traversed by any deployed agent**. Seven entrypoints (12
+agent nodes counting specialists) hold `graph_traverse`:
 
-| Graph | Node and edge labels | Traversal |
-|---|---|---|
-| `MiningAssetGraph` | `assets` -[`DEPENDS_ON`]-> `assets` | `blast_radius`, 1 to 3 hops |
-| `MiningSupplyChainGraph` | `SparePart` <-[`REPLACED_PART`]- `WorkOrder` <-[`HAS_WORK_ORDER`]- `Asset` | `stockout_exposure` |
-| `MiningOperationsSafetyGraph` | `FatigueLog` -[`LOGGED_FOR`]-> `Operator` -[`OPERATES`]-> `Vehicle` -[`INVOLVED_IN`]-> `Incident` | `fatigue_to_incident` |
-| `MiningOntologyGraph` | `ontology_concepts` -[`RELATED_TO`]-> `ontology_concepts` | `ontology_related` |
+| Graph | Node and edge labels | Traversal | Entrypoints |
+|---|---|---|---|
+| `MiningAssetGraph` | `assets` -[`DEPENDS_ON`]-> `assets` | `blast_radius`, 1 to 3 hops | D05, S01 |
+| `MiningSupplyChainGraph` | `SparePart` <-[`REPLACED_PART`]- `WorkOrder` <-[`HAS_WORK_ORDER`]- `Asset` | `stockout_exposure` | D31, S02, S08 |
+| `MiningOperationsSafetyGraph` | `FatigueLog` -[`LOGGED_FOR`]-> `Operator` -[`OPERATES`]-> `Vehicle` -[`INVOLVED_IN`]-> `Incident` | `fatigue_to_incident` | S05, S11 |
+
+The fourth, `MiningOntologyGraph` / `ontology_related`, is granted to **zero
+agents** — `tests/test_demo_scenarios.py` pins that at exactly zero, and
+`ontology_concepts.concept_type` is NULL for all 25 rows. It is therefore **not
+exported and not shown**. Rendering a graph no agent reads would be scenery, and
+the standing constraint rules out scenery as firmly as it rules out invented
+numbers.
 
 **Measured scale, so the visual treatment is honest:** 5 assets joined by 3
 `DEPENDS_ON` edges in a chain — CONVEYOR-02 → CRUSHER-03 → MILL-01 → PUMP-104A,
@@ -175,7 +182,7 @@ coordinator, three specialists and a critic; Pattern B, 40 departmental deep
 agents; 52 externally callable entrypoints; 14 of them gated on human approval;
 five tools; three service accounts. Deployment shown as it is, on Cloud Run.
 
-**1.5 The graph.** The four property graphs, rendered and traversable. Default
+**1.5 The graph.** The three traversed property graphs, rendered and live. Default
 view is the asset graph with its 5 nodes and 3 typed edges. Pick an asset, run
 the blast radius, watch it propagate one to three hops with impact scores on the
 edges. Switch to the supply chain graph and watch a below-reorder-point part

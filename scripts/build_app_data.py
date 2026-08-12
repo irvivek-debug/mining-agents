@@ -1,0 +1,501 @@
+"""Export the JSON the two demo applications read.
+
+Both applications must show what is actually deployed, so the catalog export
+derives from `mining_agents.catalog.definitions` -- the same module that builds
+the agents -- rather than from a hand-maintained copy that would drift the first
+time an agent changed.
+
+The graph export has two sources. BigQuery is authoritative when credentials
+are available. Without them it falls back to `data/profile/` and the generated
+parquet, which hold the same entities. Both paths write the same shape, and the
+file records which one produced it, because a graph drawn from a local cache is
+a weaker claim than one drawn from the warehouse and the screen says so.
+
+Run: python -m scripts.build_app_data [--out apps/shared/data]
+"""
+from __future__ import annotations
+
+import argparse
+import collections
+import datetime
+import json
+import pathlib
+
+import yaml
+
+from mining_agents.catalog.definitions import ALL_AGENTS
+
+REPO = pathlib.Path(__file__).resolve().parents[1]
+DEFAULT_OUT = REPO / "apps" / "shared" / "data"
+PROFILE = REPO / "data" / "profile"
+GENERATED = REPO / "data" / "generated"
+PERSONA_PROFILES = REPO / "docs" / "persona-profiles.yaml"
+
+# The one dollar figure this repo actually establishes. Everything else is the
+# client's to supply; see docs/superpowers/specs/2026-08-13-applications-design.md.
+MILL_DOWNTIME_USD_PER_HOUR = 145_000
+
+# APQC code -> the process name this catalog uses it for. Compound codes on
+# agents that span two domains are split on "/" and looked up per part.
+APQC_NAMES = {
+    "2.0.1": "Develop and manage products and services",
+    "4.1.2": "Manage inventory and materials",
+    "4.2.2": "Manage production operations",
+    "4.3.1": "Manage logistics and transportation",
+    "5.2.1": "Procure materials and services",
+    "9.1.2": "Manage health, safety and environment",
+    "11.0.3": "Manage plant and asset maintenance",
+}
+
+
+def _traversal_holders(traversal: str) -> dict:
+    """Which agents run a traversal, read off the catalog rather than typed here.
+
+    The graph screen claims "this is the traversal S01 runs". That claim has to
+    come from the same definitions that deploy S01, or it becomes a caption that
+    quietly goes stale.
+    """
+    holders = [a for a in ALL_AGENTS if traversal in (getattr(a, "traversals", None) or ())]
+    return {
+        "agents": sorted(a.agent_id for a in holders),
+        "entrypoints": sorted(
+            a.agent_id for a in holders if a.swarm_role in (None, "coordinator")
+        ),
+    }
+
+
+# The three property graphs that deployed agents actually traverse. A fourth
+# exists in code -- MiningOntologyGraph / ontology_related -- but is granted to
+# zero agents (tests/test_demo_scenarios.py pins that at exactly zero), so it is
+# not exported: a screen showing a graph no agent reads would be showing scenery.
+GRAPH_META = {
+    "asset": {
+        "bigquery_graph": "MiningAssetGraph",
+        "traversal": "blast_radius",
+        "question": "If this asset fails, what fails behind it?",
+    },
+    "supply_chain": {
+        "bigquery_graph": "MiningSupplyChainGraph",
+        "traversal": "stockout_exposure",
+        "question": "If this part runs out, which work orders stall?",
+    },
+    "safety": {
+        "bigquery_graph": "MiningOperationsSafetyGraph",
+        "traversal": "fatigue_to_incident",
+        "question": "Which fatigue readings precede an operator's incident?",
+    },
+}
+for _name, _meta in GRAPH_META.items():
+    _meta.update(_traversal_holders(_meta["traversal"]))
+
+
+def _now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+def _entrypoints() -> list:
+    """The 52 externally callable agents: deep agents and swarm coordinators.
+
+    A specialist or critic is reachable only through its coordinator, so it is
+    not an entrypoint even though it is an agent.
+    """
+    return [a for a in ALL_AGENTS if a.swarm_role in (None, "coordinator")]
+
+
+def _agent_record(agent) -> dict:
+    return {
+        "agent_id": agent.agent_id,
+        "display_name": agent.display_name,
+        "pattern": agent.pattern,
+        "swarm_id": agent.swarm_id,
+        "swarm_role": agent.swarm_role,
+        "apqc_code": agent.apqc_code,
+        "apqc_names": [
+            APQC_NAMES.get(part.strip(), part.strip())
+            for part in agent.apqc_code.split("/")
+        ],
+        "persona": agent.persona,
+        "value_branch": agent.value_branch,
+        "model_tier": agent.model_tier,
+        "hitl_required": agent.hitl_required,
+        "source_tables": list(agent.source_tables),
+        "tools": list(agent.tools),
+        "traversals": list(getattr(agent, "traversals", ()) or ()),
+        "models": list(getattr(agent, "models", ()) or ()),
+        "is_entrypoint": agent.swarm_role in (None, "coordinator"),
+    }
+
+
+def build_catalog() -> dict:
+    entries = _entrypoints()
+
+    swarms: dict[str, dict] = {}
+    for agent in ALL_AGENTS:
+        if agent.swarm_id is None:
+            continue
+        swarm = swarms.setdefault(
+            agent.swarm_id, {"coordinator": None, "specialists": [], "critic": None}
+        )
+        if agent.swarm_role == "coordinator":
+            swarm["coordinator"] = agent.agent_id
+        elif agent.swarm_role == "critic":
+            swarm["critic"] = agent.agent_id
+        else:
+            swarm["specialists"].append(agent.agent_id)
+
+    return {
+        "generated_at": _now(),
+        "source": "mining_agents.catalog.definitions",
+        "counts": {
+            "agent_nodes": len(ALL_AGENTS),
+            "entrypoints": len(entries),
+            "swarms": len(swarms),
+            "deep_agents": sum(1 for a in entries if a.pattern == "B"),
+            "hitl_entrypoints": sum(1 for a in entries if a.hitl_required),
+        },
+        "by_persona": _counted(entries, lambda a: a.persona),
+        "by_value_branch": _counted(entries, lambda a: a.value_branch),
+        "by_apqc": _counted(entries, lambda a: a.apqc_code),
+        "tool_usage": dict(
+            collections.Counter(t for a in entries for t in a.tools).most_common()
+        ),
+        "apqc_names": APQC_NAMES,
+        "swarms": swarms,
+        "agents": [_agent_record(a) for a in ALL_AGENTS],
+    }
+
+
+def _counted(entries, key) -> dict:
+    """Group entrypoint ids by a key, ordered by descending group size."""
+    grouped = collections.defaultdict(list)
+    for agent in entries:
+        grouped[key(agent)].append(agent.agent_id)
+    return {
+        k: {"count": len(v), "agents": sorted(v)}
+        for k, v in sorted(grouped.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    }
+
+
+def build_personas(catalog: dict) -> dict:
+    """Merge the transcribed persona profiles with live catalog counts.
+
+    The quotes and journeys are human-transcribed from
+    docs/personas-and-value-tree.md with line citations. The agent lists come
+    from the catalog, so a persona's roster cannot drift from what is deployed.
+    """
+    profiles = yaml.safe_load(PERSONA_PROFILES.read_text())
+    by_persona = catalog["by_persona"]
+
+    out = {}
+    for code, profile in sorted(profiles.items()):
+        catalog_agents = by_persona.get(code, {}).get("agents", [])
+        if sorted(profile["agents"]) != sorted(catalog_agents):
+            raise SystemExit(
+                f"{code}: persona-profiles.yaml lists {sorted(profile['agents'])} "
+                f"but the catalog says {sorted(catalog_agents)}. The catalog wins; "
+                "fix docs/persona-profiles.yaml."
+            )
+        entry = dict(profile)
+        entry["agents"] = catalog_agents
+        entry["agent_count"] = len(catalog_agents)
+        entry["hitl_agents"] = sorted(
+            a["agent_id"]
+            for a in catalog["agents"]
+            if a["persona"] == code and a["is_entrypoint"] and a["hitl_required"]
+        )
+        out[code] = entry
+    return {"generated_at": _now(), "source": str(PERSONA_PROFILES.relative_to(REPO)),
+            "personas": out}
+
+
+# --------------------------------------------------------------------------
+# Graph export
+# --------------------------------------------------------------------------
+
+def build_graph_from_local() -> dict:
+    """Build the property graphs from data/profile and the generated parquet.
+
+    Used when BigQuery credentials are unavailable. Every entity here exists in
+    the warehouse too; this path just reads the profiled copy.
+    """
+    import pandas as pd
+
+    stats = json.loads((PROFILE / "stats.json").read_text())
+
+    nodes: list[dict] = []
+    edges: list[dict] = []
+
+    # --- MiningAssetGraph: assets and their DEPENDS_ON chain ---
+    for asset in stats["assets"]:
+        nodes.append({
+            "id": asset["asset_id"],
+            "label": asset["asset_id"],
+            "type": "Asset",
+            "graph": "asset",
+            "detail": {
+                "name": asset["asset_name"],
+                "asset_type": asset["asset_type"],
+                "criticality": asset["criticality_rating"],
+                "installed": asset["installed"],
+                "state_keys": sorted(json.loads(asset["current_state"])),
+            },
+        })
+    for dep in stats["asset_dependencies"]:
+        edges.append({
+            "source": dep["source_id"],
+            "target": dep["target_id"],
+            "label": "DEPENDS_ON",
+            "graph": "asset",
+            "weight": dep["impact_score"],
+            "detail": {"dependency_type": dep["dependency_type"],
+                       "impact_score": dep["impact_score"]},
+        })
+
+    # --- MiningSupplyChainGraph: Asset -> WorkOrder -> SparePart ---
+    # The same five assets anchor this graph too. They are emitted a second time
+    # under graph="supply_chain" rather than shared with the asset graph: every
+    # HAS_WORK_ORDER edge needs its source node present in the view the screen
+    # renders, and a screen filtering on graph would otherwise draw 126 edges
+    # from nodes it never added.
+    for asset in stats["assets"]:
+        nodes.append({
+            "id": asset["asset_id"],
+            "label": asset["asset_id"],
+            "type": "Asset",
+            "graph": "supply_chain",
+            "detail": {"name": asset["asset_name"],
+                       "criticality": asset["criticality_rating"]},
+        })
+
+    work_orders = pd.read_parquet(GENERATED / "erp_work_orders.parquet")
+    logs = pd.read_parquet(GENERATED / "maintenance_logs.parquet")
+    inventory = pd.read_parquet(GENERATED / "inventory_levels.parquet")
+
+    wo_parts = [
+        (row.work_order_id, part)
+        for row in logs.itertuples()
+        for part in (row.parts_replaced if row.parts_replaced is not None else [])
+    ]
+    linked_orders = {wo for wo, _ in wo_parts}
+    used_parts = {p for _, p in wo_parts}
+
+    wo_by_id = {r.work_order_id: r for r in work_orders.itertuples()}
+    for wo_id in sorted(linked_orders):
+        row = wo_by_id.get(wo_id)
+        nodes.append({
+            "id": wo_id,
+            "label": wo_id,
+            "type": "WorkOrder",
+            "graph": "supply_chain",
+            "detail": {
+                "asset_id": getattr(row, "asset_id", None),
+                "priority": getattr(row, "priority", None),
+                "status": getattr(row, "status", None),
+                "repair_cost": _num(getattr(row, "repair_cost", None)),
+            } if row is not None else {},
+        })
+        if row is not None and getattr(row, "asset_id", None):
+            edges.append({"source": row.asset_id, "target": wo_id,
+                          "label": "HAS_WORK_ORDER", "graph": "supply_chain"})
+
+    stocked = {r.part_number: r for r in inventory.itertuples()}
+    for part in sorted(used_parts):
+        row = stocked.get(part)
+        nodes.append({
+            "id": part,
+            "label": part,
+            "type": "SparePart",
+            "graph": "supply_chain",
+            "detail": {
+                "on_hand": _num(getattr(row, "quantity_on_hand", None)),
+                "reorder_point": _num(getattr(row, "reorder_point", None)),
+                "lead_time_days": _num(getattr(row, "lead_time_days", None)),
+                "unit_price_usd": _num(getattr(row, "unit_price", None)),
+            } if row is not None else {"stocked": False},
+        })
+    for wo_id, part in sorted(set(wo_parts)):
+        edges.append({"source": part, "target": wo_id,
+                      "label": "REPLACED_PART", "graph": "supply_chain"})
+
+    # --- MiningOperationsSafetyGraph: FatigueLog -> Operator -> Vehicle -> Incident ---
+    fatigue = pd.read_parquet(GENERATED / "fatigue_logs_node.parquet")
+    alerts = fatigue[fatigue["fatigue_alert_triggered"]]
+    for row in alerts.itertuples():
+        nodes.append({
+            "id": row.log_id,
+            "label": row.log_id[:8],
+            "type": "FatigueLog",
+            "graph": "safety",
+            "detail": {
+                "timestamp": row.timestamp.isoformat(),
+                "operator_id": row.operator_id,
+                "heart_rate_bpm": _num(row.heart_rate_bpm),
+                "sleep_deficit_hours": _num(row.sleep_deficit_hours),
+                "microsleep_events_detected": _num(row.microsleep_events_detected),
+            },
+        })
+        edges.append({"source": row.log_id, "target": row.operator_id,
+                      "label": "LOGGED_FOR", "graph": "safety"})
+
+    for operator in sorted(fatigue["operator_id"].unique()):
+        readings = fatigue[fatigue["operator_id"] == operator]
+        nodes.append({
+            "id": operator,
+            "label": operator,
+            "type": "Operator",
+            "graph": "safety",
+            "detail": {
+                "fatigue_readings": int(len(readings)),
+                "alerts_triggered": int(readings["fatigue_alert_triggered"].sum()),
+                "max_sleep_deficit_hours": _num(readings["sleep_deficit_hours"].max()),
+            },
+        })
+
+    vehicles = {v["vehicle_id"]: v for v in stats["fleet_vehicles_sample"]}
+    seen_vehicles: set[str] = set()
+    for assignment in stats["operator_assignments"]:
+        vehicle_id = assignment["vehicle_id"]
+        if vehicle_id not in seen_vehicles:
+            seen_vehicles.add(vehicle_id)
+            vehicle = vehicles.get(vehicle_id, {})
+            nodes.append({
+                "id": vehicle_id, "label": vehicle_id, "type": "Vehicle",
+                "graph": "safety",
+                "detail": {"model": vehicle.get("model"),
+                           "status": vehicle.get("operational_status"),
+                           "payload_capacity_tons": vehicle.get("payload_capacity_tons")},
+            })
+        edges.append({"source": assignment["operator_id"], "target": vehicle_id,
+                      "label": "OPERATES", "graph": "safety",
+                      "detail": {"shift_date": assignment["shift_date"],
+                                 "shift_type": assignment["shift_type"]}})
+
+    for involvement in stats["incident_involvements"]:
+        incident_id = involvement["incident_id"]
+        nodes.append({"id": incident_id, "label": incident_id, "type": "Incident",
+                      "graph": "safety", "detail": {}})
+        edges.append({"source": involvement["vehicle_id"], "target": incident_id,
+                      "label": "INVOLVED_IN", "graph": "safety"})
+
+    # Every graph below shows less than the whole table it draws from. The
+    # sentences are built from the same frames that built the nodes, so a screen
+    # quoting them cannot claim a ratio the export does not hold.
+    assigned_operators = {a["operator_id"] for a in stats["operator_assignments"]}
+    scope = {
+        "asset": (
+            f"All {len(stats['assets'])} assets and all "
+            f"{len(stats['asset_dependencies'])} dependency edges. Nothing filtered."
+        ),
+        "supply_chain": (
+            f"Work orders that consumed a part: {len(linked_orders)} of "
+            f"{len(work_orders)}. Parts consumed: {len(used_parts)} of "
+            f"{len(inventory)} held in inventory."
+        ),
+        "safety": (
+            f"Fatigue logs that raised an alert: {len(alerts)} of {len(fatigue)}. "
+            f"Only {len(assigned_operators)} of {fatigue['operator_id'].nunique()} "
+            "operators hold a vehicle assignment, so the traversal returns rows "
+            "for those and is empty for the rest."
+        ),
+    }
+    return _assemble_graph(nodes, edges, source="local-profile-cache", scope=scope)
+
+
+def _num(value):
+    """JSON cannot hold numpy scalars or NaN; normalise both away."""
+    if value is None:
+        return None
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError):
+        return value
+    if as_float != as_float:  # NaN
+        return None
+    return int(as_float) if as_float.is_integer() else round(as_float, 4)
+
+
+def _assemble_graph(nodes: list[dict], edges: list[dict], source: str,
+                    scope: dict[str, str]) -> dict:
+    """Deduplicate, then record per-graph counts so a screen can state its scale.
+
+    Identity is (graph, id), not id: an asset is a node of both the asset graph
+    and the supply chain graph, and collapsing the two would strip the supply
+    chain view of the endpoints its HAS_WORK_ORDER edges point at.
+    """
+    unique_nodes = {(n["graph"], n["id"]): n for n in nodes}
+    unique_edges = {
+        (e["graph"], e["source"], e["target"], e["label"]): e for e in edges
+    }
+    node_list = sorted(unique_nodes.values(), key=lambda n: (n["graph"], n["type"], n["id"]))
+    edge_list = sorted(unique_edges.values(), key=lambda e: (e["graph"], e["source"], e["target"]))
+
+    per_graph = {}
+    for name in sorted({n["graph"] for n in node_list}):
+        graph_nodes = [n for n in node_list if n["graph"] == name]
+        graph_edges = [e for e in edge_list if e["graph"] == name]
+        present = {n["id"] for n in graph_nodes}
+        dangling = sorted(
+            {e["source"] for e in graph_edges if e["source"] not in present}
+            | {e["target"] for e in graph_edges if e["target"] not in present}
+        )
+        if dangling:
+            raise SystemExit(
+                f"graph {name!r} has edges pointing at {len(dangling)} node(s) it "
+                f"does not contain: {dangling[:5]}. A renderer would silently drop "
+                "those edges, so the screen would understate the graph."
+            )
+        per_graph[name] = dict(
+            GRAPH_META[name],
+            scope=scope.get(name),
+            nodes=len(graph_nodes),
+            edges=len(graph_edges),
+            node_types=dict(collections.Counter(n["type"] for n in graph_nodes)),
+            edge_labels=dict(collections.Counter(e["label"] for e in graph_edges)),
+        )
+
+    return {
+        "generated_at": _now(),
+        "source": source,
+        "graphs": per_graph,
+        "nodes": node_list,
+        "edges": edge_list,
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out", type=pathlib.Path, default=DEFAULT_OUT)
+    args = parser.parse_args()
+    args.out.mkdir(parents=True, exist_ok=True)
+
+    catalog = build_catalog()
+    personas = build_personas(catalog)
+    graph = build_graph_from_local()
+    facts = {
+        "generated_at": _now(),
+        "mill_downtime_usd_per_hour": MILL_DOWNTIME_USD_PER_HOUR,
+        "mill_downtime_source": "docs/personas-and-value-tree.md",
+        "note": (
+            "This is the only monetary figure this repository establishes. Every "
+            "other magnitude renders as [CLIENT INPUT REQUIRED]."
+        ),
+    }
+
+    for name, payload in (("catalog", catalog), ("personas", personas),
+                          ("graph", graph), ("facts", facts)):
+        path = args.out / f"{name}.json"
+        path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
+        print(f"wrote {path.relative_to(REPO)} ({path.stat().st_size:,} bytes)")
+
+    print(f"\nagent nodes {catalog['counts']['agent_nodes']}, "
+          f"entrypoints {catalog['counts']['entrypoints']}, "
+          f"swarms {catalog['counts']['swarms']}, "
+          f"HITL {catalog['counts']['hitl_entrypoints']}")
+    print(f"personas {len(personas['personas'])}")
+    for name, info in graph["graphs"].items():
+        print(f"graph {name:<14} {info['nodes']:>4} nodes {info['edges']:>4} edges  "
+              f"{info['node_types']}")
+
+
+if __name__ == "__main__":
+    main()
