@@ -4,7 +4,7 @@ from __future__ import annotations
 from google.adk.agents import LlmAgent
 
 from mining_agents.catalog.definitions import AgentDef
-from mining_agents.config import model_for_tier
+from mining_agents.config import llm_for_tier
 from mining_agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
 from mining_agents.safety.untrusted import FREE_TEXT_FIELDS, UNTRUSTED_PREFIX
 from mining_agents.tools.bq_query import make_bq_query
@@ -120,7 +120,7 @@ def build_deep_agent(agent: AgentDef) -> LlmAgent:
         raise ValueError(f"{agent.agent_id} is pattern {agent.pattern}, not B")
     return LlmAgent(
         name=agent.agent_id.lower().replace("-", "_"),
-        model=model_for_tier(agent.model_tier),
+        model=llm_for_tier(agent.model_tier),
         description=agent.display_name,
         instruction=build_instruction(agent),
         tools=bind_tools(agent),

@@ -1,25 +1,60 @@
-"""Deploy the 52 entrypoints and register them. The domain binding stops.
+"""Deploy the 52 entrypoints to Agent Engine and attach their runtime identity.
 
-Ruling 1: The real ADK 2.6.3 CLI deploy verb is:
+Ruling 1: the ADK 2.6.3 deploy verb takes an agent DIRECTORY, not an agent id:
   python -m google.adk.cli deploy agent_engine \\
     --project=<PROJECT> --region=<REGION> --display_name=<NAME> <AGENT_DIRECTORY>
-  There is no --service-account flag; the runtime SA must be annotated separately.
-  There is no 'gcloud ai agents' group in this GCP project.
-
-Ruling 2: deploy(dry_run=False) raises NotImplementedError — the 52 per-agent
-packages have not been built, and the runtime SA attachment mechanism is
-unresolved. Do not call with dry_run=False in any automated pipeline.
+It has no --service-account flag, so the runtime identity is attached in a
+second step (see `attach_service_account`).
 
 Ruling 3: DOMAIN_BINDING_COMMAND is NEVER executed by this module. It is
 printed with a warning and the caller is required to run it manually if approved.
+
+The dry run prints the exact argv the real run executes, because both come from
+`deploy_command`. A dry run that renders a command by hand is worse than no dry
+run at all: it reads as evidence while being free to drift from what actually
+happens. This module had that defect once already.
 """
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
+import tempfile
 
-from mining_agents.build import build_all
+import google.auth
+import google.auth.transport.requests
+import requests
+
 from mining_agents.config import settings
 from mining_agents.registry import registrations
+
+# Agent Engine has its own regions; `settings().location` is the BigQuery
+# dataset location ("US") and is not one of them.
+REGION = "us-central1"
+
+# Directories that must travel to the container alongside the agent package.
+#
+# ADK copies each entry to /app/<basename> and puts /app on PYTHONPATH, so the
+# container reproduces the repo's top-level layout. That is what makes
+# `config._repo_root()` — which is `parents[1]` of the config module — resolve
+# to /app in the container exactly as it resolves to the checkout locally.
+#
+# `references` is here because it is read at RUNTIME, not just by tooling:
+# `model_for_tier` parses references/model-policy.md on every agent build. Omit
+# it and the deploy still succeeds, the container still builds, and the agent
+# then dies on its first query with FileNotFoundError — a failure that costs a
+# full container build to discover. `test_deploy.py` pins this.
+EXTRA_PACKAGES = ("./mining_agents", "./references")
+
+# Passing dry_run=False is not enough to deploy; the caller must also pass this
+# phrase. A boolean is too easy to reach by accident, and the accident is
+# expensive: a unit test that asserted `deploy(dry_run=False)` raised — written
+# when it did — kept calling it after the implementation landed, and spent
+# twenty-six minutes creating eight billable Agent Engine instances before
+# anyone noticed. Nothing about the call site looked dangerous.
+CONFIRM_PHRASE = "yes-deploy-for-real"
+
+_API = f"https://{REGION}-aiplatform.googleapis.com/v1beta1"
 
 # ---------------------------------------------------------------------------
 # The single copy of this command lives in docs/phase-3-design.md §5.5.
@@ -53,65 +88,148 @@ def print_domain_binding_warning() -> None:
     print("=" * 72)
 
 
-def deploy(dry_run: bool = True) -> None:
-    """Build and (dry-run) deploy the 52 externally-callable agents.
+def deploy_command(
+    agent_id: str, display_name: str, engine_id: str | None = None
+) -> list[str]:
+    """The argv that deploys one entrypoint.
 
-    dry_run=True (default): prints the real deploy command shape per agent,
-    the full registration payload (auditor-readable), and the domain-binding
-    warning block. No subprocess is spawned; no cloud state is touched.
+    *engine_id*, when given, makes the deploy UPDATE that instance instead of
+    creating another one. Without it a second run of this script would leave
+    two instances per agent, each billing, with nothing naming which is live.
+    """
+    s = settings()
+    argv = [
+        # The interpreter running this script, not whatever `python` resolves
+        # to on PATH — the ADK CLI and its deps live in this one.
+        sys.executable,
+        "-m",
+        "google.adk.cli",
+        "deploy",
+        "agent_engine",
+        f"--project={s.project_id}",
+        f"--region={REGION}",
+        f"--display_name={display_name}",
+    ]
+    if engine_id:
+        argv.append(f"--agent_engine_id={engine_id}")
+    argv += [f"--extra_packages={pkg}" for pkg in EXTRA_PACKAGES]
+    # Without this, ADK stages into a timestamped folder under its working
+    # directory, which is `packages/` — the tree this repo regenerates and
+    # scans. An interrupted deploy then leaves a half-copy of the repo sitting
+    # inside it, which the model-policy scan reads as a stray model id.
+    argv.append(f"--temp_folder={tempfile.gettempdir()}/adk-stage-{agent_id}")
+    argv.append(f"./packages/{agent_id}")
+    return argv
 
-    dry_run=False: raises NotImplementedError. The 52 per-agent packages are
-    not generated by this build, and the runtime service-account attachment
-    mechanism is unresolved per Ruling 1. Execute deploy only after:
-      1. A per-agent directory (each exposing `root_agent`) has been built.
-      2. The --service-account attachment mechanism is confirmed against the
-         installed ADK CLI version.
+
+def _auth_headers() -> dict[str, str]:
+    creds, _ = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    creds.refresh(google.auth.transport.requests.Request())
+    return {
+        "Authorization": f"Bearer {creds.token}",
+        "Content-Type": "application/json",
+    }
+
+
+def existing_engines() -> dict[str, str]:
+    """Map display name -> engine id for every deployed instance.
+
+    Deployment state is read back from the API rather than cached in a local
+    file, so re-running from a different machine — or after a `git clean` —
+    still updates the live instances instead of duplicating them.
+    """
+    s = settings()
+    parent = f"projects/{s.project_id}/locations/{REGION}"
+    response = requests.get(f"{_API}/{parent}/reasoningEngines", headers=_auth_headers())
+    response.raise_for_status()
+    return {
+        engine["displayName"]: engine["name"].rsplit("/", 1)[1]
+        for engine in response.json().get("reasoningEngines", [])
+        if engine.get("displayName")
+    }
+
+
+def attach_service_account(engine_id: str, service_account: str) -> None:
+    """Point one deployed engine at its tier service account.
+
+    The deploy verb has no flag for this, and an engine left unpatched runs as
+    the shared Vertex service agent — which holds none of the per-tier limits
+    the access model is built on, so the whole tiering would be decorative.
+    """
+    s = settings()
+    name = f"projects/{s.project_id}/locations/{REGION}/reasoningEngines/{engine_id}"
+    response = requests.patch(
+        f"{_API}/{name}",
+        headers=_auth_headers(),
+        params={"updateMask": "spec.service_account"},
+        data=json.dumps({"spec": {"serviceAccount": service_account}}),
+    )
+    response.raise_for_status()
+
+
+def deploy(
+    dry_run: bool = True,
+    only: tuple[str, ...] | None = None,
+    confirm: str = "",
+) -> None:
+    """Deploy the externally-callable agents and attach their identities.
+
+    dry_run=True (default) prints the argv and the full registration payload
+    per agent and touches no cloud state. dry_run=False runs each deploy, then
+    patches the runtime service account onto the resulting instance — but only
+    when *confirm* is CONFIRM_PHRASE, so that reaching this by accident takes
+    two deliberate arguments rather than one flipped boolean.
+
+    *only* restricts the run to the given agent ids, which is what makes a
+    representative-subset demo possible without editing the catalog.
 
     Ruling 3: DOMAIN_BINDING_COMMAND is printed and never executed.
     """
-    if not dry_run:
-        raise NotImplementedError(
-            "deploy(dry_run=False) is not implemented. Two prerequisites are missing:\n"
-            "  1. The 52 per-agent package directories (each exposing `root_agent`) "
-            "have not been generated. The ADK CLI deploy verb requires a local agent "
-            "directory, not an agent_id.\n"
-            "  2. The runtime service-account attachment mechanism is unresolved: "
-            "the `python -m google.adk.cli deploy agent_engine` verb has no "
-            "--service-account flag. The SA must be attached via a separate "
-            "IAM step that has not been scripted.\n"
-            "Build the 52 packages and resolve the SA attachment before calling "
-            "deploy(dry_run=False)."
+    if not dry_run and confirm != CONFIRM_PHRASE:
+        raise PermissionError(
+            "deploy(dry_run=False) creates billable, always-on Agent Engine "
+            f"instances. Pass confirm={CONFIRM_PHRASE!r} to proceed. If you are "
+            "reading this from a test, the test should be calling dry_run=True."
         )
 
-    s = settings()
-    agents = build_all()
-    print(f"built {len(agents)} entrypoints")
-    print()
+    entries = list(registrations())
+    if only:
+        wanted = set(only)
+        unknown = wanted - {e["agent_id"] for e in entries}
+        if unknown:
+            raise KeyError(f"not externally-callable entrypoints: {sorted(unknown)}")
+        entries = [e for e in entries if e["agent_id"] in wanted]
 
-    for entry in registrations():
+    deployed = {} if dry_run else existing_engines()
+
+    for entry in entries:
         agent_id = entry["agent_id"]
-        sa = entry["service_account"]
+        display_name = entry["display_name"]
+        service_account = entry["service_account"]
+        argv = deploy_command(agent_id, display_name, deployed.get(display_name))
 
-        # Ruling 1: real ADK 2.6.3 CLI shape — positional arg is an agent directory.
-        # There is no --service-account flag; print it as an explicit annotation.
         print(f"# --- {agent_id} ---")
-        print(
-            f"python -m google.adk.cli deploy agent_engine \\\n"
-            f"  --project={s.project_id} \\\n"
-            f"  --region={s.location} \\\n"
-            f"  --display_name={entry['display_name']!r} \\\n"
-            f"  ./packages/{agent_id}/"
-        )
-        print(f"# Runtime service account (attach separately): {sa}")
+        print(" \\\n  ".join(argv))
+        print(f"# Runtime service account: {service_account}")
+
+        if dry_run:
+            # Print the full payload — no truncation — so an auditor can read
+            # caller_allowlist and guardrails (Ruling 6).
+            print("Registration payload:")
+            print(json.dumps(entry, indent=2))
+            print()
+            continue
+
+        subprocess.run(argv, check=True)
+        engine_id = existing_engines()[display_name]
+        attach_service_account(engine_id, service_account)
+        print(f"# deployed {agent_id} as {engine_id}, running as {service_account}")
         print()
 
-        # Print full payload — no truncation — so an auditor can read
-        # caller_allowlist and guardrails (Ruling 6).
-        print("Registration payload:")
-        print(json.dumps(entry, indent=2))
-        print()
-
-    print_domain_binding_warning()
+    if dry_run:
+        print_domain_binding_warning()
 
 
 if __name__ == "__main__":

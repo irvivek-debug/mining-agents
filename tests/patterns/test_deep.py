@@ -73,7 +73,7 @@ def test_the_agent_resolves_its_model_from_the_tier_not_a_literal():
     import mining_agents.patterns.deep as module
     source = inspect.getsource(module)
     assert "gemini" not in source
-    assert "model_for_tier" in source
+    assert "llm_for_tier" in source
 
 
 def test_the_instruction_never_names_a_tool_the_agent_does_not_hold():

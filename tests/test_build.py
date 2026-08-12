@@ -7,7 +7,7 @@ Ruling 6 corrections applied:
   {a.agent_id for a in registrable()} — cross-task coherence check.
 
 Ruling 2 & 3 tests for scripts/deploy.py:
-- deploy(dry_run=False) must raise NotImplementedError.
+- deploy(dry_run=False) must refuse without the confirmation phrase.
 - deploy(dry_run=True) must never call subprocess.run.
 - DOMAIN_BINDING_COMMAND must never be subprocess-executed by any code path.
 """
@@ -73,13 +73,28 @@ def test_every_one_of_the_hundred_agents_resolves_to_a_real_table():
 # Ruling 2: deploy(dry_run=False) must raise NotImplementedError
 # ---------------------------------------------------------------------------
 
-def test_deploy_dry_run_false_raises_not_implemented():
-    """Ruling 2: deploying without the 52 per-agent packages must be refused."""
-    with pytest.raises(NotImplementedError) as exc_info:
+def test_deploy_refuses_to_execute_without_the_confirmation_phrase():
+    """Ruling 2 is satisfied, so deploy() now really deploys — which makes this
+    test's own call the dangerous part.
+
+    Its previous form asserted `deploy(dry_run=False)` raised NotImplementedError.
+    That was true when written, and the call site stayed untouched when the
+    implementation landed. The suite then spent twenty-six minutes creating eight
+    billable Agent Engine instances. The guard is now a phrase rather than a
+    boolean, so this test can assert the refusal without being one flipped
+    default away from deploying the catalog.
+    """
+    with pytest.raises(PermissionError) as exc_info:
         deploy(dry_run=False)
-    # The error message must name what is missing.
-    msg = str(exc_info.value)
-    assert "per-agent" in msg or "package" in msg or "directory" in msg
+    assert "confirm" in str(exc_info.value)
+
+
+def test_the_refusal_happens_before_anything_is_executed():
+    """A guard that runs after the first subprocess is not a guard."""
+    with patch.object(subprocess, "run") as mock_run:
+        with pytest.raises(PermissionError):
+            deploy(dry_run=False)
+    assert mock_run.call_count == 0
 
 
 # ---------------------------------------------------------------------------
@@ -117,20 +132,18 @@ def test_deploy_dry_run_calls_no_subprocess(capsys):
         }
         assert called == {}, f"dry run executed: {called}"
 
-    # scripts/deploy.py must hold no execution capability whatsoever. This is
-    # what makes the mock assertions above durable: a `from subprocess import
-    # run` would slip past the patches, but not past this.
+    # The module may now import subprocess — the real deploy path needs it — so
+    # the old "imports nothing executable" check no longer applies. What still
+    # must hold is that execution goes through the module objects the patches
+    # above replace: a `from subprocess import run` would call the real thing
+    # while every mock above reported zero calls.
     source = inspect.getsource(deploy_module)
-    forbidden_imports = [
-        "import subprocess",
-        "from subprocess",
-        "import os",
-        "from os import",
-    ]
-    present = [i for i in forbidden_imports if i in source]
+    unpatchable_imports = ["from subprocess import", "from os import"]
+    present = [i for i in unpatchable_imports if i in source]
     assert present == [], (
-        f"scripts/deploy.py imports execution machinery: {present}. "
-        f"The deploy path is human-gated; it must be unable to run anything."
+        f"scripts/deploy.py binds execution functions by name: {present}. "
+        f"Those calls bypass the patches above, so this test would report a "
+        f"clean dry run while the real function ran."
     )
 
 

@@ -6,7 +6,19 @@ import pathlib
 import re
 from dataclasses import dataclass
 
+from google.adk.models import Gemini
+
 _VALID_TIERS = ("reasoning", "balanced")
+
+# Both tiered models are published only in the `global` location. An agent
+# deployed to a regional Agent Engine gets a regionally-scoped genai client by
+# default, and the regional endpoint answers 404 for these models — "was not
+# found or your project does not have access", which reads like a typo in the
+# policy table or a missing grant rather than a location mismatch.
+#
+# Only model calls move to `global`. The session store stays regional, because
+# it lives under the reasoning engine resource, which is regional.
+MODEL_LOCATION = "global"
 _ROW = re.compile(r"^\|\s*`(?P<tier>[a-z-]+)`\s*\|\s*`(?P<model>[^`]+)`\s*\|")
 
 
@@ -47,3 +59,16 @@ def model_for_tier(tier: str) -> str:
         if match and match.group("tier") == tier:
             return match.group("model")
     raise ValueError(f"tier {tier!r} not found in model-policy.md")
+
+
+def llm_for_tier(tier: str) -> Gemini:
+    """The model object an agent of *tier* runs on, pinned to `global`.
+
+    Agents take this rather than the bare id from `model_for_tier` so that the
+    endpoint choice is made once here instead of being inherited from whatever
+    region the agent happens to be deployed in.
+    """
+    return Gemini(
+        model=model_for_tier(tier),
+        client_kwargs={"vertexai": True, "location": MODEL_LOCATION},
+    )

@@ -1,5 +1,10 @@
 import pytest
-from mining_agents.config import settings, model_for_tier
+from mining_agents.config import (
+    MODEL_LOCATION,
+    llm_for_tier,
+    model_for_tier,
+    settings,
+)
 
 
 def test_settings_defaults_to_the_argolis_project():
@@ -23,6 +28,11 @@ def test_both_configured_models_are_callable_in_this_project():
     model-policy.md is edited by hand and nothing else validates it, so a typo
     would survive every other test in this suite and surface as a 404 on the
     first live agent run. One token per model keeps this cheap.
+
+    The location comes from MODEL_LOCATION rather than a literal. This test
+    once hardcoded "global" while the agents inherited their deployment region,
+    so it passed against an endpoint no agent ever called and the models 404'd
+    in production anyway. A test may not name the value it is validating.
     """
     import json
     import urllib.error
@@ -43,9 +53,15 @@ def test_both_configured_models_are_callable_in_this_project():
 
     for tier in ("reasoning", "balanced"):
         model = model_for_tier(tier)
+        host = (
+            "aiplatform.googleapis.com"
+            if MODEL_LOCATION == "global"
+            else f"{MODEL_LOCATION}-aiplatform.googleapis.com"
+        )
         url = (
-            f"https://aiplatform.googleapis.com/v1/projects/{project}"
-            f"/locations/global/publishers/google/models/{model}:generateContent"
+            f"https://{host}/v1/projects/{project}"
+            f"/locations/{MODEL_LOCATION}/publishers/google/models/{model}"
+            ":generateContent"
         )
         request = urllib.request.Request(url, data=body, headers={
             "Authorization": f"Bearer {creds.token}",
@@ -64,6 +80,17 @@ def test_no_floating_model_alias_is_configured():
     """A `-latest` alias changes underneath a demo and breaks reproducibility."""
     for tier in ("reasoning", "balanced"):
         assert not model_for_tier(tier).endswith("-latest"), tier
+
+
+def test_the_llm_pins_the_location_instead_of_inheriting_the_deployment_region():
+    """Agent Engine runs regionally, but these models are published only in
+    `global`. An LLM that inherits the engine's region 404s on every call, and
+    the error reads as a missing model rather than a wrong endpoint."""
+    for tier in ("reasoning", "balanced"):
+        llm = llm_for_tier(tier)
+        assert llm.model == model_for_tier(tier), tier
+        assert llm.client_kwargs["location"] == MODEL_LOCATION, tier
+        assert llm.client_kwargs["vertexai"] is True, tier
 
 
 def test_model_for_tier_rejects_pattern_c_tier():

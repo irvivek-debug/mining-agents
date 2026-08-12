@@ -24,7 +24,7 @@ from google.adk.agents import LlmAgent
 from google.adk.workflow import JoinNode, Workflow, START
 
 from mining_agents.catalog.definitions import AgentDef, SwarmDef
-from mining_agents.config import model_for_tier
+from mining_agents.config import llm_for_tier
 from mining_agents.patterns.deep import BIOMETRIC_TABLES, bind_tools, build_instruction
 from mining_agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
 
@@ -116,7 +116,7 @@ def _llm(agent: AgentDef, instruction: str) -> LlmAgent:
     """Build one LlmAgent from a catalog AgentDef."""
     return LlmAgent(
         name=agent.agent_id.lower().replace("-", "_"),
-        model=model_for_tier(agent.model_tier),
+        model=llm_for_tier(agent.model_tier),
         description=agent.display_name,
         instruction=instruction,
         tools=bind_tools(agent),
