@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import json
 import time
+import warnings
 
 import pytest
+from google.api_core.exceptions import BadRequest
 from google.cloud import bigquery
 
 from agents.config import settings
@@ -49,8 +51,14 @@ def _delete_test_rows(approval_ids: list[str]) -> None:
     )
     try:
         client.query(sql, job_config=job_config).result()
-    except Exception:  # noqa: BLE001
-        pass
+    except BadRequest as exc:
+        if "streaming buffer" not in str(exc):
+            warnings.warn(
+                f"cleanup: DELETE failed for approval_ids {approval_ids!r}; "
+                f"these rows were left behind in agent_approvals. "
+                f"Error: {exc}",
+                stacklevel=2,
+            )
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 -- Approval audit trail. Backs SC-4 — required by the HITL design.
-CREATE TABLE IF NOT EXISTS `genial-union-475913-i7.mining_data.agent_approvals` (
+CREATE TABLE IF NOT EXISTS `mining_data.agent_approvals` (
   approval_id              STRING  NOT NULL,
   agent_id                 STRING  NOT NULL,
   action_type              STRING  NOT NULL,   -- STAND_DOWN | SETPOINT_CHANGE | PO_RAISE | ...
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `genial-union-475913-i7.mining_data.agent_approvals` 
 ) PARTITION BY DATE(decided_at) CLUSTER BY agent_id, action_type;
 
 -- Every agent invocation, for the accelerator metrics in the PRD.
-CREATE TABLE IF NOT EXISTS `genial-union-475913-i7.mining_data.agent_run_log` (
+CREATE TABLE IF NOT EXISTS `mining_data.agent_run_log` (
   run_id        STRING NOT NULL,
   agent_id      STRING NOT NULL,
   parent_run_id STRING,                        -- set on swarm specialists → A2A lineage
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `genial-union-475913-i7.mining_data.agent_run_log` (
 ) PARTITION BY DATE(started_at) CLUSTER BY agent_id, status;
 
 -- Registry of the 100 agents. Single source of truth — replaces agent_manifest.json.
-CREATE TABLE IF NOT EXISTS `genial-union-475913-i7.mining_data.agent_catalog` (
+CREATE TABLE IF NOT EXISTS `mining_data.agent_catalog` (
   agent_id      STRING NOT NULL,
   display_name  STRING NOT NULL,
   pattern       STRING NOT NULL,               -- A | B
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `genial-union-475913-i7.mining_data.agent_catalog` (
   source_tables ARRAY<STRING>
 );
 
-ALTER TABLE `genial-union-475913-i7.mining_data.agent_approvals`
+ALTER TABLE `mining_data.agent_approvals`
   SET OPTIONS (partition_expiration_days = 90);
-ALTER TABLE `genial-union-475913-i7.mining_data.agent_run_log`
+ALTER TABLE `mining_data.agent_run_log`
   SET OPTIONS (partition_expiration_days = 90);

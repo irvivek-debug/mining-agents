@@ -72,16 +72,59 @@ def test_model_for_tier_rejects_pattern_c_tier():
 
 
 def test_no_raw_model_id_outside_model_policy():
-    """The design forbids raw model IDs anywhere but references/model-policy.md."""
+    """The design forbids raw model IDs anywhere but references/model-policy.md.
+
+    Scans all .py, .md, .json, .toml, .yaml, .yml files under the repo root,
+    excluding .git/, .superpowers/, and any virtualenv directory.
+
+    Guard: assert the scanned set is non-empty and plausibly large FIRST.
+    A broken glob that matches nothing must not pass this test.
+    """
     import pathlib, re
     root = pathlib.Path(__file__).resolve().parents[1]
     policy = root / "references" / "model-policy.md"
     pattern = re.compile(r"gemini-[0-9]")
+
+    # Directories to skip entirely (relative to root).
+    # docs/ is excluded because planning documents are expected to name model
+    # IDs for discussion purposes (the same reason references/ is excluded).
+    # .superpowers/ is excluded because it contains internal SDD working files.
+    _SKIP_DIRS = {".git", ".superpowers", ".venv", "venv", "env", ".env",
+                  "site-packages", "__pycache__", ".pytest_cache", ".mypy_cache",
+                  "docs"}
+
+    def _should_skip(path: pathlib.Path) -> bool:
+        for part in path.relative_to(root).parts[:-1]:
+            if part in _SKIP_DIRS:
+                return True
+        return False
+
+    extensions = {".py", ".md", ".json", ".toml", ".yaml", ".yml"}
+    scanned = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix not in extensions:
+            continue
+        if _should_skip(path):
+            continue
+        scanned.append(path)
+
+    # Population pin — a broken glob must not silently pass.
+    assert len(scanned) > 50, (
+        f"scan visited only {len(scanned)} files — expected >50; "
+        "the glob may be broken or the repo has shrunk unexpectedly"
+    )
+
     offenders = []
-    for path in (list(root.glob("agents/**/*.py")) + list(root.glob("tests/**/*.py"))
-                 + list(root.glob("infra/**/*.py"))):
+    for path in scanned:
         if path == policy:
             continue
-        if pattern.search(path.read_text()):
-            offenders.append(str(path))
+        try:
+            text = path.read_text(errors="replace")
+        except OSError:
+            continue
+        if pattern.search(text):
+            offenders.append(str(path.relative_to(root)))
+
     assert offenders == [], f"raw model IDs found outside model-policy.md: {offenders}"
