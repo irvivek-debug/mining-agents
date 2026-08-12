@@ -6,11 +6,15 @@ updated and the profile is recaptured.
 """
 
 import json
+import os
 from pathlib import Path
 
 SEED = 20260810
-PROJECT_ID = "genial-union-475913-i7"
-DATASET = "mining_data"
+# Overridable so a fork can regenerate its own data without editing this file.
+# The default is the demo project; agents/config.py reads the same variable, so
+# one export points the generator and the agents at the same place.
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "genial-union-475913-i7")
+DATASET = os.environ.get("MINING_DATASET", "mining_data")
 BACKUP_SUFFIX = "_original_20260810"
 
 # Tables that will be rewritten by tasks 2-11 and must be backed up first.

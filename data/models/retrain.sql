@@ -1,12 +1,23 @@
 -- =============================================================================
 -- Task 10 — retrain the seven BQML models against the regenerated data.
 --
--- ARCHITECTURE IS UNCHANGED. Every statement below is a byte-faithful
--- reproduction of the model's original CREATE OR REPLACE MODEL statement,
--- recovered from `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT (the models
--- were all created 2026-06-20). Same MODEL_TYPE, same OPTIONS, same feature
--- list, same joins, same filters. Only the underlying table contents differ,
--- because Task 8 replaced the ten source tables.
+-- ARCHITECTURE IS UNCHANGED. Every statement below reproduces the model's
+-- original CREATE OR REPLACE MODEL statement, recovered from
+-- `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT (the models were all created
+-- 2026-06-20). Same MODEL_TYPE, same OPTIONS, same feature list, same joins,
+-- same filters. Only the underlying table contents differ, because Task 8
+-- replaced the ten source tables.
+--
+-- ONE deviation from the recovered text, which was otherwise byte-faithful:
+-- INFORMATION_SCHEMA returned every table and model fully qualified, with the
+-- demo project as a third name part. Those are written here in the two-part
+-- dataset.table form, matching infra/ddl/, so a fork can run this against its
+-- own project without a sed pass. Supply the project on the command line:
+--
+--   bq query --use_legacy_sql=false --nouse_cache \
+--     --project_id="${GOOGLE_CLOUD_PROJECT}" < data/models/retrain.sql
+--
+-- tests/test_infra_ddl.py enforces the two-part form across all checked-in SQL.
 --
 -- Model names: the plan and design docs call these "the four
 -- `downtime_regression_model*` models". The deployed names are actually
@@ -51,44 +62,44 @@ WITH downtime_regression AS (
   SELECT AVG(i.lead_time_days) AS lead_time_days,
          AVG(i.stock_level) AS stock_level,
          SUM(m.actual_duration_hours) AS total_downtime_duration
-  FROM `genial-union-475913-i7.mining_data.inventory_levels` AS i
-  JOIN `genial-union-475913-i7.mining_data.maintenance_logs` AS m
+  FROM `mining_data.inventory_levels` AS i
+  JOIN `mining_data.maintenance_logs` AS m
     ON i.part_number = m.parts_replaced[SAFE_OFFSET(0)]
   GROUP BY m.asset_id
 ),
 inventory_impact AS (
   SELECT m.asset_id
-  FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS m
+  FROM `mining_data.maintenance_logs` AS m
   CROSS JOIN UNNEST(m.parts_replaced) AS part_number
-  INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS i
+  INNER JOIN `mining_data.inventory_levels` AS i
     ON part_number = i.part_number
-  INNER JOIN `genial-union-475913-i7.mining_data.erp_work_orders` AS e
+  INNER JOIN `mining_data.erp_work_orders` AS e
     ON m.work_order_id = e.work_order_id
   WHERE m.asset_id IN ('MILL-01', 'PUMP-104A', 'CRUSHER-03')
   GROUP BY m.asset_id
 ),
 per_asset AS (
   SELECT t3.asset_id
-  FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS t1
+  FROM `mining_data.maintenance_logs` AS t1
   CROSS JOIN UNNEST(t1.parts_replaced) AS part_name
-  INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS t2
+  INNER JOIN `mining_data.inventory_levels` AS t2
     ON part_name = t2.part_number
-  INNER JOIN `genial-union-475913-i7.mining_data.assets` AS t3
+  INNER JOIN `mining_data.assets` AS t3
     ON t1.asset_id = t3.asset_id
 ),
 asset_clustering AS (
   SELECT t1.asset_id
-  FROM `genial-union-475913-i7.mining_data.erp_work_orders` AS t1
-  JOIN `genial-union-475913-i7.mining_data.maintenance_logs` AS t2
+  FROM `mining_data.erp_work_orders` AS t1
+  JOIN `mining_data.maintenance_logs` AS t2
     ON t1.asset_id = t2.asset_id
   GROUP BY t1.asset_id
 ),
 safety AS (
   SELECT s.severity_level
-  FROM `genial-union-475913-i7.mining_data.biometric_fatigue_logs` AS b
-  INNER JOIN `genial-union-475913-i7.mining_data.incident_involvements` AS i
+  FROM `mining_data.biometric_fatigue_logs` AS b
+  INNER JOIN `mining_data.incident_involvements` AS i
     ON b.operator_id = i.operator_id
-  INNER JOIN `genial-union-475913-i7.mining_data.safety_incidents` AS s
+  INNER JOIN `mining_data.safety_incidents` AS s
     ON i.incident_id = s.incident_id
 )
 SELECT
@@ -100,7 +111,7 @@ SELECT
   (SELECT COUNTIF(asset_id = 'MILL-01')    FROM per_asset) AS inventory_impact_model_mill_rows,    -- B4
   (SELECT COUNTIF(asset_id = 'CRUSHER-03') FROM per_asset) AS inventory_impact_model_crusher_rows, -- B5
   (SELECT SUM(ARRAY_LENGTH(parts_replaced))
-     FROM `genial-union-475913-i7.mining_data.maintenance_logs`) AS parts_replaced_values;
+     FROM `mining_data.maintenance_logs`) AS parts_replaced_values;
 
 
 -- =============================================================================
@@ -111,7 +122,7 @@ SELECT
 -- A1. safety_model — retrained on the corrected fatigue physiology.
 --     Source: biometric_fatigue_logs (regenerated) x incident_involvements x
 --     safety_incidents (both static reference tables, not rewritten).
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.safety_model`
+CREATE OR REPLACE MODEL `mining_data.safety_model`
 OPTIONS(
   MODEL_TYPE='LOGISTIC_REG',
   INPUT_LABEL_COLS=['severity']
@@ -121,20 +132,20 @@ SELECT
   COALESCE(b.microsleep_events_detected, 0) AS microsleep_events_detected,
   s.severity_level AS severity
 FROM
-  `genial-union-475913-i7.mining_data.biometric_fatigue_logs` AS b
+  `mining_data.biometric_fatigue_logs` AS b
 INNER JOIN
-  `genial-union-475913-i7.mining_data.incident_involvements` AS i
+  `mining_data.incident_involvements` AS i
 ON
   b.operator_id = i.operator_id
 INNER JOIN
-  `genial-union-475913-i7.mining_data.safety_incidents` AS s
+  `mining_data.safety_incidents` AS s
 ON
   i.incident_id = s.incident_id;
 
 
 -- A2. asset_clustering_model — retrained for consistency.
 --     Source: erp_work_orders x maintenance_logs (both regenerated).
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.asset_clustering_model`
+CREATE OR REPLACE MODEL `mining_data.asset_clustering_model`
 OPTIONS(MODEL_TYPE='KMEANS', NUM_CLUSTERS=4)
 AS
 SELECT
@@ -143,9 +154,9 @@ SELECT
   SUM(t2.actual_duration_hours) AS total_downtime_duration,
   ANY_VALUE(t1.priority) AS asset_criticality
 FROM
-  `genial-union-475913-i7.mining_data.erp_work_orders` AS t1
+  `mining_data.erp_work_orders` AS t1
 JOIN
-  `genial-union-475913-i7.mining_data.maintenance_logs` AS t2
+  `mining_data.maintenance_logs` AS t2
 ON
   t1.asset_id = t2.asset_id
 GROUP BY
@@ -160,7 +171,7 @@ GROUP BY
 -- =============================================================================
 
 -- B1. downtime_regression_model
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.downtime_regression_model`
+CREATE OR REPLACE MODEL `mining_data.downtime_regression_model`
 OPTIONS(model_type='LINEAR_REG', input_label_cols=['total_downtime_duration'])
 AS
 SELECT
@@ -168,9 +179,9 @@ SELECT
   AVG(i.stock_level) AS stock_level,
   SUM(m.actual_duration_hours) AS total_downtime_duration
 FROM
-  `genial-union-475913-i7.mining_data.inventory_levels` AS i
+  `mining_data.inventory_levels` AS i
 JOIN
-  `genial-union-475913-i7.mining_data.maintenance_logs` AS m
+  `mining_data.maintenance_logs` AS m
 ON
   i.part_number = m.parts_replaced[SAFE_OFFSET(0)]
 GROUP BY
@@ -178,7 +189,7 @@ GROUP BY
 
 
 -- B2. inventory_impact_model
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.inventory_impact_model`
+CREATE OR REPLACE MODEL `mining_data.inventory_impact_model`
 OPTIONS(model_type='LINEAR_REG', input_label_cols=['total_downtime_duration'])
 AS
 WITH aggregated_data AS (
@@ -189,13 +200,13 @@ WITH aggregated_data AS (
     AVG(i.lead_time_days) AS lead_time_days,
     SUM(m.actual_duration_hours) AS total_downtime_duration
   FROM
-    `genial-union-475913-i7.mining_data.maintenance_logs` AS m
+    `mining_data.maintenance_logs` AS m
   CROSS JOIN
     UNNEST(m.parts_replaced) AS part_number
   INNER JOIN
-    `genial-union-475913-i7.mining_data.inventory_levels` AS i ON part_number = i.part_number
+    `mining_data.inventory_levels` AS i ON part_number = i.part_number
   INNER JOIN
-    `genial-union-475913-i7.mining_data.erp_work_orders` AS e ON m.work_order_id = e.work_order_id
+    `mining_data.erp_work_orders` AS e ON m.work_order_id = e.work_order_id
   WHERE
     m.asset_id IN ('MILL-01', 'PUMP-104A', 'CRUSHER-03')
   GROUP BY
@@ -211,44 +222,44 @@ FROM
 
 
 -- B3. inventory_impact_model_pump   (PUMP-104A)
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.inventory_impact_model_pump`
+CREATE OR REPLACE MODEL `mining_data.inventory_impact_model_pump`
 OPTIONS(MODEL_TYPE = 'LINEAR_REG', INPUT_LABEL_COLS = ['total_downtime_duration'], L2_REG = 0.1) AS
 SELECT
   t1.actual_duration_hours AS total_downtime_duration,
   t2.stock_level,
   t2.lead_time_days
-FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS t1
+FROM `mining_data.maintenance_logs` AS t1
 CROSS JOIN UNNEST(t1.parts_replaced) AS part_name
-INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS t2 ON part_name = t2.part_number
-INNER JOIN `genial-union-475913-i7.mining_data.assets` AS t3 ON t1.asset_id = t3.asset_id
+INNER JOIN `mining_data.inventory_levels` AS t2 ON part_name = t2.part_number
+INNER JOIN `mining_data.assets` AS t3 ON t1.asset_id = t3.asset_id
 WHERE t3.asset_type = 'PUMP' AND t3.asset_id IN ('PUMP-104A');
 
 
 -- B4. inventory_impact_model_mill   (MILL-01)
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.inventory_impact_model_mill`
+CREATE OR REPLACE MODEL `mining_data.inventory_impact_model_mill`
 OPTIONS(MODEL_TYPE = 'LINEAR_REG', INPUT_LABEL_COLS = ['total_downtime_duration'], L2_REG = 0.1) AS
 SELECT
   t1.actual_duration_hours AS total_downtime_duration,
   t2.stock_level,
   t2.lead_time_days
-FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS t1
+FROM `mining_data.maintenance_logs` AS t1
 CROSS JOIN UNNEST(t1.parts_replaced) AS part_name
-INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS t2 ON part_name = t2.part_number
-INNER JOIN `genial-union-475913-i7.mining_data.assets` AS t3 ON t1.asset_id = t3.asset_id
+INNER JOIN `mining_data.inventory_levels` AS t2 ON part_name = t2.part_number
+INNER JOIN `mining_data.assets` AS t3 ON t1.asset_id = t3.asset_id
 WHERE t3.asset_type = 'GRINDING_MILL' AND t3.asset_id = 'MILL-01';
 
 
 -- B5. inventory_impact_model_crusher   (CRUSHER-03)
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.inventory_impact_model_crusher`
+CREATE OR REPLACE MODEL `mining_data.inventory_impact_model_crusher`
 OPTIONS(MODEL_TYPE = 'LINEAR_REG', INPUT_LABEL_COLS = ['total_downtime_duration'], L2_REG = 0.1) AS
 SELECT
   t1.actual_duration_hours AS total_downtime_duration,
   t2.stock_level,
   t2.lead_time_days
-FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS t1
+FROM `mining_data.maintenance_logs` AS t1
 CROSS JOIN UNNEST(t1.parts_replaced) AS part_name
-INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS t2 ON part_name = t2.part_number
-INNER JOIN `genial-union-475913-i7.mining_data.assets` AS t3 ON t1.asset_id = t3.asset_id
+INNER JOIN `mining_data.inventory_levels` AS t2 ON part_name = t2.part_number
+INNER JOIN `mining_data.assets` AS t3 ON t1.asset_id = t3.asset_id
 WHERE t3.asset_type = 'CRUSHER' AND t3.asset_id IN ('CRUSHER-03');
 
 
@@ -317,7 +328,7 @@ WHERE t3.asset_type = 'CRUSHER' AND t3.asset_id IN ('CRUSHER-03');
 -- Training set: 12,411 rows after NULL filtering, 630 positives (5.1 %).
 -- =============================================================================
 
-CREATE OR REPLACE MODEL `genial-union-475913-i7.mining_data.telemetry_alarm_risk_model`
+CREATE OR REPLACE MODEL `mining_data.telemetry_alarm_risk_model`
 OPTIONS(
   MODEL_TYPE = 'LOGISTIC_REG',
   INPUT_LABEL_COLS = ['alarm_within_7d'],
@@ -327,7 +338,7 @@ OPTIONS(
 ) AS
 WITH t AS (
   SELECT asset_id, metric_name, timestamp, metric_value, UNIX_SECONDS(timestamp) AS ts
-  FROM `genial-union-475913-i7.mining_data.telemetry_stream`
+  FROM `mining_data.telemetry_stream`
 ),
 base AS (
   SELECT asset_id, metric_name,

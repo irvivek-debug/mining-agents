@@ -33,34 +33,42 @@ def test_all_additive_objects_exist():
     assert missing == [], f"missing BigQuery objects: {missing}"
 
 
-def test_no_hardcoded_project_id_in_ddl_sql():
-    """Every .sql file under infra/ddl/ must use unqualified two-part table names.
+def test_no_hardcoded_project_id_in_any_checked_in_sql():
+    """Every .sql file in the repo must use unqualified two-part table names.
 
     A three-part backtick reference (`project.dataset.table`) pins the SQL to a
     specific GCP project and makes the accelerator un-forkable without a sed pass.
     The allowed form is `dataset.table` — the project is resolved at runtime by
     BigQuery from the job's project context.
 
+    The scan covers the whole repo rather than infra/ddl/ alone. It was scoped
+    to that one directory, and the two files under data/models/ escaped it with
+    ninety-odd hardcoded references between them: a rule that only inspects the
+    place you first found the problem does not prevent the second instance.
+
     Guard: assert the file list is non-empty and has the expected size FIRST.
     An empty glob must not silently pass this test.
     """
     root = pathlib.Path(__file__).resolve().parents[1]
-    ddl_dir = root / "infra" / "ddl"
-    sql_files = sorted(ddl_dir.glob("*.sql"))
+    sql_files = sorted(
+        path for path in root.rglob("*.sql")
+        if ".git" not in path.parts and "generated" not in path.parts
+    )
 
     # Population pin — must come before the offender scan.
-    assert len(sql_files) >= 2, (
-        f"expected at least 2 .sql files in infra/ddl/, found {len(sql_files)}: "
+    assert len(sql_files) >= 4, (
+        f"expected at least 4 .sql files in the repo, found {len(sql_files)}: "
         f"{[str(p) for p in sql_files]}"
     )
 
-    offenders = []
-    for path in sql_files:
-        if _THREE_PART_RE.search(path.read_text()):
-            offenders.append(path.name)
+    offenders = sorted(
+        str(path.relative_to(root))
+        for path in sql_files
+        if _THREE_PART_RE.search(path.read_text())
+    )
 
     assert offenders == [], (
-        f"hardcoded project IDs found in infra/ddl/ SQL files "
+        f"hardcoded project IDs found in checked-in SQL "
         f"(use `dataset.table` not `project.dataset.table`): {offenders}"
     )
 

@@ -34,28 +34,28 @@ WITH
 -- --- 1. Preflight: can each model be trained at all? -------------------------
 per_asset AS (
   SELECT t3.asset_id
-  FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS t1
+  FROM `mining_data.maintenance_logs` AS t1
   CROSS JOIN UNNEST(t1.parts_replaced) AS part_name
-  INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS t2
+  INNER JOIN `mining_data.inventory_levels` AS t2
     ON part_name = t2.part_number
-  INNER JOIN `genial-union-475913-i7.mining_data.assets` AS t3
+  INNER JOIN `mining_data.assets` AS t3
     ON t1.asset_id = t3.asset_id
 ),
 preflight AS (
   SELECT 'downtime_regression_model' AS model, COUNT(*) AS n FROM (
     SELECT m.asset_id
-    FROM `genial-union-475913-i7.mining_data.inventory_levels` AS i
-    JOIN `genial-union-475913-i7.mining_data.maintenance_logs` AS m
+    FROM `mining_data.inventory_levels` AS i
+    JOIN `mining_data.maintenance_logs` AS m
       ON i.part_number = m.parts_replaced[SAFE_OFFSET(0)]
     GROUP BY m.asset_id)
   UNION ALL
   SELECT 'inventory_impact_model', COUNT(*) FROM (
     SELECT m.asset_id
-    FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS m
+    FROM `mining_data.maintenance_logs` AS m
     CROSS JOIN UNNEST(m.parts_replaced) AS part_number
-    INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS i
+    INNER JOIN `mining_data.inventory_levels` AS i
       ON part_number = i.part_number
-    INNER JOIN `genial-union-475913-i7.mining_data.erp_work_orders` AS e
+    INNER JOIN `mining_data.erp_work_orders` AS e
       ON m.work_order_id = e.work_order_id
     WHERE m.asset_id IN ('MILL-01', 'PUMP-104A', 'CRUSHER-03')
     GROUP BY m.asset_id)
@@ -68,40 +68,40 @@ preflight AS (
   UNION ALL
   SELECT 'asset_clustering_model', COUNT(*) FROM (
     SELECT t1.asset_id
-    FROM `genial-union-475913-i7.mining_data.erp_work_orders` AS t1
-    JOIN `genial-union-475913-i7.mining_data.maintenance_logs` AS t2
+    FROM `mining_data.erp_work_orders` AS t1
+    JOIN `mining_data.maintenance_logs` AS t2
       ON t1.asset_id = t2.asset_id
     GROUP BY t1.asset_id)
   UNION ALL
   SELECT 'safety_model', COUNT(*)
-  FROM `genial-union-475913-i7.mining_data.biometric_fatigue_logs` AS b
-  INNER JOIN `genial-union-475913-i7.mining_data.incident_involvements` AS i
+  FROM `mining_data.biometric_fatigue_logs` AS b
+  INNER JOIN `mining_data.incident_involvements` AS i
     ON b.operator_id = i.operator_id
-  INNER JOIN `genial-union-475913-i7.mining_data.safety_incidents` AS s
+  INNER JOIN `mining_data.safety_incidents` AS s
     ON i.incident_id = s.incident_id
 ),
 
 -- --- 2. Current R^2 for the four downtime-duration regressors ---------------
 r2 AS (
   SELECT 'downtime_regression_model' AS model, r2_score AS v, 0.5007753422094947 AS base
-  FROM ML.EVALUATE(MODEL `genial-union-475913-i7.mining_data.downtime_regression_model`)
+  FROM ML.EVALUATE(MODEL `mining_data.downtime_regression_model`)
   UNION ALL
   SELECT 'inventory_impact_model_pump', r2_score, 0.028296371635788797
-  FROM ML.EVALUATE(MODEL `genial-union-475913-i7.mining_data.inventory_impact_model_pump`)
+  FROM ML.EVALUATE(MODEL `mining_data.inventory_impact_model_pump`)
   UNION ALL
   SELECT 'inventory_impact_model_mill', r2_score, 0.017094587774304504
-  FROM ML.EVALUATE(MODEL `genial-union-475913-i7.mining_data.inventory_impact_model_mill`)
+  FROM ML.EVALUATE(MODEL `mining_data.inventory_impact_model_mill`)
   UNION ALL
   SELECT 'inventory_impact_model_crusher', r2_score, 0.016788534602242167
-  FROM ML.EVALUATE(MODEL `genial-union-475913-i7.mining_data.inventory_impact_model_crusher`)
+  FROM ML.EVALUATE(MODEL `mining_data.inventory_impact_model_crusher`)
   UNION ALL
   SELECT 'inventory_impact_model', r2_score, 0.9372480271309931
-  FROM ML.EVALUATE(MODEL `genial-union-475913-i7.mining_data.inventory_impact_model`)
+  FROM ML.EVALUATE(MODEL `mining_data.inventory_impact_model`)
 ),
 
 -- --- 3. The retrained pair --------------------------------------------------
-safety AS (SELECT * FROM ML.EVALUATE(MODEL `genial-union-475913-i7.mining_data.safety_model`)),
-cluster AS (SELECT * FROM ML.EVALUATE(MODEL `genial-union-475913-i7.mining_data.asset_clustering_model`)),
+safety AS (SELECT * FROM ML.EVALUATE(MODEL `mining_data.safety_model`)),
+cluster AS (SELECT * FROM ML.EVALUATE(MODEL `mining_data.asset_clustering_model`)),
 
 -- --- 4. Ground truth: the degradation ramp really is in the telemetry -------
 --     PUMP-104A, ramp window = final 21 days (data/generator/telemetry.py
@@ -111,7 +111,7 @@ telemetry AS (
     metric_name,
     AVG(IF(timestamp >= TIMESTAMP('2026-05-26 22:00:00'), metric_value, NULL)) AS ramp_mean,
     AVG(IF(timestamp <  TIMESTAMP('2026-05-26 22:00:00'), metric_value, NULL)) AS flat_mean
-  FROM `genial-union-475913-i7.mining_data.telemetry_stream`
+  FROM `mining_data.telemetry_stream`
   WHERE asset_id = 'PUMP-104A'
   GROUP BY metric_name
 ),
@@ -125,18 +125,18 @@ pump_features AS (
     IF(e.created_at >= TIMESTAMP('2026-05-26 22:00:00'), 'ramp', 'flat') AS win,
     t2.stock_level,
     t2.lead_time_days
-  FROM `genial-union-475913-i7.mining_data.maintenance_logs` AS t1
+  FROM `mining_data.maintenance_logs` AS t1
   CROSS JOIN UNNEST(t1.parts_replaced) AS part_name
-  INNER JOIN `genial-union-475913-i7.mining_data.inventory_levels` AS t2
+  INNER JOIN `mining_data.inventory_levels` AS t2
     ON part_name = t2.part_number
-  INNER JOIN `genial-union-475913-i7.mining_data.erp_work_orders` AS e
+  INNER JOIN `mining_data.erp_work_orders` AS e
     ON t1.work_order_id = e.work_order_id
   WHERE t1.asset_id = 'PUMP-104A'
 ),
 pump_preds AS (
   SELECT win, predicted_total_downtime_duration AS p
   FROM ML.PREDICT(
-    MODEL `genial-union-475913-i7.mining_data.inventory_impact_model_pump`,
+    MODEL `mining_data.inventory_impact_model_pump`,
     (SELECT * FROM pump_features))
 ),
 windows AS (SELECT w FROM UNNEST(['flat', 'ramp']) AS w),
@@ -148,7 +148,7 @@ windows AS (SELECT w FROM UNNEST(['flat', 'ramp']) AS w),
 --     ramp is entirely out of sample.
 t AS (
   SELECT asset_id, metric_name, timestamp, metric_value, UNIX_SECONDS(timestamp) AS ts
-  FROM `genial-union-475913-i7.mining_data.telemetry_stream`
+  FROM `mining_data.telemetry_stream`
 ),
 base AS (
   SELECT asset_id, metric_name,
@@ -187,7 +187,7 @@ risk AS (
          IF(timestamp >= TIMESTAMP('2026-05-26 22:00:00'), 'ramp', 'flat') AS win,
          (SELECT prob FROM UNNEST(predicted_alarm_within_7d_probs) WHERE label) AS p_alarm
   FROM ML.PREDICT(
-    MODEL `genial-union-475913-i7.mining_data.telemetry_alarm_risk_model`,
+    MODEL `mining_data.telemetry_alarm_risk_model`,
     (SELECT asset_id, metric_name, timestamp,
             z_now, z_mean_24h, z_mean_72h, z_trend_48h, z_vol_72h, peer_z_24h
      FROM peer
