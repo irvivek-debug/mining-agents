@@ -30,6 +30,8 @@ docstring.
 """
 from __future__ import annotations
 
+import datetime
+import decimal
 import re
 
 from google.cloud import bigquery
@@ -212,6 +214,38 @@ def _bq_type(value) -> str:
     return "STRING"
 
 
+def _json_safe(value):
+    """Coerce a BigQuery cell into something the model API can serialise.
+
+    The client returns native Python objects — `datetime.date` for DATE,
+    `decimal.Decimal` for NUMERIC, `bytes` for BYTES — and the tool response is
+    ultimately JSON-encoded on its way to the model. Anything the encoder does
+    not recognise raises TypeError from inside the SDK, which surfaces as a
+    bare HTTP 500 with no indication that a column type was the cause.
+
+    That is exactly how this was found: S01 answered one question and 500'd on
+    the next, because the second query touched `assets.installation_date`. Only
+    three DATE columns exist in this dataset, so the failure is invisible until
+    a query happens to select one — a demo-day defect by construction.
+
+    Temporal values become ISO-8601 strings; Decimal becomes a string rather
+    than a float because NUMERIC is used for money and float would silently
+    round it. Containers recurse: a query returning ARRAY<DATE> or a STRUCT is
+    just as unserialisable as a bare DATE.
+    """
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat()
+    if isinstance(value, decimal.Decimal):
+        return str(value)
+    if isinstance(value, bytes):
+        return value.hex()
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
+
+
 def run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict], int]:
     """Execute parameterised SQL. Returns (rows, row_count). No envelope.
 
@@ -229,7 +263,10 @@ def run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict
         use_query_cache=False,
     )
     try:
-        rows = [dict(r) for r in _bq_client().query(sql, job_config=job_config).result()]
+        rows = [
+            {k: _json_safe(v) for k, v in dict(r).items()}
+            for r in _bq_client().query(sql, job_config=job_config).result()
+        ]
     except Exception as exc:  # noqa: BLE001 - boundary with BigQuery
         raise ToolFailure(
             "QUERY_FAILED", str(exc), tables_read=list(tables_read)

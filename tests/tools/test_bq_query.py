@@ -361,3 +361,33 @@ def test_an_alias_survives_row_masking_and_is_left_to_the_output_scrub():
     )
     assert isinstance(rows[0]["hr"], int)
     assert rows[0]["hr"] != REDACTION
+
+
+def test_a_date_column_comes_back_json_serialisable():
+    """Rows must survive json.dumps, because the model API serialises them.
+
+    `assets.installation_date` is DATE, and the BigQuery client returns it as a
+    `datetime.date`. Nothing in the tool layer converted it, so the tool
+    response reached the SDK's JSON encoder unchanged and raised TypeError
+    there — surfacing to the caller as an unexplained HTTP 500 rather than a
+    ToolFailure naming the column.
+
+    Asserted by actually calling json.dumps rather than by checking the type,
+    so the test states the property that matters instead of the mechanism that
+    currently provides it. The value is compared to BigQuery's own ISO
+    rendering of the same column, so this cannot pass by finding an empty row
+    set or a NULL: both assertions require a real date to be present.
+    """
+    import json
+
+    rows, count = run_query(
+        "SELECT installation_date, "
+        "FORMAT_DATE('%Y-%m-%d', installation_date) AS expected "
+        "FROM `mining_data.assets` "
+        "WHERE installation_date IS NOT NULL LIMIT 1",
+        {},
+        ["mining_data.assets"],
+    )
+    assert count == 1, "no asset has an installation_date — the fixture changed"
+    json.dumps(rows)          # the assertion: this raised TypeError before
+    assert rows[0]["installation_date"] == rows[0]["expected"]
