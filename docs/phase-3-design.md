@@ -416,7 +416,9 @@ Three further fields, each carrying a requirement stated elsewhere that has nowh
 | `hitl_required` | UX §SC-4. The approval sheet binds to every agent with this flag, so the UX has to read it at registration; it cannot infer which of the 52 need Hold-to-Confirm. |
 | `source_tables` | UX approval record, which persists `source_tables[]` alongside `agent_reasoning_snapshot`. Also what `assert_reads_only_declared_tables` constrains each agent to at runtime, so the registry advertises exactly the reach the tool layer enforces. |
 
-**Registering 52, not 100** — the 12 coordinators plus 40 deep agents. Swarm specialists are sub-agents reachable only through their coordinator; registering them separately would make the registry unnavigable and would falsely advertise 36 agents as independently callable. This resolves the open question raised in the PRD.
+**Registering 52, not 100** — the 12 coordinators plus 40 deep agents. Swarm specialists are sub-agents reachable only through their coordinator; registering them separately would make the registry unnavigable and would falsely advertise 48 agents as independently callable — 12 swarms x (3 specialists + 1 critic). *(Corrected 2026-08-12: this paragraph said 36, which no swarm composition in the catalog produces.)*
+
+Note the two registries are not the same thing and hold different populations. `mining_data.agent_catalog` is the **catalogue of all 100** — it is what SC-1 navigates and what a customer forks and edits. **Gateway registration covers only the 52** that are externally callable. A sub-agent appears in the catalogue but has no Gateway endpoint, which is the intended asymmetry: discoverable, not invocable.
 
 ### 5.4 Agent Gateway guardrails
 

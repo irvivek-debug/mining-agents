@@ -1,8 +1,8 @@
 """Registry payloads for the 52 externally-callable agents.
 
 Swarm specialists and critics are sub-agents reachable only through their
-coordinator. Registering them would falsely advertise 36 independently callable
-agents as top-level Gateway endpoints.
+coordinator. Registering them would falsely advertise 48 independently callable
+agents as top-level Gateway endpoints — 12 swarms x (3 specialists + 1 critic).
 
 Ruling R1: GATEWAY_SERVICE_ACCOUNT is the identity the Agent Gateway uses when
 it forwards a request to a top-level agent. This account is provisioned outside
