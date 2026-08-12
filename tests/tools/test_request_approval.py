@@ -52,13 +52,22 @@ def _delete_test_rows(approval_ids: list[str]) -> None:
     try:
         client.query(sql, job_config=job_config).result()
     except BadRequest as exc:
+        # The streaming buffer blocks DML for ~30-90 min. Expected, not a defect.
         if "streaming buffer" not in str(exc):
-            warnings.warn(
-                f"cleanup: DELETE failed for approval_ids {approval_ids!r}; "
-                f"these rows were left behind in agent_approvals. "
-                f"Error: {exc}",
-                stacklevel=2,
-            )
+            _warn_orphaned(approval_ids, exc)
+    except Exception as exc:  # noqa: BLE001
+        # A teardown must never fail a test that passed, but it must never be
+        # silent either: an unswept row sits in the live SC-4 approval queue.
+        _warn_orphaned(approval_ids, exc)
+
+
+def _warn_orphaned(approval_ids: list[str], exc: BaseException) -> None:
+    warnings.warn(
+        f"cleanup: DELETE failed for approval_ids {approval_ids!r}; "
+        f"these rows were left behind in agent_approvals. "
+        f"Error: {type(exc).__name__}: {exc}",
+        stacklevel=3,
+    )
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
