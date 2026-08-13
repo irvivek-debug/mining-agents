@@ -17,10 +17,13 @@ if (!DATA) {
   });
 }
 
+/* Application 1, in the order the argument is made: what the problem is, how
+   big it is here, what closing it is worth, how it is closed, and only then
+   what it is built on. The labels are the argument, not the file names. */
 const CASE_NAV = [
-  { href: "index.html", label: "1 · Proposition" },
-  { href: "scenario.html", label: "2 · The mine today" },
-  { href: "value.html", label: "3 · Value unlock" },
+  { href: "index.html", label: "1 · The case" },
+  { href: "scenario.html", label: "2 · The gap" },
+  { href: "value.html", label: "3 · The prize" },
   { href: "solution.html", label: "4 · The solution" },
   { href: "graph.html", label: "5 · The graph" },
 ];
@@ -35,9 +38,33 @@ const WORK_NAV = [
   { href: "handover.html", label: "Handover" },
 ];
 
+/* The pill in the corner of every screen. It differs between the two
+   applications because the two applications are addressed to different
+   readers: the case is read by someone deciding whether the gap is real, and
+   the workspace by someone who has already decided and wants to know what is
+   deployed. An entrypoint count in the corner of screen one answers a question
+   that has not been asked yet, and quietly changes what the screen is about. */
 const NAVS = {
-  case: { items: CASE_NAV, brand: "Mining Agents · The case for change" },
-  workspace: { items: WORK_NAV, brand: "Mining Agents · Site workspace" },
+  case: {
+    items: CASE_NAV,
+    brand: "Mining Agents · The case for change",
+    pill: () => {
+      const row = DATA.signals.gap.rows[0];
+      const dp = rowPlaces(row);
+      return {
+        text: `Recovery ${fig(row.median, row.unit, dp)} → ${fig(row.p90, row.unit, dp)}`,
+        title: `${row.label}: this site's ordinary day against its own best day, over ${row.days} days`,
+      };
+    },
+  },
+  workspace: {
+    items: WORK_NAV,
+    brand: "Mining Agents · Site workspace",
+    pill: () => ({
+      text: `${DATA.catalog.counts.entrypoints} entrypoints · ${DATA.catalog.counts.agent_nodes} agents`,
+      title: "Source of every figure on this page",
+    }),
+  },
 };
 
 /** Escape before interpolation. Part descriptions and technician notes are
@@ -117,15 +144,14 @@ function mountNav(app, current) {
         }>${esc(i.label)}</a>`
     )
     .join("");
+  const pill = nav.pill();
   const bar = document.createElement("div");
   bar.className = "topbar";
   bar.innerHTML =
     `<span class="brand">${esc(nav.brand)}</span>` +
     `<nav>${links}</nav>` +
     '<span style="flex:1"></span>' +
-    `<span class="pill" title="Source of every figure on this page">${esc(
-      DATA.catalog.counts.entrypoints
-    )} entrypoints · ${esc(DATA.catalog.counts.agent_nodes)} agents</span>`;
+    `<span class="pill" title="${esc(pill.title)}">${esc(pill.text)}</span>`;
   document.body.prepend(bar);
 }
 

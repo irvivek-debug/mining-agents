@@ -10,6 +10,43 @@ function name(id) {
   return byId[id] ? byId[id].display_name : id;
 }
 
+/* The scale tiles. They were on screen one until the case was reordered around
+   the value argument: a reader who has not yet been shown the gap has no reason
+   to care how many nodes close it. Here, four screens in, the question has
+   actually been asked. Each tile reads a counted field; none carries a literal,
+   so a catalog change moves the screen rather than contradicting it. */
+const TILES = [
+  { n: catalog.counts.agent_nodes, label: "Agent nodes deployed",
+    sub: "Coordinators, specialists, critics and deep agents" },
+  { n: catalog.counts.entrypoints, label: "Externally callable entry points",
+    sub: "A specialist is reachable only through its coordinator" },
+  { n: catalog.counts.swarms, label: "Swarms",
+    sub: "Coordinator, three specialists and a critic apiece" },
+  { n: catalog.counts.deep_agents, label: "Departmental deep agents",
+    sub: "One role, one process, one question at a time" },
+  { n: catalog.counts.hitl_entrypoints, label: "Gated on human approval",
+    sub: "The agent proposes; a named person commits" },
+  { n: Object.keys(personas).length, label: "Personas served",
+    sub: "Each with the agents they own and the branch they answer for" },
+  // Not "value branches": these are the nine domain tags the catalog carries,
+  // which the value tree rolls up into six pools plus the convergence agent.
+  // Labelling them as branches puts a 9 on this screen against the 6 on screen
+  // three, and leaves a reader to decide which of the two we meant.
+  { n: Object.keys(catalog.by_value_branch).length, label: "Operational domains",
+    sub: "Rolled up into the six value pools on screen three" },
+  { n: Object.keys(catalog.apqc_names).length, label: "APQC processes",
+    sub: "The process taxonomy the catalog maps onto" },
+];
+
+el("scale").innerHTML = TILES.map(
+  (t) =>
+    '<div class="card c3 stat"><div>' +
+    `<div class="metric">${num(t.n)}</div>` +
+    `<div class="metric-sub">${esc(t.label)}</div></div>` +
+    `<div style="color:var(--fg-muted);font-size:12.5px;margin-top:10px">${esc(t.sub)}</div>` +
+    "</div>"
+).join("");
+
 /* Swarms as a table rather than twelve cards: the interesting thing is that the
    shape repeats exactly twelve times, and a table shows repetition where a grid
    of cards hides it. */
@@ -132,9 +169,21 @@ el("deploy").innerHTML =
   esc(catalog.counts.agent_nodes) +
   " agent nodes. A critic does not need the model a coordinator needs, and paying " +
   "for one everywhere is how a demo becomes too expensive to run twice." +
+  "</div></div>" +
+  /* The timing is here rather than on screen one, and it is printed with the
+     open defect attached. A screen that quotes its own latency and omits that
+     half the calls are the agent working out what its tables contain has
+     reported a result and hidden the finding. */
+  '<div class="card c12"><div class="note" style="margin:0"><strong>Measured, not claimed</strong><br>' +
+  'D01 — Telemetry Anomaly Detector — currently answers <span class="mono">"Which assets ' +
+  'show abnormal telemetry in the last 24 hours?"</span> in <span class="mono">48.0s</span> ' +
+  "on a warm container, spending 5 of its 9 BigQuery calls working out what the tables " +
+  "contain. Removing that orientation cost is an open workstream; the figure above is " +
+  "what it does today, before that fix." +
   "</div></div>";
 
 el("prov").innerHTML = provenance(
   "<dt>Service accounts</dt><dd>Three-tier model, an architecture decision recorded in " +
-    "the engagement notes rather than counted from the catalog.</dd>"
+    "the engagement notes rather than counted from the catalog.</dd>" +
+    "<dt>Latency</dt><dd>D01 timed end to end on 2026-08-12; see the working notes</dd>"
 );

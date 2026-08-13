@@ -957,6 +957,12 @@ def build_gap(telemetry, recovery) -> dict:
 
         median, p90 = float(daily.median()), float(daily.quantile(0.90))
         delta = p90 - median
+        # Every day, sorted worst to best. Drawn this way the median and the
+        # p90 land at the halfway and nine-tenths marks by construction, so a
+        # reader can see where the two figures were taken from instead of
+        # being asked to accept them. A time series would not show that -- it
+        # would show weather.
+        ladder = [_num(v) for v in sorted(float(x) for x in daily)]
         rows.append({
             "id": metric["id"], "label": metric["label"],
             "asset_id": holder, "column": metric["column"],
@@ -965,6 +971,7 @@ def build_gap(telemetry, recovery) -> dict:
             "delta": _num(delta),
             "delta_pct": _num(delta / median * 100.0),
             "days": int(len(daily)),
+            "ladder": ladder,
             "benchmark": metric["benchmark"],
             "source": source,
         })

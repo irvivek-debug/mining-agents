@@ -10,79 +10,88 @@
 <body>
 <div class="wrap">
 
-  <section class="hero">
+  <section class="hero reveal">
     <div class="eyebrow">The case for change</div>
-    <h1>Fifty-two questions a person asks today, answered by an agent that already knows the answer's shape.</h1>
+    <h1>The knowledge that produced your best day is already in the building. It does not arrive on time.</h1>
     <p class="lede">
-      Not a chatbot over a data lake. Fifty-two named entry points, each owned by a
-      named role, each bound to the tables it is allowed to read, the process it
-      belongs to, and the approval it must seek before it acts. This screen states
-      what is deployed. Every figure on it is counted from the catalog that builds
-      the agents, not from a slide.
+      Every mine has a good shift and an ordinary shift, run by the same crews on
+      the same plant. The difference is rarely capability. It is whether the
+      person deciding at three in the morning has, in that moment, what the best
+      operator on the best day had: the reading, the history, the standard, and
+      the authority to act on them together.
+    </p>
+    <p class="lede">
+      That is a distribution problem, and it is the one thing this estate is
+      built to fix. The four screens after this one show the size of the gap, what
+      closing it is worth, and how it is done — in that order, because the last
+      question is the least interesting one.
     </p>
   </section>
 
   <section>
-    <div class="eyebrow">The unit of consequence</div>
+    <div class="eyebrow reveal">Why now</div>
+    <h2 class="reveal">This is not one site's problem</h2>
+    <p class="lede reveal" id="condition-lede"></p>
+    <div class="bento" id="condition"></div>
+    <p class="lede reveal" id="condition-close" style="margin-top:20px"></p>
+  </section>
+
+  <section>
+    <div class="eyebrow reveal">The unit of consequence</div>
+    <h2 class="reveal">One figure, and where it came from</h2>
     <div class="bento">
-      <div class="card c5 stat">
+      <div class="card c5 stat reveal">
         <div>
-          <div class="metric accent" id="anchor"></div>
+          <div class="metric accent" id="anchor" data-prefix="$"></div>
           <div class="metric-sub">Per hour of mill downtime</div>
         </div>
         <div class="mono" style="color:var(--fg-dim)" id="anchor-src"></div>
       </div>
-      <div class="card c7">
+      <div class="card c7 reveal">
         <div class="card-cap">Why this is the only dollar figure here</div>
         <p style="margin-top:0">
-          It is the only one this repository establishes. The Reliability Engineer
-          states it in their own words, and the value tree carries it as the anchor
-          for asset reliability. Every other magnitude — the cost of a stockout, the
-          value of an hour recovered, the price of a deferred shipment — depends on
-          this site's contracts and volumes, which are the client's to supply.
+          It is the only one this repository establishes on its own. The Reliability
+          Engineer states it in their own words, and the value tree carries it as the
+          anchor for asset reliability. Every other magnitude — the cost of a stockout,
+          the value of an hour recovered, the price of a deferred shipment — depends on
+          this site's contracts and volumes, which are yours to supply and not ours to
+          assume.
         </p>
         <p style="margin-bottom:0">
-          So this deck does not print an ROI it cannot source. Where a number belongs
-          and is not ours to know, it says so, in orange, at a size no one can mistake
-          for a result.
+          So this case does not print a return it cannot source. Where a number belongs
+          and is not ours to know, it says so, at a size no one can mistake for a
+          result. The one conversion we can make honestly — a point of recovery into
+          tonnes of contained metal — is on screen three, with your two figures left
+          blank until you fill them.
         </p>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="eyebrow">What is deployed</div>
-    <h2>The shape of it</h2>
-    <div class="bento" id="scale"></div>
-  </section>
-
-  <section>
-    <div class="eyebrow">The change</div>
-    <h2>What it replaces</h2>
+    <div class="eyebrow reveal">The change</div>
+    <h2 class="reveal">What it replaces</h2>
     <div class="bento">
-      <div class="card c6">
+      <div class="card c6 reveal">
         <div class="card-cap">Today, in their words</div>
         <div id="today"></div>
       </div>
-      <div class="card c6">
-        <div class="card-cap">With an agent</div>
+      <div class="card c6 reveal">
+        <div class="card-cap">On the good day, every day</div>
         <p style="margin-top:0">
-          The same question goes to one entry point. The agent already holds the
-          schema, the site clock, the process it belongs to, and the tables it may
-          read. It returns the answer with the query it ran and the rows it read
-          attached, so the engineer checks the working rather than reassembling it.
+          The same question is asked once and answered once. What comes back is not
+          an opinion: it is the reading, the history it sits in, the standard it is
+          being judged against, and the working — so the person on shift checks a
+          decision instead of assembling one.
         </p>
-        <div class="note info" style="margin-top:14px">
-          <strong>Measured, not claimed</strong><br>
-          D01 — Telemetry Anomaly Detector — currently answers
-          <span class="mono">"Which assets show abnormal telemetry in the last 24 hours?"</span>
-          in <span class="mono">48.0s</span> on a warm container, spending 5 of its 9
-          BigQuery calls working out what the tables contain. Removing that orientation
-          cost is the open backend workstream; the figure above is what it does today,
-          before that fix.
-        </div>
+        <p>
+          Nothing here removes the person. Where an answer costs money or carries
+          risk, it stops and waits for a named human to commit it. That gate is
+          counted, not promised, and screen four shows how many of the entry points
+          sit behind it.
+        </p>
         <p class="mono" style="color:var(--fg-dim);font-size:11px;margin-bottom:0">
-          The human baseline this compares against is
+          How long the same answer takes to assemble by hand today is
           <span style="color:var(--warning)">[CLIENT INPUT REQUIRED]</span>.
         </p>
       </div>
@@ -92,13 +101,14 @@
   <div id="prov"></div>
 
   <div class="btn-row" style="margin-top:32px">
-    <a class="btn primary" href="scenario.html">Next — the mine as the demo holds it</a>
+    <a class="btn primary" href="scenario.html">Next — the gap in your own record</a>
   </div>
 
 </div>
 
 <script src="../shared/data/bundle.js"></script>
 <script src="../shared/shell.js"></script>
+<script src="../shared/motion.js"></script>
 <script src="proposition.js"></script>
 </body>
 </html>

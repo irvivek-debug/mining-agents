@@ -277,6 +277,77 @@ blockquote.verbatim cite {
                   font-family: var(--mono); font-size: 10.5px; color: var(--fg-dim);
                   text-transform: uppercase; letter-spacing: 0.06em; }
 
+/* ---------- the ladder: every recorded day, sorted worst to best ---------- */
+
+/* Sorting the days discards time on purpose. A time series of this data shows
+   weather; sorted, the median and the p90 land at the halfway and nine-tenths
+   marks by construction, so the two figures can be pointed at rather than
+   asserted. Everything below is built to make those two marks legible. */
+/* The gap above the strip is where the two mark labels sit; they are absolutely
+   positioned 19px above it and would otherwise crowd the reading line. */
+.ladder { margin-top: 26px; }
+
+/* position:relative for the two marks; the strip is the only positioned
+   ancestor they have, and their left offsets are percentages of it. */
+.ladder-strip { position: relative; display: flex; align-items: flex-end;
+                height: 108px; }
+/* One recorded day. flex-basis 0 so 167 of them divide the width evenly
+   rather than each claiming an intrinsic width; min-width 0 because a flex
+   item defaults to min-width:auto and 167 of those would hold the card open.
+   No gap and no corner radius: a day is between one and four pixels wide here,
+   and a 1px gap between 1px bars aliases into wide bands that look like a
+   pattern in the data. The bars are separate elements so the profile is a step
+   through 167 measurements rather than a smoothed curve through them. */
+.ladder-strip i { flex: 1 1 0; min-width: 0;
+                  background: var(--fg-dim); opacity: 0.45; }
+/* The days between the ordinary day and the best day: the gap, drawn. */
+.ladder-strip i.in { background: var(--hue); opacity: 1; }
+/* Above the p90. Real days, deliberately not claimed — so they are shown, but
+   in the register of something the argument is not resting on. */
+.ladder-strip i.over { background: var(--hue); opacity: 0.35; }
+
+/* Drawn in the foreground colour rather than the pool hue: a rule tinted like
+   the bars it crosses is invisible against exactly the half of the strip it
+   most needs to be read against. */
+/* The rule is a pseudo-element so its opacity does not also fade the label,
+   which is a child and would inherit it. */
+.ladder-mark { position: absolute; top: 0; bottom: 0; width: 1px; }
+.ladder-mark::before { content: ""; position: absolute; inset: 0;
+                       background: var(--fg); opacity: 0.28; }
+.ladder-mark.best::before { opacity: 0.6; }
+.ladder-mark b { position: absolute; top: -19px; font-family: var(--mono);
+                 font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase;
+                 white-space: nowrap; color: var(--fg-dim); font-weight: 400; }
+/* The ordinary-day label centres on its rule at the halfway mark, where there
+   is room either side. The best-day rule sits at nine tenths, so its label
+   hangs to the left of the rule instead of running off the card. */
+.ladder-mark.ordinary b { left: 0; transform: translateX(-50%); }
+.ladder-mark.best b { right: 4px; color: var(--hue); }
+
+.ladder-axis { display: flex; justify-content: space-between; gap: 12px;
+               margin-top: 7px; padding-top: 7px;
+               border-top: 1px solid var(--border);
+               font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em;
+               text-transform: uppercase; color: var(--fg-dim); }
+.ladder-axis span { min-width: 0; }
+
+/* The bars are drawn against the lowest recorded day, not against zero: a
+   recovery series that runs 90.9 to 95.1 plotted from zero is a flat grey
+   block. Suppressing the baseline is a licence to mislead unless the range is
+   printed, so the range is printed, here. */
+.ladder-scale { margin-top: 10px; font-family: var(--mono); font-size: 10.5px;
+                color: var(--fg-dim); overflow-wrap: anywhere; }
+
+.ladder-cap { display: flex; flex-wrap: wrap; gap: 3px 16px;
+              justify-content: space-between; }
+.ladder-cap .pool { color: var(--hue); font-weight: 400; }
+
+.ladder-head { display: flex; align-items: baseline; justify-content: space-between;
+               gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.ladder-head .move { font-family: var(--mono); font-size: 12px;
+                     color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.ladder-head .move em { font-style: normal; color: var(--hue); font-weight: 700; }
+
 /* ---------- graph canvas ---------- */
 
 #cy {

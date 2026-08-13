@@ -284,6 +284,48 @@ every input labelled as theirs, so the screen still never asserts a magnitude it
 cannot source. The 52-cell partition and the APQC table move below the value
 argument as supporting detail.
 
+**Case screen 1.** Hero states the problem rather than the estate: the knowledge
+that produced the best day exists and does not arrive on time. Beneath it, the
+four `condition`-themed benchmarks, ordered as an argument — productivity fell,
+the data was already being collected and thrown away, the industry is behind its
+peers for capital, and buying the technology has so far mostly not paid. The
+`$145k` anchor and the discipline it stands for stay. The eight scale tiles and
+the D01 latency measurement move to screen 4, which is where a reader has
+actually asked how it is built.
+
+**Case screen 2.** Becomes the evidence screen. The four gap metrics are drawn
+as ladders rather than repeated as the landing's table, then the two
+`gap`-themed benchmarks, then the counted site table and the verbatim persona
+quotes as grounding.
+
+**Case screen 4.** Receives the scale tiles and the latency note.
+
+## The ladder
+
+Screen 2 has to make the gap survive contact with the data, and a second table
+of the same four numbers would not have. So each metric is drawn as every
+recorded day, sorted worst to best.
+
+Sorting discards the calendar deliberately. A time series of these numbers shows
+weather, and invites an argument about which week was unusual. Sorted, the median
+day falls at the halfway mark and the p90 day at the nine-tenths mark **by
+construction** — so the two figures the entire business case rests on can be
+pointed at rather than asserted, and the coloured span between the two rules is
+the gap itself, drawn.
+
+Constraints the drawing had to meet:
+
+- **The baseline is suppressed and the suppression is printed.** A recovery
+  series running 90.9 to 95.1 plotted from zero is a flat grey block. Every
+  ladder prints the range it was drawn against, immediately beneath itself.
+- **Days above the p90 are shown, dimmed.** They happened; the case does not
+  claim them. Omitting them would flatter the drawing.
+- **The colour is the value pool**, matched to screen 3, and each ladder names
+  its pool beside the metric — a hue that means something stated nowhere is
+  decoration.
+- **No gaps between bars.** At 167 days a bar is one to four pixels wide, and a
+  1px gap aliases into wide bands that read as a pattern in the data.
+
 ## The calculator, as built
 
 The value screen prices a recovery point, and the design of that panel is where

@@ -1,43 +1,72 @@
-/* Screen 1.1 — the proposition. */
+/* Screen 1 — the proposition.
+ *
+ * This screen holds the thesis and the industry condition, and nothing about
+ * how the estate is built. A reader who has not yet been given a reason to
+ * care how many agent nodes there are is not helped by being told. The counts
+ * and the latency measurement live on screen four, where the question they
+ * answer has actually been asked.
+ */
 
 mountNav("case", "index.html");
 
 const facts = DATA.facts;
-const counts = DATA.catalog.counts;
+const BENCH = DATA.benchmarks;
 
-el("anchor").textContent =
-  "$" + facts.mill_downtime_usd_per_hour.toLocaleString("en-US");
+el("anchor").setAttribute("data-count", facts.mill_downtime_usd_per_hour);
 el("anchor-src").textContent = facts.mill_downtime_source;
 
-/* The scale tiles. Each reads a counted field; none carries a literal, so a
-   catalog change moves the screen rather than contradicting it. */
-const TILES = [
-  { n: counts.agent_nodes, label: "Agent nodes deployed",
-    sub: "Coordinators, specialists, critics and deep agents" },
-  { n: counts.entrypoints, label: "Externally callable entry points",
-    sub: "A specialist is reachable only through its coordinator" },
-  { n: counts.swarms, label: "Swarms",
-    sub: "Coordinator, three specialists and a critic apiece" },
-  { n: counts.deep_agents, label: "Departmental deep agents",
-    sub: "One role, one process, one question at a time" },
-  { n: counts.hitl_entrypoints, label: "Gated on human approval",
-    sub: "The agent proposes; a named person commits" },
-  { n: Object.keys(DATA.personas.personas).length, label: "Personas served",
-    sub: "Each with the agents they own and the branch they answer for" },
-  { n: Object.keys(DATA.catalog.by_value_branch).length, label: "Value branches",
-    sub: "Where the work lands on the value tree" },
-  { n: Object.keys(DATA.catalog.apqc_names).length, label: "APQC processes",
-    sub: "The process taxonomy the catalog maps onto" },
-];
+/* The industry condition, in the order that makes the argument rather than the
+   order the source file happens to hold.
+ *
+ *  It got worse. The information to fix it was already being collected and
+ *  thrown away. The industry is behind the industries it competes with for
+ *  capital. And the obvious remedy has, so far, mostly not paid.
+ *
+ *  The last of those four is on this screen deliberately. A case that carries
+ *  only upside reads as a brochure, and that particular figure is the one a
+ *  sceptical chief executive already has in mind before the meeting starts.
+ */
+const CONDITION = ["productivity_decline", "data_unused", "digital_maturity", "genai_reality"];
 
-el("scale").innerHTML = TILES.map(
-  (t) =>
-    '<div class="card c3 stat"><div>' +
-    `<div class="metric">${num(t.n)}</div>` +
-    `<div class="metric-sub">${esc(t.label)}</div></div>` +
-    `<div style="color:var(--fg-muted);font-size:12.5px;margin-top:10px">${esc(t.sub)}</div>` +
+CONDITION.forEach((id) => {
+  const b = BENCH.by_id[id];
+  if (!b) throw new Error(`this screen cites benchmark ${id}, which is not in the source file`);
+  if (b.theme !== "condition") {
+    throw new Error(`benchmark ${id} is themed ${b.theme}; this section is the industry condition`);
+  }
+});
+
+el("condition-lede").innerHTML =
+  "Four published findings, quoted as written and attributed. None of them is " +
+  "ours, and none of them is about this site. They are here because the gap " +
+  "on the next screen is easier to dismiss as a local measurement problem " +
+  "than to face, and it is not one.";
+
+el("condition").innerHTML = CONDITION.map((id) => {
+  const b = BENCH.by_id[id];
+  return (
+    '<div class="card c6 reveal">' +
+    `<div class="card-cap">${esc(b.publisher)} · ${esc(b.year)}</div>` +
+    `<h3 style="margin-top:0">${esc(b.headline)}</h3>` +
+    '<div class="benchline">' +
+    `<span class="claim">&ldquo;${esc(b.figure)}&rdquo;</span>` +
+    (b.aside ? `<span class="claim" style="margin-top:6px">&ldquo;${esc(b.aside)}&rdquo;</span>` : "") +
+    `<span class="cite">${esc(b.title)}</span>` +
+    "</div>" +
+    `<p style="color:var(--fg-dim);font-size:12.5px;margin-bottom:0">${esc(b.scope)}</p>` +
+    `<div class="mono" style="font-size:10px;color:var(--fg-dim);margin-top:10px;overflow-wrap:anywhere">${esc(
+      b.url
+    )}</div>` +
     "</div>"
-).join("");
+  );
+}).join("");
+
+el("condition-close").innerHTML =
+  "Read together they say something narrower than &ldquo;mining needs AI&rdquo;. " +
+  "They say the measurement already exists, the practice is already known, and " +
+  "what has not worked is buying a technology and hoping the practice follows. " +
+  "So the next screen does not argue from any of these. It argues from " +
+  `${esc(DATA.signals.gap.rows[0].days)} days of your own record.`;
 
 /* The "today" column quotes people, not marketing. Only quotes that are about
    the cost of assembling an answer belong on this screen; the rest of each
@@ -87,6 +116,9 @@ el("today").innerHTML = picked
   .join("");
 
 el("prov").innerHTML = provenance(
-  `<dt>Site figures</dt><dd class="mono">${esc(facts.generated_at)}</dd>` +
-    `<dt>Latency</dt><dd>D01 timed end to end on 2026-08-12; see /tmp/time_agents.py in the working notes</dd>`
+  `<dt>Benchmarks</dt><dd>${esc(BENCH.source)}</dd>` +
+    `<dt>Site figures</dt><dd class="mono">${esc(facts.generated_at)}</dd>`
 );
+
+reveal();
+countAll();
