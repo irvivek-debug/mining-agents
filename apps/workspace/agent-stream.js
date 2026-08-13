@@ -70,8 +70,11 @@ function streamUrl(options) {
  * by itself when the connection closes, so without the server's explicit
  * proxy-done event the browser would silently re-ask the agent the same
  * hundred-second question, forever. */
-function streamAgent(options) {
-  var source = new EventSource(streamUrl(options));
+
+/* Seam: accepts a pre-built source so tests can inject a fake EventSource
+ * without touching the browser global. streamAgent() is the real entry point
+ * and constructs the EventSource itself before delegating here. */
+function _streamAgentWithSource(source, options) {
   var finished = false;
   // One call memory per stream, so a response can name what its call was about.
   var calls = {};
@@ -116,6 +119,11 @@ function streamAgent(options) {
   return { close: finish };
 }
 
+function streamAgent(options) {
+  var source = new EventSource(streamUrl(options));
+  return _streamAgentWithSource(source, options);
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { eventToSteps, streamUrl, streamAgent };
+  module.exports = { eventToSteps, streamUrl, streamAgent, _streamAgentWithSource };
 }
