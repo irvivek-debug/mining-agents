@@ -142,19 +142,30 @@ function route(question, personaCode, DATA) {
   };
 }
 
+/* Turn a table phrase into a question. Table phrases that are relative clauses
+ * (they begin with "which", "who" or "what") compose ungrammatically with the
+ * default frame "What do … show right now?", so they use "Show me …" instead.
+ * Every other phrase uses the default frame. Neither frame reintroduces an
+ * article into the phrase itself. */
+function _tableQuestion(phrase) {
+  if (/^(?:which|who|what)\b/i.test(phrase)) {
+    return "Show me " + phrase + ".";
+  }
+  return "What do " + phrase + " show right now?";
+}
+
 /* Cold start. No example questions exist anywhere in the catalogue, so these are
  * derived rather than authored: each is built from one capability an agent
  * actually declares, and then checked by routing it back. A starter that did not
  * route to the agent it came from would teach the reader the wrong thing about
  * what the page does, so it is discarded rather than shipped.
  *
- * Only capabilities unique to a single agent within the persona are used, so
- * the round-trip check passes and the question cannot name a phrase that belongs
- * to a sibling agent.
+ * Tier 1: capabilities unique to a single agent within the persona — cannot name
+ * a phrase that belongs to a sibling, so round-trip is strongest here.
+ * Tier 2: shared capabilities — still checked by routing back, so a question that
+ * routes ambiguously is discarded automatically rather than shipped wrong.
  */
 function _candidateQuestions(agent, allAgents) {
-  var out = [];
-
   /* Build a map of which capabilities are shared by how many agents in the set */
   var tableCount = {};
   var traversalCount = {};
@@ -168,49 +179,74 @@ function _candidateQuestions(agent, allAgents) {
     });
   });
 
-  /* Prefer traversals first (highest weight) — only use if unique to this agent */
+  var tier1 = [];
+  var tier2 = [];
+
+  /* Prefer traversals first (highest weight) */
   (agent.traversals || []).forEach(function (t) {
+    var q = "Show me " + PLAIN.plainTraversal(t) + ".";
     if (traversalCount[t] === 1) {
-      out.push({ agent: agent, q: "Show me " + PLAIN.plainTraversal(t) + "." });
+      tier1.push({ agent: agent, q: q });
+    } else {
+      tier2.push({ agent: agent, q: q });
     }
   });
 
-  /* Then tables unique to this agent */
+  /* Then tables */
   (agent.source_tables || []).forEach(function (t) {
     var bare = PLAIN.bareTable(t);
+    var q = _tableQuestion(PLAIN.plainTable(t));
     if (tableCount[bare] === 1) {
-      out.push({ agent: agent, q: "What do " + PLAIN.plainTable(t) + " show right now?" });
+      tier1.push({ agent: agent, q: q });
+    } else {
+      tier2.push({ agent: agent, q: q });
     }
   });
 
-  return out;
+  return { tier1: tier1, tier2: tier2 };
 }
 
-function starterQuestions(personaCode, DATA) {
+/* Internal: returns [{q, agent, isGeneric}] of exactly 3 items. The agent field
+ * is the specific agent the question was derived from (null for generic
+ * backstops). Exposed for testing via _starterItems; the public starterQuestions
+ * returns only the strings, keeping the external contract stable. */
+function _starterItems(personaCode, DATA) {
   var persona = DATA.personas.personas[personaCode];
   var byId = {};
   DATA.catalog.agents.forEach(function (a) { byId[a.agent_id] = a; });
   var agents = (persona.agents || []).map(function (id) { return byId[id]; }).filter(Boolean);
 
-  // Round-robin over the agents so three starters do not all come from one.
-  var pools = agents.map(function (agent) { return _candidateQuestions(agent, agents); });
-  var queue = [];
-  for (var depth = 0; depth < 30; depth++) {
-    pools.forEach(function (pool) { if (pool[depth]) queue.push(pool[depth]); });
-  }
-
-  var chosen = [];
-  var seen = {};
-  queue.forEach(function (item) {
-    if (chosen.length >= 3 || seen[item.q]) return;
-    if (route(item.q, personaCode, DATA).agent_id !== item.agent.agent_id) return;
-    seen[item.q] = true;
-    chosen.push(item.q);
+  var pools1 = agents.map(function (agent) {
+    return _candidateQuestions(agent, agents).tier1;
+  });
+  var pools2 = agents.map(function (agent) {
+    return _candidateQuestions(agent, agents).tier2;
   });
 
-  // Backstop, for a persona whose agents share every capability: a question that
-  // names no capability at all routes to the persona's lead agent by the same
-  // tie-break every empty question uses, so it is honest by construction.
+  /* Round-robin pass: tier-1 (unique capabilities) first, then tier-2 (shared
+   * capabilities). The round-trip check inside the loop is what keeps shared
+   * candidates honest — a question that routes to the wrong agent is discarded. */
+  var chosen = [];
+  var seen = {};
+
+  function tryPool(pools) {
+    for (var depth = 0; depth < 30; depth++) {
+      pools.forEach(function (pool) {
+        if (!pool[depth]) return;
+        var item = pool[depth];
+        if (chosen.length >= 3 || seen[item.q]) return;
+        if (route(item.q, personaCode, DATA).agent_id !== item.agent.agent_id) return;
+        seen[item.q] = true;
+        chosen.push({ q: item.q, agent: item.agent, isGeneric: false });
+      });
+    }
+  }
+
+  tryPool(pools1);
+  tryPool(pools2);
+
+  // Backstop: a question that names no capability routes to the persona's lead
+  // agent by the same tie-break every empty question uses, so it is honest.
   var generic = [
     "What should I look at first?",
     "What changed since yesterday?",
@@ -219,11 +255,16 @@ function starterQuestions(personaCode, DATA) {
   generic.forEach(function (q) {
     if (chosen.length >= 3 || seen[q]) return;
     seen[q] = true;
-    chosen.push(q);
+    chosen.push({ q: q, agent: null, isGeneric: true });
   });
+
   return chosen.slice(0, 3);
 }
 
+function starterQuestions(personaCode, DATA) {
+  return _starterItems(personaCode, DATA).map(function (item) { return item.q; });
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { route, starterQuestions, branchesOf, tokens, scoreAgent };
+  module.exports = { route, starterQuestions, _starterItems, branchesOf, tokens, scoreAgent };
 }

@@ -93,32 +93,50 @@ test("every persona gets exactly three starter questions", () => {
 
 test("a starter always routes to the agent it was derived from", () => {
   for (const code of CODES) {
-    for (const q of R.starterQuestions(code, DATA)) {
-      const pick = R.route(q, code, DATA);
+    const items = R._starterItems(code, DATA);
+    for (const item of items) {
+      const pick = R.route(item.q, code, DATA);
       assert.ok(DATA.personas.personas[code].agents.includes(pick.agent_id),
-        `${code}: starter "${q}" routed outside the persona`);
+        `${code}: starter "${item.q}" routed outside the persona`);
+      if (!item.isGeneric) {
+        // The core guarantee: the starter must route to the exact agent it was
+        // derived from, not merely any agent in the persona.
+        assert.strictEqual(pick.agent_id, item.agent.agent_id,
+          `${code}: starter "${item.q}" was derived from ${item.agent.agent_id} ` +
+          `but routed to ${pick.agent_id}`);
+      }
     }
   }
 });
 
 test("a starter never names a capability its agent does not have", () => {
   const P = require("../../apps/shared/plain.js");
+  const phrases = Object.values(P.TABLES)
+    .concat(Object.values(P.TRAVERSALS))
+    .concat(Object.values(P.TOOLS));
   for (const code of CODES) {
-    for (const q of R.starterQuestions(code, DATA)) {
-      const pick = R.route(q, code, DATA);
+    const items = R._starterItems(code, DATA);
+    for (const item of items) {
+      if (item.isGeneric) {
+        // Generic backstops name no capability by construction — assert that
+        // explicitly rather than passing vacuously through the phrase loop.
+        for (const phrase of phrases) {
+          assert.ok(!item.q.toLowerCase().includes(phrase.toLowerCase()),
+            `${code}: generic starter "${item.q}" contains capability phrase "${phrase}"`);
+        }
+        continue;
+      }
+      const pick = R.route(item.q, code, DATA);
       const agent = DATA.catalog.agents.find((a) => a.agent_id === pick.agent_id);
       const owned = new Set(
         (agent.source_tables || []).map((t) => P.plainTable(t))
           .concat((agent.traversals || []).map((t) => P.plainTraversal(t)))
           .concat((agent.tools || []).map((t) => P.plainTool(t)))
       );
-      const phrases = Object.values(P.TABLES)
-        .concat(Object.values(P.TRAVERSALS))
-        .concat(Object.values(P.TOOLS));
       for (const phrase of phrases) {
-        if (q.toLowerCase().includes(phrase.toLowerCase())) {
+        if (item.q.toLowerCase().includes(phrase.toLowerCase())) {
           assert.ok(owned.has(phrase),
-            `${code}: starter "${q}" names "${phrase}", which ${pick.agent_id} does not have`);
+            `${code}: starter "${item.q}" names "${phrase}", which ${pick.agent_id} does not have`);
         }
       }
     }
