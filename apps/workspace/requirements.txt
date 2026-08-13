@@ -9,9 +9,10 @@
 # and seconds to every cold start, for code paths this process never reaches.
 #
 # What keeps the two lists from drifting into a lie is that the imports are
-# checked, not asserted: `test_the_workspace_image_needs_no_agent_sdk` imports
-# apps.workspace.server with only these packages available and fails if
-# anything reaches for the ADK.
+# checked, not asserted: `test_the_workspace_image_needs_no_agent_sdk` in
+# tests/test_workspace_image.py imports apps.workspace.server in a subprocess
+# that refuses google.adk and google.cloud.aiplatform, and fails naming the
+# module that reached for one.
 
 fastapi>=0.115
 uvicorn[standard]>=0.30
