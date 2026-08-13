@@ -64,7 +64,11 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
   font-family: var(--mono); font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--fg-muted); text-decoration: none;
-  padding: 8px 10px; min-height: 32px; display: inline-flex; align-items: center;
+  /* 44px, not 32: the nav is the only chrome on the page and it is what a
+     gloved thumb reaches for first. Measured at 768px these rendered 35px
+     tall, below the touch minimum every other control on the screen already
+     meets. */
+  padding: 8px 10px; min-height: 44px; display: inline-flex; align-items: center;
   border: 1px solid transparent;
 }
 .topbar nav a:hover { color: var(--fg); border-color: var(--border); }

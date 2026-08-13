@@ -422,7 +422,7 @@ function controls() {
             .map(
               (p) =>
                 '<label style="display:flex;gap:8px;align-items:flex-start;' +
-                'font-size:12.5px;min-height:32px">' +
+                'font-size:12.5px;min-height:44px;padding-top:3px">' +
                 `<input type="checkbox" class="p-part" value="${esc(p.id)}"${
                   p.detail.below_reorder_point ? " checked" : ""
                 } style="margin-top:4px">` +
