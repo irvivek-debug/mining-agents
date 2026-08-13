@@ -386,3 +386,42 @@ blockquote.verbatim cite {
    is what the tool returns, so it is printed in full and the table scrolls
    instead — shortening it would put a value on screen that no query returns. */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---------- the technical drawer ---------- */
+
+/* Both applications use this. It began in workspace.css, where the case
+   application could not reach it, which meant five of the ten screens had a
+   disclosure triangle at the browser's default size instead of a 44px target.
+   A component two readerships share belongs in the shared sheet. */
+.tbl { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg); }
+/* min-width: 0 because a flex item will not shrink below its content by
+   default, and the label here is a fully-qualified table name — the longest in
+   the catalog, mining_data.operator_vehicle_assignments, is wider than a
+   phone. */
+.tbl > summary {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  min-height: 44px; padding: 8px 12px; cursor: pointer; font-size: 13px;
+  min-width: 0;
+}
+.tbl > summary::-webkit-details-marker { display: none; }
+.tbl > summary::before { content: "▸"; color: var(--fg-muted); font-size: 11px; }
+.tbl[open] > summary::before { content: "▾"; }
+.tbl > summary:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
+.tbl > summary .dim { font-size: 10.5px; margin-left: auto; }
+
+/* The end-of-page drawer specifically: separated from the body by a rule, so it
+   reads as an appendix rather than as one more section. */
+.drawer { margin-top: 20px; }
+.drawer > summary { font-weight: 600; }
+.drawer-body { padding: 0 12px 12px; font-size: 12.5px; }
+.drawer-body dt { font-weight: 600; margin-top: 8px; }
+.drawer-body dd { margin: 2px 0 0; color: var(--fg-muted); }
+
+/* handover.js opens every disclosure before the dialog appears, so the
+   summary is a heading on paper and not a control: the table name and its row
+   count are provenance, and dropping them would leave a column list with
+   nothing to say which table it came from. */
+@media print {
+  .tbl > summary { list-style: none; cursor: default; }
+  .tbl > summary::-webkit-details-marker { display: none; }
+}

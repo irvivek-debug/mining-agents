@@ -75,21 +75,10 @@
 
 /* ---------- input tables ---------- */
 
-.tbl { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg); }
-/* min-width: 0 because a flex item will not shrink below its content by
-   default, and the label here is a fully-qualified table name — the longest in
-   the catalog, mining_data.operator_vehicle_assignments, is wider than a
-   phone. */
-.tbl > summary {
-  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-  min-height: 44px; padding: 8px 12px; cursor: pointer; font-size: 13px;
-  min-width: 0;
-}
-.tbl > summary::-webkit-details-marker { display: none; }
-.tbl > summary::before { content: "▸"; color: var(--fg-muted); font-size: 11px; }
-.tbl[open] > summary::before { content: "▾"; }
-.tbl > summary:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
-.tbl > summary .dim { font-size: 10.5px; margin-left: auto; }
+/* .tbl base rules (the collapsible shell + 44px touch target + focus ring) now
+   live in apps/shared/app.css so both applications can reach them. The rules
+   below are workspace-specific: the description paragraph, the column list and
+   the per-column plain-language gloss. */
 .tbl-desc { font-size: 13px; margin: 0; padding: 0 12px 10px 12px; max-width: 82ch; }
 .cols { list-style: none; margin: 0; padding: 0 12px 12px; }
 .cols li { padding: 7px 0; border-top: 1px solid var(--border-soft); font-size: 12.5px; }
@@ -291,12 +280,8 @@ table.audit td.t { white-space: nowrap; }
      supervisor refers to a section when they raise it. */
   .lede, .nc-what, .rail-id, .node-id, .expression, .metric.gap { color: #111 !important; }
 
-  /* handover.js opens every disclosure before the dialog appears, so the
-     summary is a heading on paper and not a control: the table name and its row
-     count are provenance, and dropping them would leave a column list with
-     nothing to say which table it came from. */
-  .tbl > summary { list-style: none; cursor: default; }
-  .tbl > summary::-webkit-details-marker { display: none; }
+  /* .tbl > summary print rules moved to apps/shared/app.css — they belong with
+     the component, not the application that first needed them on paper. */
 
   .card, .tbl, .unverified, .not-connected { page-break-inside: avoid; }
 }

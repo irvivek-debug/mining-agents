@@ -28,13 +28,13 @@ const CASE_NAV = [
   { href: "graph.html", label: "5 · The graph" },
 ];
 
-/* Application 2. The four destinations are the four standing screens; SC-4,
-   the approval sheet, is deliberately absent because it is a modal raised from
-   a swarm or a workbench and never a place you navigate to on its own. */
+/* Application 2. The four destinations are the four standing screens; the
+   approval sheet is deliberately absent because it is a modal raised from an
+   agent team or a role page and never a place you navigate to on its own. */
 const WORK_NAV = [
   { href: "index.html", label: "Cockpit" },
-  { href: "swarm.html", label: "Swarms" },
-  { href: "workbench.html", label: "Workbench" },
+  { href: "swarm.html", label: "Agent teams" },
+  { href: "persona.html", label: "My role" },
   { href: "handover.html", label: "Handover" },
 ];
 
@@ -153,6 +153,25 @@ function mountNav(app, current) {
     '<span style="flex:1"></span>' +
     `<span class="pill" title="${esc(pill.title)}">${esc(pill.text)}</span>`;
   document.body.prepend(bar);
+}
+
+/** The one collapsible every screen ends with.
+ *
+ *  The instruction was explicit: plain language and tables first, technical
+ *  detail at the end, behind something the reader opens on purpose. One helper
+ *  rather than ten hand-written <details> blocks, because ten of them is ten
+ *  chances for one screen to call it something else and break the pattern the
+ *  reader has just learned.
+ */
+function technicalDrawer(bodyHtml, hint) {
+  return (
+    '<details class="tbl drawer">' +
+    "<summary>Technical detail" +
+    (hint ? `<span class="dim">${esc(hint)}</span>` : "") +
+    "</summary>" +
+    `<div class="drawer-body">${bodyHtml}</div>` +
+    "</details>"
+  );
 }
 
 /** The footer every screen carries: when the data was generated and from what.
