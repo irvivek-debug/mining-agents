@@ -17,7 +17,15 @@
  * router.js is loaded before this file, so the name is already in scope; under
  * Node it arrives through require. */
 var ROUTER = typeof require !== "undefined" ? require("./router.js") : null;
-var _branchesOf = ROUTER ? ROUTER.branchesOf : branchesOf;
+var _branchesOf =
+  (ROUTER && ROUTER.branchesOf) ||
+  (typeof branchesOf !== "undefined" ? branchesOf : null);
+
+if (!_branchesOf) {
+  throw new Error(
+    "persona-data.js needs router.js loaded first — no branchesOf in scope"
+  );
+}
 
 /* The one signal that maps to a persona from the data rather than from a guess:
  * each branch names its own personas, so the lookup is a reverse index over

@@ -21,11 +21,19 @@ test("branchesOf normalises both shapes value_branch takes", () => {
     ["supply_chain", "procurement"]);
 });
 
-test("every persona gets a defined branch-evidence result", () => {
-  for (const code of CODES) {
+test("branchCodesFor returns the branch codes from the data, not from value_branch", () => {
+  // P1 belongs to exactly one branch (B1); confirmed against real bundle data.
+  assert.deepEqual(D.branchCodesFor("P1", DATA), ["B1"]);
+});
+
+test("P1–P7 each yield at least one evidence row, P8 yields zero", () => {
+  for (const code of ["P1", "P2", "P3", "P4", "P5", "P6", "P7"]) {
     const rows = D.branchEvidenceFor(code, DATA);
     assert.ok(Array.isArray(rows), `${code} returned a non-array`);
+    assert.ok(rows.length > 0, `${code} unexpectedly returned no evidence rows`);
   }
+  assert.deepEqual(D.branchEvidenceFor("P8", DATA), [],
+    "P8 belongs to no branch and must return an empty array");
 });
 
 test("seven personas have branch evidence and P8 has none", () => {
@@ -38,6 +46,8 @@ test("every evidence declares a kind, and carries that kind's fields", () => {
   for (const code of CODES) {
     for (const row of D.branchEvidenceFor(code, DATA)) {
       assert.ok(row.code && row.branch && row.evidence, `${code} returned a partial row`);
+      assert.strictEqual(row.branch.code, row.code,
+        `${code}/${row.code} byCode lookup returned the wrong branch object`);
       const e = row.evidence;
       assert.ok(["series", "distribution", "share"].includes(e.kind),
         `${code}/${row.code} has kind ${e.kind}`);
@@ -97,4 +107,29 @@ test("an unknown persona code returns empty results rather than throwing", () =>
   const split = D.gapRowsFor("P99", DATA);
   assert.deepEqual(split.reached, []);
   assert.equal(split.other.length, DATA.signals.gap.rows.length);
+});
+
+test("missing router.js throws a self-explaining load-order error", () => {
+  // Simulate the browser case where router.js was not loaded first: eval the
+  // source in a minimal sandbox that has no require (so ROUTER becomes null)
+  // and no global branchesOf. The new guard must throw before any function
+  // body executes, naming both files.
+  const src = fs.readFileSync(
+    path.join(__dirname, "..", "..", "apps", "workspace", "persona-data.js"),
+    "utf8"
+  );
+  // Wrap in a function that supplies a fake `require` returning null (simulating
+  // missing router) and no branchesOf global — matching the bad browser state.
+  const fn = new Function("require", "module", "exports", src);
+  assert.throws(
+    () => fn(() => null, { exports: {} }, {}),
+    (err) => {
+      assert.ok(err instanceof Error, "expected an Error");
+      assert.ok(
+        err.message.includes("router.js"),
+        `error message must name router.js — got: ${err.message}`
+      );
+      return true;
+    }
+  );
 });
