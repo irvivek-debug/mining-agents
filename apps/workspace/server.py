@@ -240,7 +240,13 @@ async def invoke(agent_id: str, request: Request) -> JSONResponse:
 
 @app.get("/")
 def home() -> RedirectResponse:
-    return RedirectResponse("/workspace/")
+    """Land on the chooser rather than on one of the two applications.
+
+    Which one a reader wants depends on why they came, and guessing wrong
+    costs them a back-button and leaves the impression that the other is
+    subordinate. apps/index.html asks instead.
+    """
+    return RedirectResponse("/index.html")
 
 
 # Mounted last so the API routes above win. The mount point is apps/, not

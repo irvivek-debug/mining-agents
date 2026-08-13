@@ -91,11 +91,14 @@ function provenance(extra) {
   return (
     '<hr class="rule">' +
     '<div class="card"><div class="card-cap">Provenance</div>' +
-    '<div class="kv">' +
+    // A dl, not a div: these are dt/dd pairs, which are only valid inside one.
+    // The extra class is what lets the stylesheet stack them on a phone, where
+    // the two-column form leaves too little room for a dotted module path.
+    '<dl class="kv prov">' +
     `<dt>Catalog</dt><dd>${esc(DATA.catalog.source)}</dd>` +
     `<dt>Generated</dt><dd class="mono">${esc(DATA.catalog.generated_at)}</dd>` +
     (extra || "") +
-    "</div></div>"
+    "</dl></div>"
   );
 }
 

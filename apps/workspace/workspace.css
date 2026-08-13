@@ -9,7 +9,12 @@
    rather than shrinking beside it. The breakpoint is 1000px, not 760: the rail
    needs 300px and the work needs 620px before the columns start fighting. */
 .pane { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
-@media (max-width: 1000px) { .pane { grid-template-columns: 1fr; } }
+/* minmax(0, …) rather than 1fr: a 1fr track refuses to shrink below the
+   min-content of what it holds, and what this one holds is BigQuery
+   identifiers. S12 reads mining_data.operator_vehicle_assignments, one
+   unbreakable 40-character token, which held the whole pane 27px wider than a
+   390px screen. The track is allowed to shrink; the identifiers break. */
+@media (max-width: 1000px) { .pane { grid-template-columns: minmax(0, 1fr); } }
 
 .rail { border: 1px solid var(--border); background: var(--surface); }
 .rail-cap {
@@ -71,9 +76,14 @@
 /* ---------- input tables ---------- */
 
 .tbl { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg); }
+/* min-width: 0 because a flex item will not shrink below its content by
+   default, and the label here is a fully-qualified table name — the longest in
+   the catalog, mining_data.operator_vehicle_assignments, is wider than a
+   phone. */
 .tbl > summary {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
   min-height: 44px; padding: 8px 12px; cursor: pointer; font-size: 13px;
+  min-width: 0;
 }
 .tbl > summary::-webkit-details-marker { display: none; }
 .tbl > summary::before { content: "▸"; color: var(--fg-muted); font-size: 11px; }
@@ -86,6 +96,16 @@
 .col-meaning { font-size: 12.5px; color: var(--fg-muted); margin-top: 3px; max-width: 84ch;
                font-family: var(--sans); }
 
+/* Every identifier this suite prints is one token with no spaces — dotted
+   table paths, column names, the qualified references inside a column's
+   description — and several are longer than a 360px screen. They break rather
+   than hold their card open past the edge of the display: a name clipped at
+   the border is a name a reader cannot check against the warehouse. The SQL
+   console is exempt and scrolls instead, because breaking a query line changes
+   what the query appears to say. */
+.mono, .col-meaning { overflow-wrap: anywhere; }
+.console, .console .mono { overflow-wrap: normal; }
+
 /* ---------- the unverified band ---------- */
 
 /* docs/phase-2-ux.md calls this the most important element on the approval
@@ -96,7 +116,7 @@
                   font-size: 13.5px; margin-bottom: 10px; }
 .unverified ul { list-style: none; margin: 0; padding: 0; }
 .unverified li { padding: 10px 0; border-top: 1px solid rgba(234,88,12,0.28); font-size: 13.5px; }
-.unverified li .dim { font-size: 11.5px; margin-top: 3px; word-break: break-word; }
+.unverified li .dim { font-size: 11.5px; margin-top: 3px; }
 .remedy { font-size: 12.5px; color: var(--fg-muted); margin-top: 5px; }
 
 .cite { font-size: 10.5px; color: var(--fg-dim); text-transform: uppercase;
@@ -177,6 +197,15 @@ table.audit td.v { font-family: var(--mono); font-size: 11.5px; word-break: brea
    two lines reads as two values, and this table's whole job is to say exactly
    what one row contains. */
 table.audit td.t { white-space: nowrap; }
+
+/* On a phone the sheet is 358px wide and this table cannot compress below 448:
+   the first column holds BigQuery column names, which are identifiers, and the
+   type column must not wrap for the reason above. So it scrolls inside the
+   sheet rather than pushing the sheet past the edge of the screen — the same
+   trade tokens.css makes for the data tables, at the same breakpoint. */
+@media (max-width: 820px) {
+  table.audit { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
 
 /* ---------- SC-3: the department switcher ---------- */
 
