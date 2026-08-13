@@ -1,0 +1,121 @@
+/* One agent's event stream, turned into lines a reader can follow.
+ *
+ * A real question was measured at 103.8 seconds across 26 events. The point of
+ * this module is that those 103 seconds read as work happening — reading the
+ * sensor readings, tracing what else stops — rather than as a spinner that
+ * cannot be told from a hang.
+ *
+ * The agent's own prose is never edited. The agents currently leak plumbing
+ * into their answers, and filtering that here would put this file in the
+ * business of deciding what the agent said. The honest fix is upstream.
+ */
+var PLAIN = typeof require !== "undefined" ? require("../shared/plain.js") : window;
+
+/* The four part shapes, as measured on the wire.
+ *
+ * Two details here are worth more than they look. First, success is nested under
+ * response — read at the top level it is undefined, which is not false, and a
+ * failed lookup would then never be reported at all. Second, a functionResponse
+ * carries only {id, name, response}: it has no arguments, so the noun the call
+ * was about has to be remembered from the matching functionCall by id. Without
+ * that, every failure reads "Couldn't finish tracing connections" instead of
+ * naming what could not be traced, which is the whole point of the line.
+ *
+ * `calls` is that memory. It belongs to one conversation and is passed in, so
+ * this function stays pure with respect to module state and a test can hand it
+ * a fresh one.
+ */
+function eventToSteps(adkEvent, calls) {
+  var parts = (adkEvent && adkEvent.content && adkEvent.content.parts) || [];
+  var seen = calls || {};
+  var steps = [];
+  parts.forEach(function (part) {
+    if (!part) return;
+    if (typeof part.text === "string" && part.text.length) {
+      steps.push({ kind: "text", text: part.text });
+      return;
+    }
+    if (part.functionCall) {
+      var args = part.functionCall.args || {};
+      if (part.functionCall.id) seen[part.functionCall.id] = args;
+      steps.push({ kind: "step", text: PLAIN.callLine(part.functionCall.name, args) });
+      return;
+    }
+    if (part.functionResponse) {
+      var reply = part.functionResponse.response || {};
+      var recalled = seen[part.functionResponse.id] || {};
+      var failed = reply.success === false;
+      steps.push({
+        kind: failed ? "step-failed" : "step",
+        text: failed
+          ? PLAIN.failLine(part.functionResponse.name, recalled)
+          : PLAIN.callLine(part.functionResponse.name, recalled),
+      });
+    }
+    // thoughtSignature rides alongside the other three and is not a step.
+  });
+  return steps;
+}
+
+function streamUrl(options) {
+  var q = new URLSearchParams({
+    prompt: options.prompt || "",
+    user_id: options.userId || "workspace",
+    session_id: options.sessionId || "workspace-session",
+  });
+  return "/api/stream/" + encodeURIComponent(options.agentId) + "?" + q.toString();
+}
+
+/* EventSource, with the one behaviour that would otherwise bite: it reconnects
+ * by itself when the connection closes, so without the server's explicit
+ * proxy-done event the browser would silently re-ask the agent the same
+ * hundred-second question, forever. */
+function streamAgent(options) {
+  var source = new EventSource(streamUrl(options));
+  var finished = false;
+  // One call memory per stream, so a response can name what its call was about.
+  var calls = {};
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    source.close();
+    if (options.onDone) options.onDone();
+  }
+
+  source.onmessage = function (message) {
+    var parsed;
+    try {
+      parsed = JSON.parse(message.data);
+    } catch (err) {
+      return; // A frame this module cannot read is not a frame worth guessing at.
+    }
+    eventToSteps(parsed, calls).forEach(function (step) {
+      if (options.onStep) options.onStep(step);
+    });
+  };
+
+  source.addEventListener("proxy-error", function (message) {
+    var detail = message.data;
+    try {
+      detail = JSON.parse(message.data).detail || message.data;
+    } catch (err) { /* the raw text is better than nothing */ }
+    if (options.onError) options.onError(detail);
+  });
+
+  source.addEventListener("proxy-done", finish);
+
+  source.onerror = function () {
+    // Reached when the connection drops before proxy-done — a dropped network
+    // or a proxy that died. Reconnecting would re-run the agent, so it stops.
+    if (finished) return;
+    if (options.onError) options.onError("The connection to the agent dropped.");
+    finish();
+  };
+
+  return { close: finish };
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { eventToSteps, streamUrl, streamAgent };
+}
