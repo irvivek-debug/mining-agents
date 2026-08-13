@@ -26,6 +26,7 @@ import yaml
 
 from mining_agents.catalog.definitions import ALL_AGENTS
 from mining_agents.tools.graph_traverse import TRAVERSALS
+from scripts.build_workspace_data import build_workspace
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_OUT = REPO / "apps" / "shared" / "data"
@@ -770,9 +771,13 @@ def main() -> None:
     graph = build_graph_from_local()
     facts = build_facts()
 
+    workspace = build_workspace()
+    workspace["generated_at"] = _now()
+
     payloads = {"catalog": catalog, "personas": personas,
                 "graph": graph, "facts": facts,
-                "value_tree": build_value_tree(catalog)}
+                "value_tree": build_value_tree(catalog),
+                "workspace": workspace}
     for name, payload in payloads.items():
         path = args.out / f"{name}.json"
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
@@ -805,6 +810,10 @@ def main() -> None:
           f"swarms {catalog['counts']['swarms']}, "
           f"HITL {catalog['counts']['hitl_entrypoints']}")
     print(f"personas {len(personas['personas'])}")
+    print(f"formulas {len(workspace['formulas']['registry'])}, "
+          f"traversals {len(workspace['traversals'])}, "
+          f"models {len(workspace['models'])}, "
+          f"approval columns {len(workspace['approval']['fields'])}")
     for name, info in graph["graphs"].items():
         print(f"graph {name:<14} {info['nodes']:>4} nodes {info['edges']:>4} edges  "
               f"{info['node_types']}")

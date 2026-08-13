@@ -1,0 +1,273 @@
+/* Application 2. Composed from tokens.css; no new colour, no new typeface.
+   Everything below either implements a rule from docs/phase-2-ux.md or fixes
+   one of the eight findings its Stage 3 audit raised, and says which. */
+
+/* ---------- rails and two-pane layout ---------- */
+
+/* A1: the three-panel swarm console is unusable on P7's handheld and P3's
+   rugged tablet, so the rail collapses to a full-width strip above the work
+   rather than shrinking beside it. The breakpoint is 1000px, not 760: the rail
+   needs 300px and the work needs 620px before the columns start fighting. */
+.pane { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .pane { grid-template-columns: 1fr; } }
+
+.rail { border: 1px solid var(--border); background: var(--surface); }
+.rail-cap {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted);
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+}
+/* A2: descriptions are inline. Nothing in this suite reveals content on hover,
+   because P3 works in gloves on a tablet and P7 on a handheld, and neither
+   device has a hover state to reveal it with. */
+.rail-row {
+  display: flex; gap: 10px; align-items: center;
+  min-height: 56px; padding: 9px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--fg); text-decoration: none;
+}
+.rail-row:last-child { border-bottom: 0; }
+.rail-row:hover { background: rgba(255,255,255,0.04); }
+.rail-row.on { background: var(--surface-high); box-shadow: inset 2px 0 0 var(--accent); }
+.rail-row:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
+.rail-id { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 34px; }
+.rail-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.rail-name { font-size: 13.5px; line-height: 1.35; }
+.rail-sub { font-size: 10.5px; color: var(--fg-muted); text-transform: uppercase;
+            letter-spacing: 0.05em; }
+
+/* ---------- runtime band ---------- */
+
+.run-state { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.run-state > div { flex: 1; min-width: 240px; font-size: 13.5px; }
+
+/* ---------- the not-connected block ---------- */
+
+/* Dashed, like the telemetry console, and never filled with a status colour:
+   this is an absence, and an absence that looks like a result is the thing
+   this whole application is built not to do. */
+.not-connected {
+  border: 1px dashed var(--warning);
+  background: rgba(217,119,6,0.06);
+  padding: 14px;
+}
+.not-connected .nc-what { font-size: 14px; margin: 10px 0 8px; color: var(--fg); }
+.not-connected .nc-why { font-size: 13px; margin: 0 0 6px; color: var(--fg-muted); max-width: 76ch; }
+.not-connected .nc-route { font-size: 11px; color: var(--fg-dim); margin: 8px 0 0; }
+
+/* ---------- method blocks ---------- */
+
+.method { border-left: 2px solid var(--accent); padding: 0 0 0 14px; margin: 0 0 18px; }
+.method:last-child { margin-bottom: 0; }
+.method-cap {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--accent); margin-bottom: 6px;
+}
+/* The formula is the point of the block, so it is set at reading size rather
+   than at the caption size the rest of the mono type uses. */
+.expression { font-size: 14px; color: var(--fg); line-height: 1.5; word-break: break-word; }
+.method-sub { font-size: 11.5px; color: var(--fg-muted); margin-top: 8px; line-height: 1.5; }
+
+/* ---------- input tables ---------- */
+
+.tbl { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg); }
+.tbl > summary {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  min-height: 44px; padding: 8px 12px; cursor: pointer; font-size: 13px;
+}
+.tbl > summary::-webkit-details-marker { display: none; }
+.tbl > summary::before { content: "▸"; color: var(--fg-muted); font-size: 11px; }
+.tbl[open] > summary::before { content: "▾"; }
+.tbl > summary:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
+.tbl > summary .dim { font-size: 10.5px; margin-left: auto; }
+.tbl-desc { font-size: 13px; margin: 0; padding: 0 12px 10px 12px; max-width: 82ch; }
+.cols { list-style: none; margin: 0; padding: 0 12px 12px; }
+.cols li { padding: 7px 0; border-top: 1px solid var(--border-soft); font-size: 12.5px; }
+.col-meaning { font-size: 12.5px; color: var(--fg-muted); margin-top: 3px; max-width: 84ch;
+               font-family: var(--sans); }
+
+/* ---------- the unverified band ---------- */
+
+/* docs/phase-2-ux.md calls this the most important element on the approval
+   sheet, so it is the loudest thing this stylesheet draws: the only 2px border
+   in the suite, on the critical colour, and never collapsed behind a toggle. */
+.unverified { border: 2px solid var(--critical); background: rgba(234,88,12,0.07); padding: 14px; }
+.unverified-cap { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+                  font-size: 13.5px; margin-bottom: 10px; }
+.unverified ul { list-style: none; margin: 0; padding: 0; }
+.unverified li { padding: 10px 0; border-top: 1px solid rgba(234,88,12,0.28); font-size: 13.5px; }
+.unverified li .dim { font-size: 11.5px; margin-top: 3px; word-break: break-word; }
+.remedy { font-size: 12.5px; color: var(--fg-muted); margin-top: 5px; }
+
+.cite { font-size: 10.5px; color: var(--fg-dim); text-transform: uppercase;
+        letter-spacing: 0.05em; margin: 12px 0 0; }
+
+/* ---------- swarm stages ---------- */
+
+/* The critic sits downstream of the specialists it audits, never beside them
+   as a fourth peer: docs/phase-2-ux.md is explicit that drawing it as a peer
+   misrepresents what it does, which is to challenge a finding that already
+   exists. So the stages are rows, and the specialists are the only row that
+   fans sideways. */
+.stage { margin-bottom: 12px; }
+.stage-cap {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--fg-muted);
+  display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+}
+.stage-cap::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+.fan { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.node { border: 1px solid var(--border); background: var(--surface); padding: 12px; }
+.node.critic { border-color: var(--warning); }
+.node-id { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); }
+.node-name { font-size: 13.5px; margin: 4px 0 8px; }
+.node-tools { font-family: var(--mono); font-size: 10.5px; color: var(--fg-muted);
+              text-transform: uppercase; letter-spacing: 0.05em; }
+.flow { text-align: center; color: var(--fg-dim); font-size: 14px; line-height: 1; margin: 2px 0 10px; }
+
+/* ---------- execution trace ---------- */
+
+/* A4: the trace body is on-surface #E4E2E1, not the muted variant, because at
+   12px the variant fails 7:1 against the container it sits on. Only the
+   timestamp column keeps the variant, where the smaller contrast is carrying
+   the least. */
+.trace { font-family: var(--mono); font-size: 12px; font-weight: 500; line-height: 1.6;
+         color: var(--fg); }
+.trace .t { color: var(--fg-muted); }
+
+/* ---------- SC-4: the approval sheet ---------- */
+
+.sheet-back {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(9,9,9,0.82);
+  display: flex; align-items: flex-start; justify-content: center;
+  overflow-y: auto; padding: 24px 16px 64px;
+}
+.sheet {
+  width: min(760px, 100%); background: var(--bg);
+  border: 1px solid var(--border);
+}
+.sheet-head {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.sheet-head h2 { margin: 0; font-size: 19px; }
+.sheet-body { padding: 18px; }
+.sheet-body > * + * { margin-top: 18px; }
+
+/* A3: an 8px minimum gutter between Cancel and the hold control, and the two
+   differ in weight as well as colour — Cancel is text on the surface, confirm
+   is a filled outline. A gloved thumb that misses by 6mm must not land on the
+   destructive one, and a reader who cannot separate the hues must still be
+   able to tell them apart. */
+.sheet-actions { display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+                 padding: 16px 18px; border-top: 1px solid var(--border); background: var(--surface); }
+.sheet-actions .btn.cancel { background: transparent; border-color: var(--border); }
+.hold { min-width: 260px; }
+.hold-hint { font-family: var(--mono); font-size: 10.5px; color: var(--fg-muted);
+             text-transform: uppercase; letter-spacing: 0.06em; flex-basis: 100%; }
+
+table.audit { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.audit th, table.audit td { text-align: left; padding: 7px 10px;
+                                 border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+table.audit th { font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+                 letter-spacing: 0.06em; color: var(--fg-muted); white-space: nowrap; }
+table.audit td.v { font-family: var(--mono); font-size: 11.5px; word-break: break-word; }
+/* The type column is the one cell that must never wrap: STRING broken across
+   two lines reads as two values, and this table's whole job is to say exactly
+   what one row contains. */
+table.audit td.t { white-space: nowrap; }
+
+/* ---------- SC-3: the department switcher ---------- */
+
+/* Links rather than buttons, so a person can bookmark the department they work
+   in and send it to a colleague. The tab styling in tokens.css was written
+   against <button>, so the same treatment is extended to the anchor here
+   rather than the markup being bent to fit the selector. */
+.tabstrip a {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--fg-muted); text-decoration: none;
+  border-bottom: 2px solid transparent;
+  min-height: 44px; padding: 0 14px;
+  display: inline-flex; align-items: center;
+}
+.tabstrip a:hover { color: var(--fg); background: rgba(255,255,255,0.04); }
+.tabstrip a:focus-visible { outline: none; color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tabstrip a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---------- A7: the overhead type scale ---------- */
+
+/* P7 reads this from a control-room overhead display several metres back, where
+   the audit measured 14px body as illegible. The whole config steps up 1.5×
+   rather than one element doing so, because a screen with one large number and
+   ordinary labels is harder to read at distance than a uniformly larger one. */
+.scale-lg { font-size: 21px; }
+.scale-lg .rail-name, .scale-lg .node-name, .scale-lg .tbl-desc { font-size: 20px; }
+.scale-lg .trace, .scale-lg .expression { font-size: 18px; }
+.scale-lg .lede { font-size: 22px; }
+.scale-lg .rail-row { min-height: 72px; }
+.scale-lg .badge { font-size: 13px; }
+
+.scale-note { font-family: var(--mono); font-size: 10.5px; color: var(--fg-muted);
+              text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ---------- cockpit groups ---------- */
+
+.group { border: 1px solid var(--border); background: var(--surface); padding: 14px; }
+.group h3 { margin: 0 0 2px; font-size: 16px; }
+.group .group-sub { font-family: var(--mono); font-size: 10.5px; color: var(--fg-muted);
+                    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 44px on a chip that is 40px of text is deliberate: these are the primary way
+   into all 52 agents and they are tapped, not clicked. */
+.chip {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border: 1px solid var(--border); background: var(--bg);
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  color: var(--fg); text-decoration: none;
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.chip.hitl { border-left: 3px solid var(--warning); }
+
+/* ---------- print: SC-5 leaves the building on paper ---------- */
+
+/* P8 hands over at shift change and the brief has to survive the walk. Print
+   is not an afterthought here — it is one of the two ways this screen is
+   consumed, so the dark surfaces invert and the chrome that cannot be actioned
+   on paper is removed. */
+@media print {
+  .topbar, .btn-row, .no-print { display: none !important; }
+  body { background: #fff; color: #111; font-size: 11pt; }
+  .card, .group, .rail, .tbl { background: #fff; border-color: #999; }
+  .unverified { border-color: #111; background: #fff; }
+  .console, .not-connected { background: #fff; border-color: #999; color: #111; }
+  .badge { border-color: #111 !important; color: #111 !important; background: #fff !important; }
+  a { color: #111; text-decoration: none; }
+  .wrap { max-width: none; padding: 0; }
+  section { margin-bottom: 24px; page-break-inside: avoid; }
+
+  /* The muted greys are tuned for a dark surface and vanish on paper. Secondary
+     text stays secondary — #444 against #111 — rather than being flattened to
+     one weight, because the hierarchy is doing work here too. */
+  .dim, .rail-sub, .node-tools, .method-sub, .method-cap, .col-meaning,
+  .tbl-desc, .cite, .metric-sub, .group-sub, .card-cap, .kv dt, .eyebrow,
+  .scale-note, .hold-hint, .nc-why, .nc-route, .trace .t, .remedy,
+  .stage-cap, blockquote.verbatim cite { color: #444 !important; }
+
+  /* Primary text that carries its own colour on the dark surface: the lede sits
+     at --fg-muted, and the agent ids at --accent, a pale blue that all but
+     disappears on white. Both are load-bearing on paper — the ids are how a
+     supervisor refers to a section when they raise it. */
+  .lede, .nc-what, .rail-id, .node-id, .expression, .metric.gap { color: #111 !important; }
+
+  /* handover.js opens every disclosure before the dialog appears, so the
+     summary is a heading on paper and not a control: the table name and its row
+     count are provenance, and dropping them would leave a column list with
+     nothing to say which table it came from. */
+  .tbl > summary { list-style: none; cursor: default; }
+  .tbl > summary::-webkit-details-marker { display: none; }
+
+  .card, .tbl, .unverified, .not-connected { page-break-inside: avoid; }
+}

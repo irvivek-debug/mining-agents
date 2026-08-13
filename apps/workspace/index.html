@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site cockpit — Mining Agents workspace</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/app.css">
+<link rel="stylesheet" href="workspace.css">
+</head>
+<body>
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">SC-1 · Site cockpit</div>
+    <h1>Every agent on this site, filed the way you already think.</h1>
+    <p class="lede">
+      Fifty-two of the hundred agent nodes are callable from outside; the rest
+      are specialists and critics reachable only through the coordinator that
+      owns them. Below they are grouped three ways — by the person accountable,
+      by the APQC process, and by the value branch — because which grouping is
+      useful depends entirely on why you came here.
+    </p>
+  </section>
+
+  <div id="runtime"></div>
+
+  <section style="margin-top:32px">
+    <div class="bento" id="counts"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Three ways in</div>
+    <h2 id="axis-head">By the person accountable</h2>
+    <p class="lede" id="axis-lede"></p>
+    <div class="tabstrip" id="axes" role="tablist"></div>
+    <div class="bento" id="groups" style="margin-top:16px"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Where approval is mandatory</div>
+    <h2>The fourteen agents that cannot act alone</h2>
+    <p class="lede">
+      Each of these carries <span class="mono">hitl_required</span> in the
+      catalog, which binds it to the <span class="mono">request_approval</span>
+      tool. That tool writes one row with
+      <span class="mono">decision = PENDING</span> and can write nothing else —
+      the approved value is written by a person, through the approval sheet, and
+      by no other path in this codebase.
+    </p>
+    <div class="card"><div class="chips" id="hitl"></div></div>
+  </section>
+
+  <div id="prov"></div>
+
+  <div class="btn-row" style="margin-top:32px">
+    <a class="btn" href="../case/index.html">The case for change</a>
+  </div>
+
+</div>
+
+<script src="../shared/data/bundle.js"></script>
+<script src="../shared/shell.js"></script>
+<script src="workspace.js"></script>
+<script src="cockpit.js"></script>
+</body>
+</html>

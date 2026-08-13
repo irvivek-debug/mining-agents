@@ -175,6 +175,9 @@ table.data td.num { font-family: var(--mono); font-size: 12px; text-align: right
   border-radius: 999px; border: 1px solid var(--border);
   background: var(--surface-high); color: var(--fg);
   cursor: pointer; position: relative; overflow: hidden;
+  /* Some of these are <button> and some are <a>. The pill is the affordance;
+     an underline inside it reads as a second, different one. */
+  text-decoration: none;
 }
 .btn:hover  { background: var(--surface-top); }
 .btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }

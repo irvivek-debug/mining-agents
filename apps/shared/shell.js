@@ -25,6 +25,21 @@ const CASE_NAV = [
   { href: "graph.html", label: "5 · The graph" },
 ];
 
+/* Application 2. The four destinations are the four standing screens; SC-4,
+   the approval sheet, is deliberately absent because it is a modal raised from
+   a swarm or a workbench and never a place you navigate to on its own. */
+const WORK_NAV = [
+  { href: "index.html", label: "Cockpit" },
+  { href: "swarm.html", label: "Swarms" },
+  { href: "workbench.html", label: "Workbench" },
+  { href: "handover.html", label: "Handover" },
+];
+
+const NAVS = {
+  case: { items: CASE_NAV, brand: "Mining Agents · The case for change" },
+  workspace: { items: WORK_NAV, brand: "Mining Agents · Site workspace" },
+};
+
 /** Escape before interpolation. Part descriptions and technician notes are
  *  free text from the warehouse, and they land inside innerHTML. */
 function esc(value) {
@@ -47,8 +62,9 @@ function clientInput() {
 }
 
 function mountNav(app, current) {
-  const items = app === "case" ? CASE_NAV : [];
-  const links = items
+  const nav = NAVS[app];
+  if (!nav) throw new Error(`no nav defined for app ${app}`);
+  const links = nav.items
     .map(
       (i) =>
         `<a href="${i.href}"${
@@ -59,7 +75,7 @@ function mountNav(app, current) {
   const bar = document.createElement("div");
   bar.className = "topbar";
   bar.innerHTML =
-    '<span class="brand">Mining Agents · The case for change</span>' +
+    `<span class="brand">${esc(nav.brand)}</span>` +
     `<nav>${links}</nav>` +
     '<span style="flex:1"></span>' +
     `<span class="pill" title="Source of every figure on this page">${esc(
