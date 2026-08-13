@@ -43,7 +43,7 @@ const AXES = [
     head: "By the person accountable",
     lede:
       "Eight roles, from the catalog's persona field. This is the grouping the " +
-      "workbench uses: a person opens their own column and finds every agent " +
+      "role page uses: a person opens their own page and finds every agent " +
       "that answers a question they are accountable for.",
     groups: () =>
       Object.entries(CAT.by_persona).map(([code, g]) => ({
@@ -51,8 +51,8 @@ const AXES = [
         sub: code + " · " + g.count + " entrypoints",
         detail: (PERSONAS[code] || {}).accountable_for,
         agents: g.agents,
-        href: "workbench.html?p=" + encodeURIComponent(code),
-        hrefLabel: "Open the workbench",
+        href: "persona.html?p=" + encodeURIComponent(code),
+        hrefLabel: "Open this role's page",
       })),
   },
   {
@@ -112,9 +112,16 @@ el("axes").addEventListener("click", (event) => {
   renderAxis();
 });
 
+/* A team agent opens its own team console. A specialist agent has no screen of
+   its own — it is reached through the page of the role that is accountable for
+   it, which is where a question can actually be put to it. The persona field is
+   declared on every agent in the catalog, so this is a lookup, not a guess. */
 function chip(id) {
   const a = AGENTS[id];
-  const href = a.pattern === "A" ? "swarm.html?s=" + id : "workbench.html?a=" + id;
+  const href =
+    a.pattern === "A"
+      ? "swarm.html?s=" + id
+      : "persona.html?p=" + encodeURIComponent(a.persona);
   return (
     `<a class="chip${a.hitl_required ? " hitl" : ""}" href="${href}" ` +
     `title="${esc(a.display_name)}${a.hitl_required ? " — needs approval" : ""}">` +

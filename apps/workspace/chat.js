@@ -1,0 +1,1 @@
+/* The chat sidecar. Built in the next commit. */

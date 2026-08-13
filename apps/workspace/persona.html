@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My role · Mining Agents</title>
+    <link rel="stylesheet" href="../shared/tokens.css" />
+    <link rel="stylesheet" href="../shared/app.css" />
+    <link rel="stylesheet" href="workspace.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="head">
+        <h1>My role</h1>
+        <p class="lede" id="role-lede"></p>
+        <label class="role-pick">
+          <span>Role</span>
+          <select id="role-select"></select>
+        </label>
+      </header>
+      <div class="role-layout">
+        <div id="panel"></div>
+        <aside class="sidecar" id="sidecar"></aside>
+      </div>
+      <div id="foot"></div>
+    </div>
+
+    <script src="../shared/data/bundle.js"></script>
+    <script src="../shared/shell.js"></script>
+    <script src="../shared/plain.js"></script>
+    <script src="router.js"></script>
+    <script src="persona-data.js"></script>
+    <script src="persona-panel.js"></script>
+    <script src="chat.js"></script>
+    <script src="agent-stream.js"></script>
+    <script src="persona.js"></script>
+  </body>
+</html>
