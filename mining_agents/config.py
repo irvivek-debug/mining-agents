@@ -5,8 +5,10 @@ import os
 import pathlib
 import re
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from google.adk.models import Gemini
+if TYPE_CHECKING:  # pragma: no cover - for type checkers only
+    from google.adk.models import Gemini
 
 _VALID_TIERS = ("reasoning", "balanced")
 
@@ -61,13 +63,22 @@ def model_for_tier(tier: str) -> str:
     raise ValueError(f"tier {tier!r} not found in model-policy.md")
 
 
-def llm_for_tier(tier: str) -> Gemini:
+def llm_for_tier(tier: str) -> "Gemini":
     """The model object an agent of *tier* runs on, pinned to `global`.
 
     Agents take this rather than the bare id from `model_for_tier` so that the
     endpoint choice is made once here instead of being inherited from whatever
     region the agent happens to be deployed in.
+
+    The ADK import is deliberately inside the function. Almost everything that
+    imports this module wants `settings()` and nothing else — the deploy
+    script, the IAM plan, the DDL runner, the workspace server — and a
+    module-level `from google.adk.models import Gemini` made every one of them
+    require the whole ADK and Vertex SDK to read a project id. Only the two
+    pattern builders construct a model, and they pay for it here.
     """
+    from google.adk.models import Gemini
+
     return Gemini(
         model=model_for_tier(tier),
         client_kwargs={"vertexai": True, "location": MODEL_LOCATION},
