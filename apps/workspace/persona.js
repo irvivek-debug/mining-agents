@@ -52,7 +52,9 @@ async function showRuntime() {
   const box = document.createElement("div");
   box.className = "runtime-state";
   box.textContent = "Checking whether the agents are reachable…";
-  el("sidecar").prepend(box);
+  // #runtime, not #sidecar: the sidecar's other child is written by chat.js with
+  // innerHTML, which would erase anything sharing that node.
+  el("runtime").appendChild(box);
   try {
     const reply = await fetch("/api/runtime");
     // A FastAPI 500 answers {"detail": "Internal Server Error"} — valid JSON,
@@ -109,3 +111,19 @@ el("panel").innerHTML = renderPanel(CODE, DATA);
 el("foot").innerHTML = technicalDrawer(drawerBody(CODE), "agent ids, tables, model tiers") +
   provenance();
 showRuntime();
+
+/* The sidecar is mounted after the panel so the "Ask this one" buttons in the
+   sign-off block have something to call. */
+const CHAT = mountChat(el("chat"), CODE, DATA);
+
+el("panel").addEventListener("click", (event) => {
+  const button = event.target.closest("button.ask[data-agent]");
+  if (!button) return;
+  CHAT.pick(button.dataset.agent);
+  el("chat").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+/* EventSource reconnects by itself when a connection closes. A page left with
+   one open while it is torn down can re-ask a question that costs a minute or
+   two of model time, and nobody is watching by then. */
+window.addEventListener("pagehide", () => CHAT.close());

@@ -329,6 +329,65 @@ table.audit td.t { white-space: nowrap; }
 .runtime-state.ok { border-color: var(--success); color: var(--fg); }
 .runtime-state.warn { border-color: var(--warning); }
 
+/* ---------- the chat sidecar ---------- */
+
+/* .sidecar itself is not re-declared here. Its box, its background and its
+   sticky offset are set above, and that offset is 88px for a reason the topbar
+   height dictates. */
+.chat-head h2 { font-size: 14px; margin: 0 0 6px; }
+.starters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.starter { min-height: 44px; padding: 8px 12px; text-align: left; font: inherit;
+  cursor: pointer; background: var(--bg); color: var(--fg-muted);
+  border: 1px solid var(--border-soft); }
+.starter:hover, .starter:focus-visible { color: var(--fg); border-color: var(--border); }
+.starter:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--accent); }
+
+/* Capped and scrolled, so a long conversation does not push the composer off
+   the bottom of the column. */
+.transcript { max-height: 55vh; min-height: 0; overflow-y: auto; font-size: 13px; }
+.transcript .you { margin: 12px 0 6px; font-weight: 600; }
+.transcript .you p, .transcript .pick p, .transcript .error p { margin: 0; }
+.transcript .pick { font-size: 12px; color: var(--fg-muted); margin-bottom: 8px; }
+.transcript .log { margin: 6px 0; }
+.transcript .step { font-size: 12px; color: var(--fg-muted); margin: 3px 0;
+  padding-left: 14px; position: relative; }
+.transcript .step::before { content: "·"; position: absolute; left: 2px; }
+.transcript .step.failed { color: var(--fg); }
+.transcript .step.failed::before { content: "×"; }
+/* Stopped is not failed: the reader ended it, and nothing went wrong. */
+.transcript .step.stopped::before { content: "–"; }
+.transcript .answer { white-space: pre-wrap; margin: 8px 0 4px; }
+.transcript .error { font-size: 12px; margin: 8px 0; padding: 8px;
+  border: 1px solid var(--warning); }
+
+.composer { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.composer textarea { font: inherit; font-size: 13px; padding: 8px; resize: vertical;
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); }
+.composer textarea:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--accent); }
+.ask.primary { border-color: var(--accent); color: var(--accent); }
+/* margin-top as well as margin-left: with two or three runners-up these wrap,
+   and a wrapped row with no leading collides with the line above it. The
+   vertical padding is what lets the label wrap: agent names run long, and in a
+   380px column the longest of them takes three lines, which .ask's flat 44px
+   would print outside its own border. */
+.ask.alt { margin: 6px 0 0 8px; padding: 8px 14px; text-align: left; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* At desk widths the sidecar is pinned, and a pinned column taller than the
+   viewport hides its own bottom — which is where the Ask button is, the one
+   control this screen exists for. Measured at 1440x900 with three starters and
+   one answer: the button sat 40px below the fold and could not be scrolled to.
+   The column is bounded to the viewport instead and the transcript takes
+   whatever is left over, so the composer is always the last thing in it. */
+@media (min-width: 1001px) {
+  .sidecar { max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
+  .chat { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  .chat-head, .starters, .composer { flex: none; }
+  .chat .transcript { max-height: none; flex: 1 1 auto; }
+}
+
 /* ---------- print: SC-5 leaves the building on paper ---------- */
 
 /* P8 hands over at shift change and the brief has to survive the walk. Print
@@ -336,7 +395,9 @@ table.audit td.t { white-space: nowrap; }
    consumed, so the dark surfaces invert and the chrome that cannot be actioned
    on paper is removed. */
 @media print {
-  .topbar, .btn-row, .no-print { display: none !important; }
+  /* The sidecar is a conversation with a live agent. On paper it is a dead
+     text box and a button that cannot be pressed. */
+  .topbar, .btn-row, .no-print, .sidecar { display: none !important; }
   body { background: #fff; color: #111; font-size: 11pt; }
   .card, .group, .rail, .tbl { background: #fff; border-color: #999; }
   .unverified { border-color: #111; background: #fff; }
