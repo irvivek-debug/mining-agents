@@ -299,13 +299,31 @@ from — a property `router.test.js` asserts.
 
 ### 5.2 Streaming — `apps/workspace/agent-stream.js` + `/api/stream/{agent_id}`
 
-A real question against S01 was measured at **~102 seconds across ~181
-renderable events**: tool calls at 5.8s (`graph_traverse` ×2, `bq_query` ×4),
-tool results next, first text at 10.4s. A request/response spinner over that is
-indistinguishable from a hang.
+A real question against S01 ("Which assets are most at risk right now?") was
+measured over the wire at **103.8 seconds across 26 SSE events** — 10
+`functionCall`, 10 `functionResponse`, 5 `text`, and `thoughtSignature` riding
+along on 15 parts. A request/response spinner over that is indistinguishable
+from a hang.
 
-The agents' ADK containers expose `/run_sse` (`content-type: text/event-stream`,
-first chunk 6–8.6s warm). `server.py` gains:
+The agents' ADK containers expose `POST /run_sse` (`content-type:
+text/event-stream; charset=utf-8`; a trivial prompt returns its first chunk at
+8.8s warm). **The body is the same snake_case shape `/api/invoke` already
+sends** — `{app_name, user_id, session_id, new_message, streaming:false}` —
+verified against the deployed S12 and S01. ADK's OpenAPI advertises camelCase
+(`appName`, `newMessage`), and the model accepts both; the existing snake_case
+spelling is kept so the two routes do not disagree.
+
+Each SSE line is `data: {json}`, and each event carries `content.parts[]` whose
+members are:
+
+```
+{ functionCall:     { id, name, args } }          // args.sql holds the SELECT
+{ functionResponse: { id, name, response: { success, data } } }
+{ text: "…" }
+{ thoughtSignature: "…" }                          // rides alongside; ignored
+```
+
+`server.py` gains:
 
 ```
 GET /api/stream/{agent_id}?prompt=…&user_id=…&session_id=…
@@ -331,9 +349,17 @@ churn.
 Each SSE event becomes one line via `plain.js`:
 
 - `functionCall` → "Reading the sensor readings…" / "Tracing what else stops if this stops…"
-- `functionResponse` with `success != false` → the same line, ticked
-- `functionResponse` with `success == false` → **"Couldn't trace what else stops — that lookup failed."** Named, not hidden.
+- `functionResponse` with `response.success !== false` → the same line, ticked
+- `functionResponse` with `response.success === false` → **"Couldn't trace what else stops — that lookup failed."** Named, not hidden.
 - `text` parts → streamed into the answer body
+- `thoughtSignature` → ignored; it rides alongside the other three and is not a step
+
+The table a call touched is read from `functionCall.args.sql` — the observed
+`bq_query` argument is a literal SELECT naming its table in backticks, e.g.
+``SELECT * FROM `mining_data.telemetry_stream` LIMIT 10``. `plain.js` extracts
+the first `mining_data.<name>` it finds. Where a call carries no recognisable
+table (any non-`bq_query` tool), the line degrades to the tool's verb alone
+rather than guessing a noun.
 
 **The model's own prose is passed through unaltered.** The agents currently leak
 plumbing into their answers — S01 emits `The tool call \`graph_traverse\` failed
