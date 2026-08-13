@@ -175,17 +175,17 @@ def runtime() -> JSONResponse:
     )
 
 
-def _agent_client(base: str, token: str) -> httpx.AsyncClient:
+def _agent_client(base: str, token: str, timeout: float | None) -> httpx.AsyncClient:
     """The one place an agent-facing client is built.
 
     A function rather than an inline constructor so a test can substitute a
-    transport and exercise the streaming path without Cloud Run. `timeout=None`
-    on the streaming path is deliberate: the ceiling that matters is the one the
-    service is deployed with, and a shorter one here would cut off a working
-    call and report it as a proxy failure.
+    transport and exercise the streaming path without Cloud Run. `timeout` is
+    a required parameter so each caller states its intent explicitly — a default
+    is how /api/invoke's 300-second socket timeout was silently lost in the
+    refactor that introduced this factory.
     """
     return httpx.AsyncClient(
-        base_url=base, timeout=None, headers={"Authorization": f"Bearer {token}"}
+        base_url=base, timeout=timeout, headers={"Authorization": f"Bearer {token}"}
     )
 
 
@@ -230,7 +230,7 @@ async def invoke(agent_id: str, request: Request) -> JSONResponse:
             status_code=503,
         )
 
-    async with _agent_client(base, token) as client:
+    async with _agent_client(base, token, timeout=300) as client:
         # ADK requires the session to exist before /run accepts a message for
         # it. Re-creating an existing session answers 400, which is not an
         # error here: it means the session is already there.
@@ -311,7 +311,11 @@ async def stream(
 
     async def relay():
         try:
-            async with _agent_client(base, token) as client:
+            # timeout=None: any finite socket timeout would kill a working
+            # 100-second answer mid-stream and report it as a proxy failure.
+            # The ceiling that matters is the one the Cloud Run service is
+            # deployed with, not one imposed here on top.
+            async with _agent_client(base, token, timeout=None) as client:
                 # As in /api/invoke: a 400 here means the session already exists.
                 await client.post(
                     SESSION_PATH.format(app=agent_id, user=user_id, session=session_id),
@@ -346,7 +350,7 @@ async def stream(
             # EventSource reconnects when a connection closes. Without an
             # explicit end the browser would silently re-ask the agent the same
             # hundred-second question, forever.
-            yield b"event: proxy-done\ndata: {}\n\n"
+            yield _sse("proxy-done", {})
 
     return StreamingResponse(
         relay(),

@@ -47,10 +47,11 @@ def upstream(monkeypatch):
             )
         return httpx.Response(seen["session_status"], json={})
 
-    def fake_client(base, token):
+    def fake_client(base, token, timeout):
+        seen["timeout"] = timeout
         return httpx.AsyncClient(
             base_url=base,
-            timeout=None,
+            timeout=timeout,
             headers={"Authorization": f"Bearer {token}"},
             transport=httpx.MockTransport(handle),
         )
@@ -143,3 +144,90 @@ def test_a_client_that_leaves_closes_the_upstream_connection(client, upstream):
     with client.stream("GET", "/api/stream/S01?prompt=hello") as reply:
         next(reply.iter_raw())
     assert upstream["closed"] is True
+
+
+# --- Finding 1: each route's timeout is explicit and correct ---
+
+def test_stream_route_uses_unbounded_timeout(client, upstream):
+    """The streaming route must not impose a finite socket timeout.
+
+    A 100-second answer would be cut off by any shorter ceiling here, and the
+    browser would see a proxy failure rather than a complete response. The real
+    ceiling is the Cloud Run service's own request timeout.
+    """
+    with client.stream("GET", "/api/stream/S01?prompt=hello") as reply:
+        b"".join(reply.iter_raw())
+    assert upstream["timeout"] is None
+
+
+def test_invoke_route_uses_300s_timeout(client, upstream, monkeypatch):
+    """The buffered invoke route must keep a finite socket timeout.
+
+    Without it a half-open TCP connection to a hung upstream would never
+    be recovered from the proxy's side. Cloud Run's request timeout bounds
+    the upstream's *execution*; it does not close the proxy's outbound socket.
+    """
+    monkeypatch.setattr(server, "_services", lambda: {"mag-s01": "https://fake.invalid"})
+    monkeypatch.setattr(server, "_identity_token", lambda audience: "fake-token")
+    client.post(
+        "/api/invoke/S01",
+        json={"prompt": "hello", "user_id": "u1", "session_id": "s1"},
+    )
+    assert upstream["timeout"] == 300
+
+
+# --- Finding 2: proxy-done fires even when an exception raises mid-stream ---
+
+def test_proxy_done_fires_after_mid_stream_exception(client, monkeypatch):
+    """An exception raised after chunks have already been relayed must not
+    suppress proxy-done. Without it EventSource silently re-asks the same
+    100-second question forever, burning real model tokens on every loop.
+
+    The realistic shape is a network-level error (httpx.ReadError) raised
+    partway through aiter_raw(), after the status code is already sent.
+    """
+    seen = {"requests": [], "closed": False}
+
+    async def body_that_explodes():
+        try:
+            yield CHUNKS[0]
+            yield CHUNKS[1]
+            raise httpx.ReadError("simulated mid-stream network failure", request=None)
+        finally:
+            seen["closed"] = True
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen["requests"].append((request.method, request.url.path))
+        if request.url.path.endswith("/run_sse"):
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/event-stream; charset=utf-8"},
+                content=body_that_explodes(),
+            )
+        return httpx.Response(200, json={})
+
+    def fake_client(base, token, timeout):
+        return httpx.AsyncClient(
+            base_url=base,
+            timeout=timeout,
+            headers={"Authorization": f"Bearer {token}"},
+            transport=httpx.MockTransport(handle),
+        )
+
+    monkeypatch.setattr(server, "_agent_client", fake_client)
+    monkeypatch.setattr(server, "_services", lambda: {"mag-s01": "https://fake.invalid"})
+    monkeypatch.setattr(server, "_identity_token", lambda audience: "fake-token")
+
+    tc = TestClient(server.app)
+    with tc.stream("GET", "/api/stream/S01?prompt=hello") as reply:
+        assert reply.status_code == 200
+        body = b"".join(reply.iter_raw())
+
+    # The error event must arrive so the browser knows something went wrong.
+    assert b"event: proxy-error" in body
+    assert b"simulated mid-stream network failure" in body
+
+    # proxy-done must fire exactly once as the last event, so EventSource does
+    # not reconnect and silently re-ask the question.
+    assert body.count(b"event: proxy-done") == 1
+    assert body.endswith(b"event: proxy-done\ndata: {}\n\n")
