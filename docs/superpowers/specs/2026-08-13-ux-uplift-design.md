@@ -188,3 +188,143 @@ final state. `prefers-reduced-motion: reduce` checked separately. Screenshots at
 Rolling the language across the other nine screens; any change to the workspace
 application; any new data generation; any change to the catalog or the value
 tree's membership.
+
+---
+
+# Revision — messaging and positioning
+
+**Date:** 2026-08-13, after review of the two built screens.
+
+The build landed but the copy argues like an architect. "100 agent nodes", "52
+callable entrypoints", "APQC 11.0.3", "3 property graphs" prove the estate
+exists; none of them say why it is worth owning. The reader is a mining CEO, and
+they are being handed the evidence that convinced the engineer.
+
+## The thesis
+
+**Best practice. Every shift.**
+
+Not "the best performing worker". A worker is a headcount claim, and a headcount
+claim in mining is a union and political conversation that this screen cannot
+win and does not need to have. Best practice is a *standard*, and unlike a worker
+it has a number attached in the client's own data.
+
+The mechanism line is **optimal decisions, 24/7**: the same standard applied at
+3am, across a handover, and on the days the best people are not on site.
+
+## Why the thesis is defensible rather than a slogan
+
+The gap between this site's p90 day and its median day, measured over the 167
+days the warehouse actually covers, sits inside the range the published research
+gives as the available prize:
+
+| Quantity | p90 day vs median day, this site | Published |
+|---|---|---|
+| Metallurgical recovery | +1.96 pp (92.32 → 94.28 %) | +1–3 pp |
+| Crusher feed rate | +8.5 % | throughput +4–8 % |
+| Truck payload | +9.1 % | AHS productivity +20 % (WA) |
+| Conveyor load | +10.7 % | — |
+
+So the argument runs: the best day is not a capability that has to be bought. It
+is already on record, achieved by this site, with this plant and these people.
+What is missing is repetition. That reframes the sale from *buy a new capability*
+to *stop losing the one you already have*, which is a materially easier thing for
+a CEO to believe and a materially harder thing for a competitor to dispute.
+
+**The honesty constraint.** Not all of the gap is capturable — some of it is ore
+variability, weather and scheduled work. The screen therefore presents the gap as
+the size of the opportunity space, never as a promised recovery, and says so in
+the copy. PUMP-104A is excluded from the gap table: its +45 % is a bearing
+degrading, not a good day, and it belongs to the downtime story instead.
+
+## External benchmarks
+
+Every external figure carries its publication title, publisher and year on
+screen, and lives in a reviewable source file rather than in prose, so a claim
+can be traced to a document without reading the markup. Verified figures only:
+anything that could not be confirmed against a primary source is recorded in the
+source file as excluded, with the reason, so nobody re-adds it later.
+
+Rendered so that external evidence is visibly distinct from the client's own
+data. A benchmark is a third party's claim about the industry; a measurement is
+this warehouse's claim about this site. Merging the two visually would let a
+reader carry McKinsey's authority onto our number, which is the exact move that
+makes a CEO stop trusting a deck.
+
+## Progressive disclosure of technical detail
+
+Technical specificity ramps across the five case screens rather than appearing at
+full strength on screen 1:
+
+| Screen | Carries | Does not carry |
+|---|---|---|
+| 1 Proposition | the thesis, the industry condition | any implementation noun |
+| 2 The mine today | the measured gap, benchmarks | architecture |
+| 3 Value unlock | six value pools, MECE, RoI | entrypoint counts above the fold |
+| 4 The solution | swarms, human-in-the-loop, orchestration | SQL |
+| 5 The graph | the property graph, the traversals, the SQL | — |
+
+MECE survives the reframe unchanged, because MECE is the consultancy's own house
+method rather than a technical artifact — a CEO reads a strict partition as
+rigour. What changes is what the partition is *of*: value pools first, with the
+entrypoint counts demoted to a supporting figure inside each pool.
+
+## Screen changes
+
+**Landing.** Hero carries the thesis. The three-fact list per door drops
+`agent nodes`, `property graphs` and `callable entrypoints` in favour of value
+language. The five-machine strip stays — it is the proof that a real plant is
+being read — recaptioned as evidence rather than as a feature.
+
+**Value.** Leads with the gap: the site's own number beside the published number.
+Each of the six branches is recast as a value pool carrying its mechanism, its
+measured gap, its benchmark and its RoI line. A small calculator lets the reader
+supply throughput and price and see what one recovery point is worth to them —
+every input labelled as theirs, so the screen still never asserts a magnitude it
+cannot source. The 52-cell partition and the APQC table move below the value
+argument as supporting detail.
+
+## The calculator, as built
+
+The value screen prices a recovery point, and the design of that panel is where
+the honesty constraint had to be made structural rather than editorial.
+
+A recovery point is not money until three quantities are known: how much ore
+goes through the mill, what the ore carries, and what the metal sells for. The
+site's own record settles exactly one of them — 167 days of concentrator feed
+assays give a median of 1.08 % copper — and is silent on the other two. So the
+panel publishes the one conversion it can derive, **108 t of contained copper
+per million tonnes milled per point of recovery**, and stops. Throughput and
+price are entered by the reader, are never defaulted, and each carries a label
+saying whose figure it is and why this repository does not hold it. Until both
+are supplied the result reads `[CLIENT INPUT REQUIRED]`.
+
+The panel is laid out in two columns for that reason and not for balance: *what
+this site's record settles* on the left, *what only you hold* on the right. The
+split is the argument.
+
+Three further constraints, each of which cost a defect before it was found:
+
+- **Contained, not payable.** Smelter payability and treatment and refining
+  charges take a cut this repository has no terms for. The figure is stated as
+  contained metal and the omission is printed, because an upper bound that
+  admits it is one is more useful to a CEO than a number that quietly is not.
+- **The working is printed whether or not it evaluates.** A calculator that
+  shows only its answer asks to be trusted; this one is meant to be checked.
+- **The arithmetic on screen must reproduce.** The panel multiplies by the gap
+  the reader can see, not by the float behind it — printing "1.96 points" and
+  then returning a total that is not 1.96 × the unit rate is the same defect as
+  a gap table whose columns do not subtract.
+
+## Printed precision
+
+Related, and the source of two defects caught in review: a figure's precision is
+chosen so the reader's own arithmetic comes out.
+
+Rounding by magnitude alone gave `92.3 %`, `94.3 %` and a gap of `+1.96 pts`,
+which the first person to subtract the two columns catches. Where a gap is an
+absolute difference, the gap sets the precision for the whole row, and the row
+then widens until the displayed columns subtract to the displayed delta. This
+lives in `shell.js` rather than per screen, because the landing and the value
+screen quote the same recovery gap and a measurement printed two ways across two
+screens is the same failure in slower motion.

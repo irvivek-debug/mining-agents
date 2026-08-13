@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-13T02:37:00+00:00",
+  "generated_at": "2026-08-13T04:15:57+00:00",
   "source": "data/generated/*.parquet",
   "buckets": 64,
   "window": {
@@ -399,6 +399,92 @@
       "source": "data/generated/telemetry_stream.parquet"
     }
   ],
+  "gap": {
+    "rows": [
+      {
+        "id": "recovery",
+        "label": "Metallurgical recovery",
+        "asset_id": null,
+        "column": "recovery_rate_pct",
+        "unit": "%",
+        "delta_kind": "points",
+        "median": 92.32,
+        "p90": 94.278,
+        "delta": 1.958,
+        "delta_pct": 2.1209,
+        "days": 167,
+        "benchmark": "throughput_100_assets",
+        "source": "data/generated/metallurgical_recovery.parquet"
+      },
+      {
+        "id": "feed_rate",
+        "label": "Crusher feed rate",
+        "asset_id": "CRUSHER-03",
+        "column": "feed_rate_tph",
+        "unit": "t/h",
+        "delta_kind": "percent",
+        "median": 1149.552,
+        "p90": 1247.7618,
+        "delta": 98.2099,
+        "delta_pct": 8.5433,
+        "days": 167,
+        "benchmark": "throughput_recovery",
+        "source": "data/generated/telemetry_stream.parquet"
+      },
+      {
+        "id": "payload",
+        "label": "Truck payload",
+        "asset_id": "TRUCK-08",
+        "column": "payload_tons",
+        "unit": "t",
+        "delta_kind": "percent",
+        "median": 204.5038,
+        "p90": 223.0208,
+        "delta": 18.517,
+        "delta_pct": 9.0546,
+        "days": 167,
+        "benchmark": "haulage_ahs",
+        "source": "data/generated/telemetry_stream.parquet"
+      },
+      {
+        "id": "conveyor_load",
+        "label": "Conveyor load",
+        "asset_id": "CONVEYOR-02",
+        "column": "load_pct",
+        "unit": "%",
+        "delta_kind": "percent",
+        "median": 77.7011,
+        "p90": 86.0013,
+        "delta": 8.3002,
+        "delta_pct": 10.6822,
+        "days": 167,
+        "benchmark": null,
+        "source": "data/generated/telemetry_stream.parquet"
+      }
+    ],
+    "method": "Each figure is a daily mean. The best day is the 90th percentile day and the ordinary day is the median day, across 167 days of recorded operation.",
+    "caveat": "The gap is the size of the opportunity, not a promise. Some of it is ore variability, weather and planned work, and no amount of software recovers that part.",
+    "excluded": [
+      {
+        "asset_id": "PUMP-104A",
+        "reason": "Its best day sits 45% above its ordinary day, the widest gap in this data, and it is not an achievement \u2014 the vibration trend is a bearing degrading across the window. It belongs to the downtime argument, not this one."
+      }
+    ]
+  },
+  "roi": {
+    "generated_at": "2026-08-13T04:15:57+00:00",
+    "commodity": "copper",
+    "feed_grade_pct": 1.08,
+    "feed_grade_days": 167,
+    "feed_grade_source": "data/generated/metallurgical_recovery.parquet",
+    "recovery_gap_pts": 1.958,
+    "t_per_mt_per_point": 108,
+    "client_inputs": [
+      "Annual mill throughput",
+      "Copper price"
+    ],
+    "basis": "Contained copper, before smelter payability and treatment and refining charges, for which this repository holds no terms."
+  },
   "branch_evidence": {
     "B1": {
       "points": [

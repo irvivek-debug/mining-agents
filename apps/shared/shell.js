@@ -55,6 +55,51 @@ function num(value) {
   return typeof value === "number" ? value.toLocaleString("en-US") : esc(value);
 }
 
+/** How many decimals a figure of this size deserves. A plant does not run to
+ *  four decimal places, and an export that carries them because it averaged
+ *  something is not a licence to print them. */
+function places(v) {
+  return Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? 1 : 2;
+}
+
+function fig(v, unit, dp) {
+  const step = dp === undefined ? places(v) : dp;
+  const n = v.toLocaleString("en-US", {
+    minimumFractionDigits: step,
+    maximumFractionDigits: step,
+  });
+  if (!unit) return n;
+  // A per-cent sign closes up against its number in English setting; a tonne
+  // or a megawatt takes the space. Handling it here rather than at each call
+  // site is what keeps "92.32%" and "204.5 t" both right on the same row.
+  return unit === "%" ? `${n}%` : `${n} ${unit}`;
+}
+
+/** The precision a whole gap row must be printed at.
+ *
+ *  A gap row prints three numbers that have to survive a reader subtracting
+ *  them: 92.3, 94.3 and a gap of 1.96 is a screen caught out by mental
+ *  arithmetic. So a row is printed at whatever precision makes its own
+ *  subtraction come out, starting from the least that could work — the
+ *  cheapest fix is more decimals, and more decimals than the measurement
+ *  deserves is its own dishonesty.
+ */
+function rowPlaces(row) {
+  // Where the gap is an absolute difference it is the subject of the row, so
+  // it sets the precision too. Rounding a 1.96-point gap to 2.0 because it
+  // sits on a 92 discards the measurement to suit its neighbour, and then
+  // overstates it by two percent on the way past.
+  const start =
+    row.delta_kind === "points"
+      ? Math.max(places(row.median), places(row.delta))
+      : places(row.median);
+  for (let dp = start; dp <= 4; dp += 1) {
+    const shown = +row.p90.toFixed(dp) - +row.median.toFixed(dp);
+    if (Math.abs(shown - +row.delta.toFixed(dp)) < Math.pow(10, -dp) / 2) return dp;
+  }
+  return 4;
+}
+
 /** A magnitude this repository does not establish. Rendered as words, never as
  *  a number, so it cannot be misread as one at a glance. */
 function clientInput() {

@@ -1,0 +1,201 @@
+# External research benchmarks
+#
+# Third-party figures shown on the value screens. These are the ONLY external
+# numbers permitted on any screen. Nothing here may be added from memory: every
+# entry was read from the publisher's own page, and an entry that cannot be
+# confirmed against its primary source belongs in `excluded` at the bottom of
+# this file rather than in `benchmarks`.
+#
+# Why a file and not prose in the markup: a claim printed beside a CEO's own
+# operating data has to be traceable to a document without anyone reading
+# JavaScript to find out where it came from. The build fails if an entry is
+# missing a title, publisher, year or url.
+#
+# `figure` is quoted exactly as published. `scope` exists so the screen cannot
+# quietly widen a claim — several of these are narrower than they first read.
+
+benchmarks:
+  - id: throughput_recovery
+    theme: prize
+    headline: "4–8% throughput, 1–3pp recovery"
+    figure: >-
+      opportunities to raise mineral recovery by 1 to 3 percent and increase
+      throughput by 4 to 8 percent, while reducing energy consumption
+    aside: >-
+      a productivity boost of 5 to 10 percent, which equates roughly to opening
+      a new mine without the capital cost
+    title: "Behind the mining productivity upswing: Technology-enabled transformation"
+    publisher: McKinsey & Company
+    year: 2018
+    url: https://www.mckinsey.com/industries/metals-and-mining/our-insights/behind-the-mining-productivity-upswing-technology-enabled-transformation
+    scope: >-
+      Available uplift from technology-enabled transformation across mining
+      operations, not attributed to any single technology.
+
+  - id: throughput_100_assets
+    theme: prize
+    headline: "Recovery up 1–3 percentage points"
+    figure: >-
+      potential to achieve 8 to 10 percent in throughput improvement as well as
+      an uptick of one to three percentage points in recovery
+    aside: >-
+      alongside 8 to 10 percent throughput improvement, observed across more
+      than 100 assets across industries and commodities globally
+    title: "Advancing metals and mining in Southeast Asia with digital and analytics"
+    publisher: McKinsey & Company
+    year: 2023
+    url: https://www.mckinsey.com/industries/metals-and-mining/our-insights/advancing-metals-and-mining-in-southeast-asia-with-digital-and-analytics
+    scope: >-
+      Observed across a stated base of 100+ assets, which makes this the best
+      evidenced of the throughput figures.
+
+  - id: haulage_ahs
+    theme: prize
+    headline: "20% productivity improvement from autonomous haulage"
+    figure: >-
+      miners using autonomous haulage technology have reported a 20 percent
+      improvement in productivity
+    title: "Behind the mining productivity upswing: Technology-enabled transformation"
+    publisher: McKinsey & Company
+    year: 2018
+    url: https://www.mckinsey.com/industries/metals-and-mining/our-insights/behind-the-mining-productivity-upswing-technology-enabled-transformation
+    scope: >-
+      Reported by Western Australian operators running autonomous haulage
+      fleets. It is a fleet-automation figure, not a decision-support one.
+
+  - id: procurement
+    theme: prize
+    headline: "Procurement productivity up to 50%"
+    figure: "improved their procurement productivity by up to 50%"
+    title: "Racing Toward a Digital Future in Metals and Mining"
+    publisher: Boston Consulting Group
+    year: 2021
+    url: https://www.bcg.com/publications/2021/adopting-a-digital-strategy-in-the-metals-and-mining-industry
+    scope: >-
+      Upper end of a range observed among digitally mature metals and mining
+      companies; quoted as a ceiling, not a typical result.
+
+  - id: quartile_gap
+    theme: gap
+    headline: "Top-quartile sites run 6% higher truck availability than average"
+    figure: >-
+      companies with scores in the top quartile of the OHI had truck
+      availability that was 8 percent higher than companies in the bottom
+      quartile, and 6 percent higher than average OHI performers
+    aside: >-
+      that 8 percent difference could translate into a production increase of
+      around 5 percent, or a decrease in operations costs of about 2 percent
+    title: "The missing link in mining-company productivity: People"
+    publisher: McKinsey & Company
+    year: 2018
+    url: https://www.mckinsey.com/capabilities/operations/our-insights/the-missing-link-in-mining-company-productivity
+    scope: >-
+      Cross-mine benchmark linking Organizational Health Index quartile to
+      physical equipment performance. The gap is attributed to operational
+      discipline and accountability, not to technology.
+
+  - id: discipline_gap
+    theme: gap
+    headline: "16% higher effective equipment use, on discipline alone"
+    figure: >-
+      top quartile results in 'Accountability' and 'Operational discipline'
+      achieved 16 percent higher UEE than those in the bottom quartile
+    title: "The missing link in mining-company productivity: People"
+    publisher: McKinsey & Company
+    year: 2018
+    url: https://www.mckinsey.com/capabilities/operations/our-insights/the-missing-link-in-mining-company-productivity
+    scope: >-
+      Utilisation of Equipment Effectiveness, quartile to quartile. Named here
+      because consistency of practice, not new plant, is what moves it.
+
+  - id: digital_maturity
+    theme: condition
+    headline: "Mining is 30–40% less digitally mature than comparable industries"
+    figure: >-
+      the metals and mining industry is roughly 30% to 40% less digitally
+      mature than comparable industries
+    aside: >-
+      some improved their mining throughput by 10% to 20% and their procurement
+      productivity by up to 50%
+    title: "Racing Toward a Digital Future in Metals and Mining"
+    publisher: Boston Consulting Group
+    year: 2021
+    url: https://www.bcg.com/publications/2021/adopting-a-digital-strategy-in-the-metals-and-mining-industry
+    scope: >-
+      Based on BCG's Digital Acceleration Index survey of large metals and
+      mining companies.
+
+  - id: productivity_decline
+    theme: condition
+    headline: "28% less efficient at moving a tonne than a decade earlier"
+    figure: >-
+      mining productivity as measured by MPI has declined 3.5 percent per year,
+      meaning mining companies are 28 percent less efficient in digging and
+      moving a ton of total material today than ten years ago
+    title: "Productivity in mining operations: Reversing the downward trend"
+    publisher: McKinsey & Company
+    year: 2015
+    url: https://www.mckinsey.com/industries/metals-and-mining/our-insights/productivity-in-mining-operations-reversing-the-downward-trend
+    scope: >-
+      Industry-wide index over the decade to 2015. Used to establish that the
+      gap is an industry condition rather than a failing of one operator.
+
+  - id: data_unused
+    theme: condition
+    headline: "Miners use less than 1% of the data their equipment produces"
+    figure: "miners use less than 1 percent of the information collected from their equipment"
+    aside: >-
+      average overall equipment effectiveness of 27 percent for underground
+      mining and 39 percent for open-pit, against 88 percent for upstream oil
+      and gas
+    title: "How digital innovation can improve mining productivity"
+    publisher: McKinsey & Company
+    year: 2015
+    url: https://www.mckinsey.com/industries/metals-and-mining/our-insights/how-digital-innovation-can-improve-mining-productivity
+    scope: >-
+      2015 vintage; the OEE contrast is the durable part of the finding.
+
+  - id: genai_reality
+    theme: condition
+    headline: "Only ~5% of companies get a tenth of their EBIT from gen AI"
+    figure: >-
+      only about 5 percent of companies attribute at least 10 percent of their
+      EBIT to gen AI
+    title: "Mining for operational excellence"
+    publisher: McKinsey & Company
+    year: 2025
+    url: https://www.mckinsey.com/capabilities/operations/our-insights/mining-for-operational-excellence
+    scope: >-
+      Cross-industry. Printed deliberately: a value screen that only carries
+      upside reads as a brochure, and this is the figure a sceptical CEO
+      already has in mind.
+
+# Figures that were found but could NOT be confirmed against a primary source.
+# They are recorded so that nobody rediscovers them in a search result and adds
+# them back believing they are new. Do not print any of these.
+excluded:
+  - figure: "20% EBITDA uplift / $3 return per $1 spent on AI"
+    attributed_to: McKinsey & Company
+    reason: >-
+      Appears only in press coverage of remarks, with no named publication.
+      Also not mining-specific.
+  - figure: "42% EBITDA increase over a three-year programme"
+    attributed_to: "Boston Consulting Group, The Mining Productivity Imperative"
+    reason: Search snippet only; the source page was not reached.
+  - figure: "5–10% throughput and 2–5% yield uplift from digital"
+    attributed_to: Boston Consulting Group
+    reason: >-
+      Search snippet only; not found in the BCG publication that was read.
+  - figure: "Gen AI cut fleet fuel consumption by up to 10 percent"
+    attributed_to: "McKinsey, Global Materials Perspective 2025"
+    reason: Snippet-level only.
+  - figure: "Any Deloitte figure"
+    attributed_to: Deloitte
+    reason: >-
+      Tracking the Trends and the generative AI in mining papers exist as
+      primary PDFs but could not be extracted and read on this machine.
+  - figure: "$425bn of value to the mining and metals industry over ten years"
+    attributed_to: "World Economic Forum, Digital Transformation Initiative, 2017"
+    reason: >-
+      The WEF's own page now redirects; the full text was only reachable
+      through third-party mirrors. Reinstate if the primary source is recovered.

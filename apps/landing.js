@@ -1,17 +1,116 @@
-/* The front door. Two cards, and every figure on both read off the catalog.
+/* The front door. It argues one thing, and it argues it before it offers a door.
  *
  * There is no navigation bar here on purpose: this page is a fork in the road
  * and the two applications each own their own chrome. A third nav would imply a
  * place above them that a reader can return to, and there is nothing there.
  *
- * Above the fork sits the site itself — five real machines replayed through the
- * window the telemetry table actually covers. It is there because a reader who
- * is asked to choose a door should first know there is something behind it.
+ * The order is the argument. The gap comes first, because it is the reason to
+ * keep reading. The five machines come second, because a reader who has just
+ * been given a number is entitled to see the plant it was taken from. The doors
+ * come last, once there is a reason to open one.
+ *
+ * Nothing on this screen names a node, an entrypoint, a swarm or a graph. The
+ * reader is a CEO; those are the architect's evidence, not theirs, and they are
+ * disclosed further in.
  */
 
 const C = DATA.catalog.counts;
 const HITL = DATA.catalog.agents.filter((a) => a.is_entrypoint && a.hitl_required).length;
 const SIG = DATA.signals;
+const GAP = SIG.gap;
+const BENCH = DATA.benchmarks;
+
+/* places(), fig() and rowPlaces() are in shell.js: the value screen quotes the
+   same recovery gap, and a measurement printed to one precision here and
+   another there is the same defect rowPlaces() exists to prevent. */
+
+/* ---------- the gap ---------- */
+
+const RECOVERY = GAP.rows.find((r) => r.id === "recovery");
+
+const RDP = rowPlaces(RECOVERY);
+
+el("thesis").textContent =
+  "Over " + RECOVERY.days + " days of recorded operation the concentrator's " +
+  "best day recovered " + fig(RECOVERY.p90, "", RDP) + "% and its ordinary day " +
+  fig(RECOVERY.median, "", RDP) + "%. That " + fig(RECOVERY.delta, "", RDP) +
+  "-point spread is " +
+  "not a target to be bought. It is a result this site has already produced, " +
+  "and did not repeat. Agents exist here to make the ordinary day look like " +
+  "the good one — optimal decisions, around the clock.";
+
+el("gap-lede").textContent =
+  "Each figure below is a daily mean drawn from this site's own records. The " +
+  "best day is the 90th-percentile day, not the single best one, because one " +
+  "unusual shift is an anecdote and should not set a target. Beside each is " +
+  "what the published research says is available to a mine that closes gaps " +
+  "of this kind — independently arrived at, and in the same range.";
+
+/* External figures are rendered in a visibly different register from measured
+   ones: muted, mono, and set behind a rule. A benchmark is a third party's
+   claim about the industry and a measurement is this warehouse's claim about
+   this site, and letting the two share a typeface would lend a consultancy's
+   authority to our number. That is the move that makes a CEO stop reading. */
+function benchCell(id) {
+  if (!id) return '<td class="bench none">No verified benchmark held</td>';
+  const b = BENCH.by_id[id];
+  return (
+    '<td class="bench">' +
+    `<span class="claim">${esc(b.headline)}</span>` +
+    `<span class="cite">${esc(b.publisher)}, ${esc(b.year)}</span></td>`
+  );
+}
+
+el("gap").innerHTML =
+  "<thead><tr>" +
+  "<th>Quantity</th>" +
+  '<th class="num">Ordinary day</th>' +
+  '<th class="num">Best day</th>' +
+  '<th class="num">The gap</th>' +
+  "<th>What the research says is available</th>" +
+  "</tr></thead><tbody>" +
+  GAP.rows
+    .map((r) => {
+      const dp = rowPlaces(r);
+      // Recovery is already a percentage, so its gap is stated in points. A
+      // "+2.1%" against a 92.32% base would be read as 2.1 points by half the
+      // room and as 1.96 points by the other half.
+      const gap =
+        r.delta_kind === "points"
+          ? `+${fig(r.delta, "", dp)} pts`
+          : `+${r.delta_pct.toFixed(1)}%`;
+      return (
+        "<tr>" +
+        `<td><b>${esc(r.label)}</b>` +
+        (r.asset_id ? `<span class="who-sub">${esc(r.asset_id)}</span>` : "") +
+        "</td>" +
+        `<td class="num">${esc(fig(r.median, r.unit, dp))}</td>` +
+        `<td class="num">${esc(fig(r.p90, r.unit, dp))}</td>` +
+        `<td class="num gain">${esc(gap)}</td>` +
+        benchCell(r.benchmark) +
+        "</tr>"
+      );
+    })
+    .join("") +
+  "</tbody>";
+
+/* The caveat is not a disclaimer in small print at the bottom. It sits directly
+   under the table because a CEO who works out for themselves that some of this
+   gap is weather trusts the next number less, and one who was told so first
+   trusts it more. */
+const PUMP = GAP.excluded[0];
+el("gap-note").innerHTML =
+  '<div class="note"><strong>What this gap is, and is not</strong><br>' +
+  esc(GAP.caveat) +
+  " The honest claim is that the distance between an ordinary day and a good " +
+  "one is where the money is, and that nobody currently manages it because " +
+  "nobody sees it until the month-end report." +
+  "</div>" +
+  '<div class="note" style="margin-top:10px"><strong>' +
+  esc(PUMP.asset_id) +
+  " is deliberately not in the table</strong><br>" +
+  esc(PUMP.reason) +
+  "</div>";
 
 /* ---------- the recorded-window strip ---------- */
 
@@ -28,14 +127,6 @@ DATA.graph.nodes.forEach((n) => {
 });
 const RATING = { CRITICAL: "b-crit", HIGH: "b-warn", MEDIUM: "b-info", LOW: "b-idle" };
 
-/** Decimals that suit the magnitude. A payload of 172.4831 t is false
- *  precision on a truck scale; a vibration of 5 Hz has thrown away the reading. */
-function places(max) {
-  if (max >= 100) return 0;
-  if (max >= 10) return 1;
-  return 2;
-}
-
 const FROM = new Date(SIG.window.from.replace(" ", "T"));
 const TO = new Date(SIG.window.to.replace(" ", "T"));
 const STEPS = SIG.buckets;
@@ -46,14 +137,15 @@ function stamp(i) {
 }
 
 el("strip-lede").textContent =
-  "Every reading below is in this repository. The window runs " +
+  "The numbers above were taken from these machines. The window runs " +
   stamp(0) +
   " to " +
   stamp(STEPS - 1) +
   ", reduced to " +
   STEPS +
   " points of equal duration. It is recorded history on a scrubber, not a live " +
-  "feed — drag it and the five figures move to what those machines actually read.";
+  "feed — drag it and the five figures move to what those machines actually " +
+  "read that day. The variation you are watching is the gap.";
 
 el("scrub").innerHTML =
   "<span>Recorded window</span>" +
@@ -152,49 +244,59 @@ play.addEventListener("input", () => {
 
 /* ---------- the two doors ---------- */
 
+/* The facts under each door are deliberately not counts of things we built.
+   "100 agent nodes" answers a question nobody at this stage is asking. What a
+   CEO wants to know from a front door is what it costs them today, how the
+   value is cut, who it is for, and what stays under their control. */
 const APPS = [
   {
     href: "case/index.html",
-    eyebrow: "Application 1 · five screens",
+    eyebrow: "Read first · five screens",
     title: "The case for change",
     lede:
-      "Why the estate is worth building, told in the order a decision is made: " +
-      "the proposition, the mine as this demo holds it, where the value is " +
-      "unlocked, how the answer is assembled, and the property graph the " +
-      "traversals actually run over.",
+      "Where the gap comes from, what closing it is worth, and how the value " +
+      "divides so that no part of it is claimed twice. Told in the order a " +
+      "capital decision is actually made, with the mechanism named on every " +
+      "line and the magnitude left to the people who hold the contracts.",
     facts: [
-      [C.agent_nodes, "agent nodes", "counted from the module that builds them"],
       [
-        DATA.value_tree.branches.length,
-        "value branches",
-        "rooted on all-in sustaining cost per tonne",
+        DATA.facts.mill_downtime_usd_per_hour,
+        "an hour of mill downtime",
+        "the one cost this repository can source outright",
+        { prefix: "$" },
       ],
       [
-        Object.keys(DATA.graph.graphs).length,
-        "property graphs",
-        "drawn, traversable, with the SQL on screen",
+        RECOVERY.delta,
+        "points of recovery, best day to ordinary",
+        "measured here across " + RECOVERY.days + " days, not modelled",
+        // Same precision the gap table prints, so a reader who scrolls between
+        // the two does not find the same measurement quoted two ways.
+        { decimals: RDP },
+      ],
+      [
+        DATA.value_tree.branches.length,
+        "value pools",
+        "mutually exclusive, collectively exhaustive — nothing double-counted",
       ],
     ],
     cta: "Read the case",
   },
   {
     href: "workspace/index.html",
-    eyebrow: "Application 2 · five screens",
+    eyebrow: "Then this · five screens",
     title: "The site workspace",
     lede:
-      "What a person does with the estate once it exists: find the right " +
-      "entrypoint out of " +
-      C.entrypoints +
-      ", see how a swarm is wired, work the entrypoints one role is " +
-      "accountable for, approve what cannot act alone, and read the handover " +
-      "at shift change.",
+      "What the standard looks like once someone has to work it: the decisions " +
+      "it makes, the ones it is not allowed to make alone, the person " +
+      "accountable for each, and the handover it writes at shift change so the " +
+      "next crew starts where the last one stopped.",
     facts: [
-      [C.entrypoints, "callable entrypoints", "of the " + C.agent_nodes + " nodes"],
-      [HITL, "need a human", "bound to request_approval by the catalog"],
+      [C.entrypoints, "decisions it takes on", "each one a call somebody makes today"],
+      [HITL, "held back for a human", "the ones that cannot act on their own"],
       [
-        C.swarms,
-        "swarms of five",
-        "a coordinator, specialists and a critic — one console each",
+        Object.keys(DATA.personas.personas).length,
+        "roles it works for",
+        "from the pit and the plant up to the general manager",
       ],
     ],
     cta: "Open the workspace",
@@ -209,11 +311,15 @@ el("apps").innerHTML = APPS.map(
     `<p style="font-size:14px;margin:0 0 16px">${esc(a.lede)}</p>` +
     a.facts
       .map(
-        ([n, label, sub]) =>
+        ([n, label, sub, opts]) =>
           '<div style="display:flex;gap:12px;align-items:baseline;padding:8px 0;' +
           'border-top:1px solid var(--border-soft)">' +
-          `<span class="metric" style="font-size:22px;min-width:2.5ch;text-align:right" ` +
-          `data-count="${esc(n)}"></span>` +
+          `<span class="metric" style="font-size:22px" data-count="${esc(n)}"` +
+          (opts && opts.prefix ? ` data-prefix="${esc(opts.prefix)}"` : "") +
+          (opts && opts.decimals !== undefined
+            ? ` data-decimals="${esc(opts.decimals)}"`
+            : "") +
+          "></span>" +
           `<span style="font-size:13px"><b>${esc(label)}</b><br>` +
           `<span class="dim" style="color:var(--fg-dim)">${esc(sub)}</span></span></div>`
       )
@@ -223,11 +329,26 @@ el("apps").innerHTML = APPS.map(
     "</div>"
 ).join("");
 
+/* Both kinds of number are sourced, and the two kinds are listed separately.
+   A reader has to be able to tell at a glance which figures this warehouse
+   measured and which ones somebody else published. */
 el("prov").innerHTML = provenance(
   "<dt>Applications</dt><dd>Both read one bundle; neither holds a figure of its own.</dd>" +
     `<dt>Signals</dt><dd>${esc(SIG.source)}, reduced at build time to ${esc(
       SIG.buckets
-    )} points per series.</dd>`
+    )} points per series.</dd>` +
+    `<dt>The gap</dt><dd>${esc(GAP.method)} ${esc(
+      GAP.rows.map((r) => r.source).filter((s, i, a) => a.indexOf(s) === i).join(", ")
+    )}.</dd>` +
+    "<dt>Benchmarks</dt><dd>" +
+    BENCH.order
+      .map((id) => BENCH.by_id[id])
+      .filter((b, i, a) => a.findIndex((o) => o.title === b.title) === i)
+      .map((b) => `${esc(b.title)} (${esc(b.publisher)}, ${esc(b.year)})`)
+      .join("; ") +
+    `. Held in ${esc(BENCH.source)}; ${esc(BENCH.excluded.length)} further ` +
+    "figures were found and excluded there because they could not be traced to " +
+    "a primary source.</dd>"
 );
 
 reveal();

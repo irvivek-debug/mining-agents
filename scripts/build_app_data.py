@@ -836,6 +836,203 @@ def _histogram(values, bins: int) -> dict:
     }
 
 
+# The quantities whose best-day-to-median-day gap the value screens argue from,
+# and the published benchmark each one is set beside. A row names its benchmark
+# here rather than on the screen so that a figure and the third-party claim it
+# is compared against cannot drift apart in the markup.
+#
+# PUMP-104A is deliberately absent. Its p90 day is 45% above its median day,
+# which is by far the largest gap in the data and is not an achievement: the
+# bearing is degrading across the window. Printing it beside "your best day"
+# would present a failing pump as a target.
+GAP_METRICS = [
+    {"id": "recovery", "label": "Metallurgical recovery",
+     "table": "metallurgical_recovery", "column": "recovery_rate_pct",
+     "unit": "%", "delta_kind": "points", "benchmark": "throughput_100_assets"},
+    {"id": "feed_rate", "label": "Crusher feed rate",
+     "asset_id": "CRUSHER-03", "column": "feed_rate_tph",
+     "unit": "t/h", "delta_kind": "percent", "benchmark": "throughput_recovery"},
+    {"id": "payload", "label": "Truck payload",
+     "asset_id": "TRUCK-08", "column": "payload_tons",
+     "unit": "t", "delta_kind": "percent", "benchmark": "haulage_ahs"},
+    {"id": "conveyor_load", "label": "Conveyor load",
+     "asset_id": "CONVEYOR-02", "column": "load_pct",
+     "unit": "%", "delta_kind": "percent", "benchmark": None},
+]
+
+BENCHMARKS = REPO / "docs" / "external-benchmarks.yaml"
+BENCHMARK_FIELDS = ("id", "headline", "figure", "title", "publisher", "year", "url")
+
+
+def build_benchmarks() -> dict:
+    """Third-party figures, loaded from the one file that is allowed to hold them.
+
+    These are the only numbers on any screen that this repository did not
+    measure, so the bar is a citation rather than a query: an entry without a
+    title, publisher, year and url cannot be traced back to a document by
+    someone who doubts it, and a figure a CEO cannot check is a figure that
+    costs more trust than it buys.
+    """
+    doc = yaml.safe_load(BENCHMARKS.read_text())
+    entries = doc.get("benchmarks") or []
+    if not entries:
+        raise SystemExit(f"{BENCHMARKS.relative_to(REPO)} lists no benchmarks.")
+
+    by_id = {}
+    for entry in entries:
+        missing = [f for f in BENCHMARK_FIELDS if not entry.get(f)]
+        if missing:
+            raise SystemExit(
+                f"benchmark {entry.get('id', '<no id>')!r} is missing "
+                f"{missing}; every external figure must carry its source. "
+                f"Fix {BENCHMARKS.relative_to(REPO)}."
+            )
+        if entry["id"] in by_id:
+            raise SystemExit(f"duplicate benchmark id {entry['id']!r}.")
+        by_id[entry["id"]] = entry
+
+    wanted = {m["benchmark"] for m in GAP_METRICS if m["benchmark"]}
+    unknown = sorted(wanted - set(by_id))
+    if unknown:
+        raise SystemExit(
+            f"GAP_METRICS cites benchmark ids {unknown} that "
+            f"{BENCHMARKS.relative_to(REPO)} does not define."
+        )
+
+    return {
+        "generated_at": _now(),
+        "source": str(BENCHMARKS.relative_to(REPO)),
+        "by_id": by_id,
+        "order": [e["id"] for e in entries],
+        # Carried into the bundle so the excluded list travels with the screens
+        # it is protecting. Nobody re-adds a figure they can see was rejected.
+        "excluded": doc.get("excluded") or [],
+    }
+
+
+def build_gap(telemetry, recovery) -> dict:
+    """How far this site's best day sits above its ordinary day.
+
+    The whole value argument rests on this: the p90 day is not a capability
+    that has to be bought, it is one this plant and these people already
+    reached. What is missing is repetition.
+
+    p90 rather than the maximum, because a single best day is an anecdote and
+    one unusual shift should not set the target. Median rather than the mean,
+    because a handful of bad days would drag a mean down and flatter the gap.
+
+    Daily means, not raw readings: the claim is about a day's operation, and a
+    p90 taken over 2-hourly readings would compare the best two hours of the
+    half-year against a typical two hours, which is a different and much
+    larger number that no one could ever run a site to.
+    """
+    import pandas as pd
+
+    rows = []
+    for metric in GAP_METRICS:
+        if "asset_id" in metric:
+            frame = telemetry[
+                (telemetry["asset_id"] == metric["asset_id"])
+                & (telemetry["metric_name"] == metric["column"])
+            ]
+            if frame.empty:
+                raise SystemExit(
+                    f"gap metric {metric['id']!r} found no "
+                    f"{metric['column']!r} rows for {metric['asset_id']!r}."
+                )
+            times, values = frame["timestamp"], frame["metric_value"]
+            source = f"{GENERATED.relative_to(REPO)}/telemetry_stream.parquet"
+            holder = metric["asset_id"]
+        else:
+            frame = recovery
+            times, values = frame["timestamp"], frame[metric["column"]]
+            source = (f"{GENERATED.relative_to(REPO)}/"
+                      f"{metric['table']}.parquet")
+            holder = None
+
+        daily = pd.DataFrame({
+            "day": pd.to_datetime(times, utc=True).dt.date,
+            "value": values,
+        }).groupby("day")["value"].mean()
+
+        median, p90 = float(daily.median()), float(daily.quantile(0.90))
+        delta = p90 - median
+        rows.append({
+            "id": metric["id"], "label": metric["label"],
+            "asset_id": holder, "column": metric["column"],
+            "unit": metric["unit"], "delta_kind": metric["delta_kind"],
+            "median": _num(median), "p90": _num(p90),
+            "delta": _num(delta),
+            "delta_pct": _num(delta / median * 100.0),
+            "days": int(len(daily)),
+            "benchmark": metric["benchmark"],
+            "source": source,
+        })
+
+    return {
+        "rows": rows,
+        "method": (
+            "Each figure is a daily mean. The best day is the 90th percentile "
+            "day and the ordinary day is the median day, across "
+            f"{rows[0]['days']} days of recorded operation."
+        ),
+        "caveat": (
+            "The gap is the size of the opportunity, not a promise. Some of it "
+            "is ore variability, weather and planned work, and no amount of "
+            "software recovers that part."
+        ),
+        "excluded": [{
+            "asset_id": "PUMP-104A",
+            "reason": (
+                "Its best day sits 45% above its ordinary day, the widest gap "
+                "in this data, and it is not an achievement — the vibration "
+                "trend is a bearing degrading across the window. It belongs to "
+                "the downtime argument, not this one."
+            ),
+        }],
+    }
+
+
+def build_roi(gap: dict, recovery) -> dict:
+    """The one conversion this repository can honestly supply to a business case.
+
+    A recovery point is not money until three things are known: how much ore
+    goes through the mill, what the ore carries, and what the metal sells for.
+    This site's own record settles the middle one -- 167 days of concentrator
+    feed assays -- and says nothing about the other two. So the export stops
+    exactly there: it publishes tonnes of contained copper per million tonnes
+    milled per point of recovery, and leaves throughput and price to the only
+    people who hold them. A screen that guessed either would be inventing the
+    client's business in front of the client.
+
+    Contained metal, not payable: smelter payability, treatment and refining
+    charges take a cut that this repository has no terms for. Stating the
+    figure as contained and saying so is honest; applying a remembered
+    payability factor would not be.
+    """
+    row = next(r for r in gap["rows"] if r["id"] == "recovery")
+    grade = float(recovery["feed_grade_pct"].median())
+    # One tonne of ore carries grade/100 t of copper. A point of recovery is
+    # one percent of that. Per million tonnes milled, the 1e6 and the 100s
+    # collapse to grade * 100.
+    per_point = grade * 100.0
+    return {
+        "generated_at": _now(),
+        "commodity": "copper",
+        "feed_grade_pct": _num(grade),
+        "feed_grade_days": int(len(recovery)),
+        "feed_grade_source": (f"{GENERATED.relative_to(REPO)}/"
+                              "metallurgical_recovery.parquet"),
+        "recovery_gap_pts": row["delta"],
+        "t_per_mt_per_point": _num(per_point),
+        "client_inputs": ["Annual mill throughput", "Copper price"],
+        "basis": (
+            "Contained copper, before smelter payability and treatment and "
+            "refining charges, for which this repository holds no terms."
+        ),
+    }
+
+
 def build_signals() -> dict:
     """The real measurements the screens draw.
 
@@ -935,6 +1132,8 @@ def build_signals() -> dict:
         ),
     }
 
+    gap = build_gap(telemetry, recovery)
+
     return {
         "generated_at": _now(),
         "source": f"{generated}/*.parquet",
@@ -945,6 +1144,8 @@ def build_signals() -> dict:
             "source": telemetry_src,
         },
         "assets": assets,
+        "gap": gap,
+        "roi": build_roi(gap, recovery),
         "branch_evidence": {"B1": b1, "B2": b2, "B3": b3,
                             "B4": b4, "B5": b5, "B6": b6},
     }
@@ -977,7 +1178,8 @@ def main() -> None:
     payloads = {"catalog": catalog, "personas": personas,
                 "graph": graph, "facts": facts,
                 "value_tree": build_value_tree(catalog),
-                "workspace": workspace, "signals": signals}
+                "workspace": workspace, "signals": signals,
+                "benchmarks": build_benchmarks()}
     for name, payload in payloads.items():
         path = args.out / f"{name}.json"
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
@@ -1017,6 +1219,15 @@ def main() -> None:
     print(f"signals {len(signals['assets'])} asset series, "
           f"{len(signals['branch_evidence'])} branch evidence entries, "
           f"{signals['buckets']} buckets")
+    print(f"benchmarks {len(payloads['benchmarks']['by_id'])} cited, "
+          f"{len(payloads['benchmarks']['excluded'])} excluded as unverifiable")
+    for row in signals["gap"]["rows"]:
+        print(f"gap {row['label']:<24} median {row['median']:>10,.2f} "
+              f"p90 {row['p90']:>10,.2f}  +{row['delta_pct']:.1f}%")
+    roi = signals["roi"]
+    print(f"roi feed grade {roi['feed_grade_pct']}% Cu over "
+          f"{roi['feed_grade_days']} days -> {roi['t_per_mt_per_point']:,.0f} t "
+          f"contained Cu per Mt milled per recovery point")
     for name, info in graph["graphs"].items():
         print(f"graph {name:<14} {info['nodes']:>4} nodes {info['edges']:>4} edges  "
               f"{info['node_types']}")

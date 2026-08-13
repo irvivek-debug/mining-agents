@@ -170,6 +170,113 @@ blockquote.verbatim cite {
                 transition: width var(--dur-3) var(--ease-emph); }
 @media (prefers-reduced-motion: reduce) { .share > span { transition: none; } }
 
+/* ---------- the gap table and its benchmarks ---------- */
+
+/* A measured gain. Not the success green: nothing has been achieved yet, this
+   is a distance between two of the client's own numbers. */
+.data td.gain { color: var(--fg); font-weight: 700; }
+
+/* An external claim, set in a different register from the measured columns
+   beside it. Third-party evidence that shares a typeface with our own
+   measurement lends its authority to our number, which is precisely the
+   sleight a reader is right to distrust. The rule down the left says: from
+   here on, somebody else is talking. */
+.data td.bench {
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+  max-width: 300px;
+}
+.data td.bench .claim { display: block; font-size: 12.5px; color: var(--fg-muted); }
+.data td.bench .cite {
+  display: block; margin-top: 3px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--fg-dim);
+}
+/* Named rather than left blank. An empty cell reads as an oversight; this one
+   is a finding — we looked, and would not print what we could not verify. */
+.data td.bench.none {
+  font-family: var(--mono); font-size: 10.5px; color: var(--fg-dim);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.data .who-sub {
+  display: block; margin-top: 2px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+
+/* ---------- the value calculator ---------- */
+
+/* Two columns because the panel is an argument in two halves: what this
+   repository knows on the left, what only the client knows on the right. The
+   split is the point, so it survives to the narrowest viewport that can hold
+   it and only stacks when a column would be too narrow to read. */
+.roi { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .roi { grid-template-columns: 1fr; } }
+/* A grid item's min-width is auto, and a number input's intrinsic width is
+   about twenty characters, so without this the column refuses to shrink and
+   the whole document is 42px wider than a 360px phone. */
+.roi > div { min-width: 0; }
+
+.roi .half-cap { font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+                 letter-spacing: 0.06em; text-transform: uppercase;
+                 color: var(--fg-muted); padding-bottom: 8px;
+                 border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+
+.roi label { display: block; margin-bottom: 14px; }
+.roi label .name { display: block; font-size: 13px; margin-bottom: 6px; }
+/* Every input says whose number it is before it says anything else. The whole
+   panel rests on the reader believing we did not supply these two. */
+.roi label .whose { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+                    text-transform: uppercase; color: var(--accent); margin-left: 6px; }
+.roi label .hint { display: block; margin-top: 5px; font-family: var(--mono);
+                   font-size: 10px; color: var(--fg-dim); }
+.roi input[type="number"] {
+  width: 100%; min-width: 0; box-sizing: border-box; padding: 9px 11px;
+  background: var(--surface-high); color: var(--fg);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.roi input[type="number"]:focus { outline: none; border-color: var(--accent); }
+.roi input::placeholder { color: var(--fg-dim); }
+
+/* overflow-wrap because the right-hand line of each row ends in a warehouse
+   path, which is one unbroken token wide enough to hold a 360px phone open on
+   its own. The path is what the figure came from, so it is printed in full and
+   allowed to break instead. */
+.roi .known { display: flex; align-items: baseline; gap: 10px; padding: 9px 0;
+              border-top: 1px solid var(--border-soft); font-size: 13px;
+              overflow-wrap: anywhere; }
+.roi .known > span { min-width: 0; }
+.roi .known .v { font-family: var(--mono); font-size: 15px; font-weight: 700;
+                 color: var(--fg); font-variant-numeric: tabular-nums; flex: none;
+                 min-width: 92px; }
+
+.roi-out { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.roi-out .eq { font-family: var(--mono); font-size: 11px; color: var(--fg-dim);
+               line-height: 1.6; overflow-wrap: anywhere; }
+
+/* ---------- value pool cards ---------- */
+
+.pool-measured .row { display: grid; grid-template-columns: 1fr auto auto;
+                      gap: 10px; align-items: baseline; padding: 6px 0;
+                      border-top: 1px solid var(--border-soft); font-size: 12.5px; }
+.pool-measured .row .move { font-family: var(--mono); font-size: 11px;
+                            color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.pool-measured .row .up { font-family: var(--mono); font-size: 12.5px; font-weight: 700;
+                          color: var(--hue); font-variant-numeric: tabular-nums; }
+
+/* The same left rule the gap table uses, for the same reason: from here on,
+   somebody else is talking. */
+.benchline { margin-top: 12px; padding-left: 12px; border-left: 2px solid var(--border); }
+.benchline .claim { display: block; font-size: 12.5px; color: var(--fg-muted); }
+.benchline .cite { display: block; margin-top: 3px; font-family: var(--mono);
+                   font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+                   color: var(--fg-dim); }
+.benchline.none { border-left-color: var(--border-soft);
+                  font-family: var(--mono); font-size: 10.5px; color: var(--fg-dim);
+                  text-transform: uppercase; letter-spacing: 0.06em; }
+
 /* ---------- graph canvas ---------- */
 
 #cy {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3 · Value unlock — Mining Agents</title>
+<title>3 · What the gap is worth — Mining Agents</title>
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="../shared/app.css">
 </head>
@@ -12,26 +12,62 @@
 
   <section class="hero reveal">
     <div class="eyebrow">Value unlock</div>
-    <h1>The mechanism, precisely. The magnitude, only where we can source it.</h1>
+    <h1>What the gap is worth, and where it sits</h1>
     <p class="lede">
-      This screen is where the discipline shows. One dollar figure in this
-      repository is real. Everything else on this page states exactly how value is
-      released and leaves the size of it to the people who hold the contracts, the
-      volumes and the tariffs. A CEO who sees a number they did not supply stops
-      trusting the screen.
+      The previous screen measured the distance between this site's ordinary day
+      and its own best one. This screen prices that distance and then divides it,
+      so that every part of the value has a named mechanism behind it and no part
+      of it is claimed twice.
     </p>
+    <p class="lede" id="value-lede"></p>
   </section>
 
-  <!-- The partition is the argument, so it leads. Everything below it is either
-       what a part of the partition does, or a second cut of the same 52 that
-       deliberately does not partition. -->
+  <!-- The price of a recovery point comes first, because it is the only
+       arithmetic on this screen a CEO will do in their head, and they should be
+       able to do it before being asked to read anything else. -->
   <section>
-    <div class="eyebrow reveal">Mutually exclusive, collectively exhaustive</div>
-    <h2 class="reveal">Every entrypoint lands in exactly one place</h2>
+    <div class="eyebrow reveal">The prize</div>
+    <h2 class="reveal">One point of recovery, priced with your numbers</h2>
+    <p class="lede reveal" id="roi-lede"></p>
+
+    <div class="card reveal">
+      <div class="card-cap">The calculation, with its halves kept apart</div>
+      <div class="roi">
+        <div>
+          <div class="half-cap">What this site's record settles</div>
+          <div id="roi-known"></div>
+        </div>
+        <div>
+          <div class="half-cap">What only you hold</div>
+          <div id="roi-inputs"></div>
+        </div>
+      </div>
+      <div class="roi-out" id="roi-out"></div>
+    </div>
+
+    <div id="roi-note" style="margin-top:16px" class="reveal"></div>
+  </section>
+
+  <!-- Six pools, each one a mechanism with a measurement under it. This is the
+       body of the value argument; the partition below is how we prove the six
+       do not overlap. -->
+  <section>
+    <div class="eyebrow reveal">Where the value sits</div>
+    <h2 class="reveal">Six pools, and what each one is holding</h2>
+    <p class="lede reveal" id="pools-lede"></p>
+    <div class="bento" id="detail"></div>
+  </section>
+
+  <!-- Demoted deliberately. The partition is how the six are shown not to
+       overlap; a reader who has accepted the six on their merits can take the
+       proof or leave it, and a reader who has not is owed it. -->
+  <section>
+    <div class="eyebrow reveal">Nothing counted twice</div>
+    <h2 class="reveal">How the six divide the work</h2>
     <p class="lede reveal" id="mece-lede"></p>
 
     <div class="card reveal">
-      <div class="card-cap">The 52, partitioned</div>
+      <div class="card-cap">The work, partitioned</div>
       <div class="partition" id="partition"></div>
       <div class="mece-key" id="mece-key"></div>
       <div id="mece-sum" style="margin-top:18px"></div>
@@ -41,27 +77,16 @@
   </section>
 
   <section>
-    <div class="eyebrow reveal">Branch by branch</div>
-    <h2 class="reveal">Mechanism, magnitude, and the evidence this repository holds</h2>
-    <p class="lede reveal">
-      Each branch states how value is released, what it is worth if we can source
-      that, and the measurement in this repository that the branch acts on. A
-      branch gets a trend line only where a time axis genuinely exists; where the
-      evidence is a spatial distribution or a standing level it is drawn as one
-      and says so.
-    </p>
-    <div class="bento" id="detail"></div>
-  </section>
-
-  <section>
     <div class="eyebrow reveal">The process view</div>
-    <h2 class="reveal">The same 52, cut so that they overlap</h2>
+    <h2 class="reveal">The same work, cut so that it overlaps</h2>
     <p class="lede reveal" id="apqc-lede"></p>
     <div class="card reveal">
-      <table class="data">
-        <thead><tr><th>APQC</th><th>Process</th><th style="text-align:right">Entry points</th><th>Agents</th></tr></thead>
-        <tbody id="apqc"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>APQC</th><th>Process</th><th style="text-align:right">Entry points</th><th>Agents</th></tr></thead>
+          <tbody id="apqc"></tbody>
+        </table>
+      </div>
     </div>
     <div id="apqc-note" style="margin-top:16px" class="reveal"></div>
   </section>
