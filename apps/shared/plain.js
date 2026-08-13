@@ -41,7 +41,7 @@ var TRAVERSALS = {
 };
 
 var TABLES = {
-  asset_dependencies: "which machines depend on which",
+  asset_dependencies: "which machines depend on which others",
   assets: "machine register",
   bid_parts_edge: "which parts each supplier quoted",
   biometric_fatigue_logs: "crew fatigue readings",

@@ -143,15 +143,16 @@ function route(question, personaCode, DATA) {
 }
 
 /* Turn a table phrase into a question. Table phrases that are relative clauses
- * (they begin with "which", "who" or "what") compose ungrammatically with the
- * default frame "What do … show right now?", so they use "Show me …" instead.
- * Every other phrase uses the default frame. Neither frame reintroduces an
- * article into the phrase itself. */
+ * (they begin with "which", "who" or "what") compose as "Show me …" because
+ * they are already a complete clause and the container frame would be redundant.
+ * All other phrases use "What's in the … right now?" — this frame works for
+ * both singular and plural nouns without any number-agreement logic, and it
+ * never reintroduces an article into the phrase itself. */
 function _tableQuestion(phrase) {
   if (/^(?:which|who|what)\b/i.test(phrase)) {
     return "Show me " + phrase + ".";
   }
-  return "What do " + phrase + " show right now?";
+  return "What's in the " + phrase + " right now?";
 }
 
 /* Cold start. No example questions exist anywhere in the catalogue, so these are
