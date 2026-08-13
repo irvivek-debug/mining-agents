@@ -20,6 +20,36 @@
   --sans: "Work Sans", "Inter", system-ui, -apple-system, sans-serif;
   --display: "Bricolage Grotesque", "Outfit", "Work Sans", system-ui, sans-serif;
   --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  /* Radius. Surfaces soften; data does not. Tables, consoles and the graph
+     canvas stay square on purpose — a square edge is what reads as "this is a
+     measurement", and rounding it makes it look like chrome. */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+
+  /* Material 3's emphasized curve for entrances and its standard curve for
+     state changes. One curve family for the whole suite: a screen where three
+     things ease differently reads as three screens. */
+  --ease-emph: cubic-bezier(0.2, 0, 0, 1);
+  --ease-std:  cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-1: 180ms;
+  --dur-2: 320ms;
+  --dur-3: 560ms;
+
+  /* Six hues for the six value branches. Desaturated to sit on a matte
+     background without glowing, and each is bound to exactly one branch
+     everywhere it appears — partition strip, card edge, sparkline, legend — so
+     the colour carries the same meaning on every surface. Hue is never the only
+     carrier: every coloured element also prints its branch code. */
+  --b1: #A7CAED;
+  --b2: #E0B978;
+  --b3: #8FD0BC;
+  --b4: #C4B0E8;
+  --b5: #E8A9A0;
+  --b6: #B9D48C;
+  /* S12 sits above the six and is deliberately not one of them. Neutral. */
+  --bx: #A0A3A8;
 }
 
 * { box-sizing: border-box; }
@@ -91,9 +121,24 @@ hr.rule { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: var(--r-md);
   padding: 16px;
+  /* Elevation here is tone and border, never a shadow. That is Material 3's
+     dark-theme rule and it is also the rule this system already had; a drop
+     shadow on a #131313 background is invisible anyway, so the only honest
+     way to raise a surface is to lighten it. */
+  transition: background var(--dur-1) var(--ease-std),
+              border-color var(--dur-1) var(--ease-std),
+              transform var(--dur-1) var(--ease-std);
 }
+/* Only cards that lead somewhere lift. A card the cursor cannot act on that
+   moves under the cursor is a promise the screen does not keep. */
+.card.lift:hover {
+  background: var(--surface-high);
+  border-color: var(--fg-dim);
+  transform: translateY(-2px);
+}
+.card.lift:focus-within { border-color: var(--accent); }
 .bento { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
 .c3 { grid-column: span 3; } .c4 { grid-column: span 4; }
 .c5 { grid-column: span 5; } .c6 { grid-column: span 6; }
@@ -113,7 +158,7 @@ hr.rule { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
   display: inline-flex; align-items: center; gap: 5px;
   font-family: var(--mono); font-size: 9.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 3px 7px; border-radius: 0; border: 1px solid;
+  padding: 3px 7px; border-radius: var(--r-sm); border: 1px solid;
   white-space: nowrap;
 }
 .b-ok    { color: var(--success);  border-color: var(--success);  background: rgba(5,150,105,0.14); }
@@ -249,7 +294,11 @@ table.data td.num { font-family: var(--mono); font-size: 12px; text-align: right
   .kv.prov dd + dt { margin-top: 12px; }
 }
 
-.metric { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1; }
+/* tabular-nums because several of these count up. Proportional digits change
+   width as they change value, so an animating figure shivers and the eye reads
+   the shiver instead of the number. */
+.metric { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1;
+          font-variant-numeric: tabular-nums; }
 
 /* A missing baseline is rendered as text, not as a number, so it can never be
    mistaken for one at a glance. It also has to fit: [CLIENT INPUT REQUIRED] at
@@ -263,6 +312,7 @@ table.data td.num { font-family: var(--mono); font-size: 12px; text-align: right
 
 .note {
   border-left: 2px solid var(--warning); background: rgba(217,119,6,0.07);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
   padding: 10px 14px; font-size: 13.5px; color: var(--fg);
 }
 .note.info { border-left-color: var(--accent); background: rgba(167,202,237,0.06); }
@@ -275,3 +325,22 @@ ul.tight li { margin-bottom: 5px; }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--mono);
           font-size: 10.5px; color: var(--fg-muted); text-transform: uppercase;
           letter-spacing: 0.06em; }
+
+/* ---------- motion ---------- */
+
+/* Entrances. An element carrying .reveal starts 12px low and transparent; the
+   observer in motion.js adds .in when it comes into view. The whole mechanism
+   lives inside prefers-reduced-motion: no-preference, so a reader who has asked
+   for less motion gets the finished page painted at once — the final state,
+   never a degraded one. That is why the hidden state is defined in here rather
+   than on .reveal itself: with the query unmatched, .reveal means nothing and
+   there is nothing to undo. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity var(--dur-3) var(--ease-emph),
+                transform var(--dur-3) var(--ease-emph);
+  }
+  .reveal.in { opacity: 1; transform: none; }
+}

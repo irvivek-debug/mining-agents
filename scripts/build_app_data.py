@@ -760,6 +760,196 @@ def build_facts() -> dict:
     }
 
 
+# --------------------------------------------------------------------------
+# Signal export
+# --------------------------------------------------------------------------
+
+# Every series on a screen is drawn at this many points. The generated tables
+# hold between 167 and 25,946 rows; a screen cannot draw 25,946 points and does
+# not need to, but it must not pretend the 64 it draws are 64 readings. So each
+# series carries the reading count it was reduced from and states the reduction
+# in its own caption.
+SIGNAL_BUCKETS = 64
+
+# One headline metric per asset -- the reading a control-room operator watches
+# for that machine. Choosing here rather than on the screen keeps the choice
+# next to the assertion below that the metric exists in the table at all.
+ASSET_SIGNALS = {
+    "MILL-01": ("power_draw_mw", "MW", "Power draw"),
+    "CRUSHER-03": ("feed_rate_tph", "t/h", "Feed rate"),
+    "CONVEYOR-02": ("belt_tension_kn", "kN", "Belt tension"),
+    "TRUCK-08": ("payload_tons", "t", "Payload"),
+    "PUMP-104A": ("vibration_hz", "Hz", "Vibration"),
+}
+
+
+def _bucketed(frame, value_col: str, how: str = "mean") -> dict:
+    """Reduce a timestamped frame to SIGNAL_BUCKETS points of equal duration.
+
+    Equal duration rather than equal row count: the buckets are read as a time
+    axis, and a bucket holding twice the rows of its neighbour because the
+    sensor happened to report twice as often would draw a line that is not the
+    shape of the signal. A bucket with no rows carries null and the renderer
+    breaks the line there rather than joining across a gap that has no data.
+    """
+    import pandas as pd
+
+    times = pd.to_datetime(frame["timestamp"], utc=True)
+    lo, hi = times.min(), times.max()
+    edges = pd.date_range(lo, hi, periods=SIGNAL_BUCKETS + 1)
+    # right=False keeps the first reading inside bucket 0; the final edge is
+    # exclusive under that rule, so the last reading is pulled back by hand
+    # rather than dropped.
+    index = pd.cut(times, bins=edges, labels=False, right=False, include_lowest=True)
+    index = index.fillna(SIGNAL_BUCKETS - 1).astype(int).clip(0, SIGNAL_BUCKETS - 1)
+
+    grouped = frame[value_col].groupby(index)
+    reduced = (grouped.sum() if how == "sum" else grouped.mean())
+    if how == "sum":
+        # A bucket with no alerts genuinely holds zero, which is a fact; a
+        # bucket with no readings holds nothing, which is not.
+        reduced = reduced.reindex(range(SIGNAL_BUCKETS), fill_value=0)
+    else:
+        reduced = reduced.reindex(range(SIGNAL_BUCKETS))
+
+    points = [None if v != v else _num(v) for v in reduced.tolist()]
+    present = [p for p in points if p is not None]
+    return {
+        "points": points,
+        "min": min(present),
+        "max": max(present),
+        "readings": int(len(frame)),
+        "from": lo.isoformat(),
+        "to": hi.isoformat(),
+    }
+
+
+def _histogram(values, bins: int) -> dict:
+    """Counts per equal-width bin, with the edges, so a screen can label an axis."""
+    import numpy as np
+
+    counts, edges = np.histogram(values.dropna(), bins=bins)
+    return {
+        "bins": [int(c) for c in counts],
+        "edges": [_num(e) for e in edges],
+        "n": int(values.notna().sum()),
+    }
+
+
+def build_signals() -> dict:
+    """The real measurements the screens draw.
+
+    Until now the bundle carried schemas and counts and no measurement at all,
+    so the only chart in either application plotted how many agents were in a
+    branch. That is an org chart wearing a mine's clothes. Everything here is
+    reduced from data/generated/*.parquet and every entry names the file and
+    the column it came from, because a line on a screen with no source behind
+    it is decoration.
+
+    A branch gets a line only where a time axis genuinely exists. B2's block
+    model is spatial and B5's inventory is a standing level, so those two carry
+    a distribution and a share instead. The asymmetry is the shape of the data
+    and is left visible rather than smoothed into six identical sparklines.
+    """
+    import pandas as pd
+
+    def parquet(name):
+        return pd.read_parquet(GENERATED / f"{name}.parquet")
+
+    generated = f"{GENERATED.relative_to(REPO)}"
+    telemetry = parquet("telemetry_stream")
+    telemetry_src = f"{generated}/telemetry_stream.parquet"
+
+    def series_for(asset_id: str, metric: str):
+        rows = telemetry[
+            (telemetry["asset_id"] == asset_id) & (telemetry["metric_name"] == metric)
+        ]
+        if rows.empty:
+            raise SystemExit(
+                f"telemetry_stream holds no {metric!r} for {asset_id!r}; available: "
+                f"{sorted(telemetry[telemetry['asset_id'] == asset_id]['metric_name'].unique())}"
+            )
+        return _bucketed(rows, "metric_value")
+
+    assets = []
+    for asset_id, (metric, unit, label) in ASSET_SIGNALS.items():
+        assets.append(dict(
+            series_for(asset_id, metric),
+            asset_id=asset_id, metric=metric, unit=unit, label=label,
+            source=telemetry_src,
+        ))
+
+    recovery = parquet("metallurgical_recovery")
+    fatigue = parquet("fatigue_logs_node")
+    blocks = parquet("geological_block_models")
+    inventory = parquet("inventory_levels")
+
+    def reduced_from(readings: int, what: str) -> str:
+        return (
+            f"{readings:,} {what} reduced to {SIGNAL_BUCKETS} points of equal "
+            "duration; each point is the mean of its bucket."
+        )
+
+    b1 = dict(series_for("MILL-01", "power_draw_mw"), kind="series",
+              label="MILL-01 power draw", unit="MW", source=telemetry_src)
+    b1["caption"] = reduced_from(b1["readings"], "readings")
+
+    b3_rows = recovery[["timestamp", "recovery_rate_pct"]]
+    b3 = dict(_bucketed(b3_rows, "recovery_rate_pct"), kind="series",
+              label="Concentrator recovery rate", unit="%",
+              source=f"{generated}/metallurgical_recovery.parquet")
+    b3["caption"] = reduced_from(b3["readings"], "daily records")
+
+    b4 = dict(series_for("TRUCK-08", "payload_tons"), kind="series",
+              label="TRUCK-08 payload", unit="t", source=telemetry_src)
+    b4["caption"] = reduced_from(b4["readings"], "readings")
+
+    b6_rows = fatigue[["timestamp", "fatigue_alert_triggered"]].assign(
+        fatigue_alert_triggered=lambda f: f["fatigue_alert_triggered"].astype(int)
+    )
+    b6 = dict(_bucketed(b6_rows, "fatigue_alert_triggered", how="sum"), kind="series",
+              label="Fatigue alerts raised", unit="alerts",
+              source=f"{generated}/fatigue_logs_node.parquet")
+    b6["caption"] = (
+        f"{int(fatigue['fatigue_alert_triggered'].sum())} alerts across "
+        f"{b6['readings']:,} readings, summed into {SIGNAL_BUCKETS} buckets of "
+        "equal duration."
+    )
+
+    b2 = dict(_histogram(blocks["gold_grade_gpt_est"], 24), kind="distribution",
+              label="Estimated gold grade across the block model", unit="g/t",
+              source=f"{generated}/geological_block_models.parquet")
+    b2["caption"] = (
+        f"{b2['n']:,} block cells by estimated grade. The block model is spatial, "
+        "not timed, so this is a distribution and not a trend."
+    )
+
+    below = int((inventory["stock_level"] <= inventory["reorder_point_limit"]).sum())
+    b5 = {
+        "kind": "share", "label": "SKUs at or below reorder point",
+        "part": below, "whole": int(len(inventory)),
+        "source": f"{generated}/inventory_levels.parquet",
+        "caption": (
+            "Inventory is a standing level with no history in these files, so "
+            "this is the position today and not a trend."
+        ),
+    }
+
+    return {
+        "generated_at": _now(),
+        "source": f"{generated}/*.parquet",
+        "buckets": SIGNAL_BUCKETS,
+        "window": {
+            "from": str(telemetry["timestamp"].min()),
+            "to": str(telemetry["timestamp"].max()),
+            "source": telemetry_src,
+        },
+        "assets": assets,
+        "branch_evidence": {"B1": b1, "B2": b2, "B3": b3,
+                            "B4": b4, "B5": b5, "B6": b6},
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=pathlib.Path, default=DEFAULT_OUT)
@@ -774,10 +964,20 @@ def main() -> None:
     workspace = build_workspace()
     workspace["generated_at"] = _now()
 
+    signals = build_signals()
+    # The value screen renders one evidence chart per branch card. A branch with
+    # no entry would render an empty card that reads as "no evidence exists",
+    # and an entry with no branch would be a chart with nothing to attach to.
+    if set(signals["branch_evidence"]) != set(CEO_TREE):
+        raise SystemExit(
+            f"branch_evidence covers {sorted(signals['branch_evidence'])} but the "
+            f"CEO tree has {sorted(CEO_TREE)}. Every branch needs evidence."
+        )
+
     payloads = {"catalog": catalog, "personas": personas,
                 "graph": graph, "facts": facts,
                 "value_tree": build_value_tree(catalog),
-                "workspace": workspace}
+                "workspace": workspace, "signals": signals}
     for name, payload in payloads.items():
         path = args.out / f"{name}.json"
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
@@ -814,6 +1014,9 @@ def main() -> None:
           f"traversals {len(workspace['traversals'])}, "
           f"models {len(workspace['models'])}, "
           f"approval columns {len(workspace['approval']['fields'])}")
+    print(f"signals {len(signals['assets'])} asset series, "
+          f"{len(signals['branch_evidence'])} branch evidence entries, "
+          f"{signals['buckets']} buckets")
     for name, info in graph["graphs"].items():
         print(f"graph {name:<14} {info['nodes']:>4} nodes {info['edges']:>4} edges  "
               f"{info['node_types']}")

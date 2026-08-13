@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-13T01:44:08+00:00",
+  "generated_at": "2026-08-13T02:37:00+00:00",
   "source": "local files, two vintages: asset, vehicle, assignment and incident records from data/profile/stats.json (Calibration profile of mining_data BEFORE regeneration. Captured 2026-08-10); work orders, parts and fatigue logs from data/generated/*.parquet, the current generated data. BigQuery is authoritative for both and was unreachable at build time.",
   "graphs": {
     "asset": {

@@ -10,7 +10,7 @@
 <body>
 <div class="wrap">
 
-  <section class="hero">
+  <section class="hero reveal">
     <div class="eyebrow">Mining Agents</div>
     <h1>Two applications over one catalog.</h1>
     <p class="lede">
@@ -22,14 +22,32 @@
     </p>
   </section>
 
-  <div class="bento" id="apps"></div>
+  <!-- The site before the software. A reader who has watched five real machines
+       move through half a year of recorded history knows there is a mine behind
+       this before they are asked which door to take. -->
+  <section>
+    <div class="eyebrow reveal">The site, as recorded</div>
+    <h2 class="reveal">Five machines, half a year of readings</h2>
+    <p class="lede reveal" id="strip-lede"></p>
+    <div class="card reveal" style="margin-bottom:16px">
+      <div class="scrub" id="scrub"></div>
+    </div>
+    <div class="sitestrip" id="strip"></div>
+  </section>
 
-  <div id="prov"></div>
+  <section>
+    <div class="eyebrow reveal">Choose a door</div>
+    <h2 class="reveal">The case, or the workspace</h2>
+    <div class="bento" id="apps"></div>
+  </section>
+
+  <div id="prov" class="reveal"></div>
 
 </div>
 
 <script src="shared/data/bundle.js"></script>
 <script src="shared/shell.js"></script>
+<script src="shared/motion.js"></script>
 <script src="landing.js"></script>
 </body>
 </html>
