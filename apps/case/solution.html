@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · The solution — Mining Agents</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">The solution</div>
+    <h1>Two patterns, a hundred agents, fifty-two doors.</h1>
+    <p class="lede">
+      Not a hundred chatbots. Two composition patterns applied deliberately: a
+      swarm where a question needs several angles argued and then criticised, and a
+      single deep agent where it does not. Every agent is bound at build time to
+      the tables it may read and the tools it may call.
+    </p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pattern A</div>
+    <h2>Twelve swarms</h2>
+    <p class="lede">
+      A coordinator, three specialists working the same incident from different
+      evidence, and a critic whose whole job is to find what the other four
+      missed. Five agent nodes, one door.
+    </p>
+    <div class="card"><div id="swarms"></div></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pattern B</div>
+    <h2>Forty departmental deep agents</h2>
+    <p class="lede">
+      One role, one process, one question. Where the answer is a query and a
+      calculation rather than an argument, a swarm is overhead paid five times.
+    </p>
+    <div class="bento" id="tools"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The gate</div>
+    <h2>Where a human still decides</h2>
+    <div class="card">
+      <p style="margin-top:0" id="hitl-lede"></p>
+      <table class="data">
+        <thead><tr><th>Agent</th><th>Does</th><th>Persona</th><th>Pattern</th></tr></thead>
+        <tbody id="hitl"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Deployment</div>
+    <h2>As it actually runs</h2>
+    <div class="bento" id="deploy"></div>
+  </section>
+
+  <div id="prov"></div>
+
+  <div class="btn-row" style="margin-top:32px">
+    <a class="btn" href="value.html">Back</a>
+    <a class="btn primary" href="graph.html">Next — the graph, traversed</a>
+  </div>
+
+</div>
+
+<script src="../shared/data/bundle.js"></script>
+<script src="../shared/shell.js"></script>
+<script src="solution.js"></script>
+</body>
+</html>

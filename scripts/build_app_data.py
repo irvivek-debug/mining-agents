@@ -20,10 +20,12 @@ import collections
 import datetime
 import json
 import pathlib
+import re
 
 import yaml
 
 from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.tools.graph_traverse import TRAVERSALS
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_OUT = REPO / "apps" / "shared" / "data"
@@ -85,8 +87,31 @@ GRAPH_META = {
         "question": "Which fatigue readings precede an operator's incident?",
     },
 }
+
+def _traversal_sql(traversal: str) -> dict:
+    """The deployed SQL, lifted off the tool rather than retyped for the screen.
+
+    The graph screen prints this text and then walks the same pattern in the
+    browser. Retyping it here would let the two drift, and the whole claim of
+    that screen is that what it runs is what the agent runs. The COLUMNS
+    aliases are parsed out of the same string, so a renamed column renames the
+    table header instead of silently leaving it stale.
+    """
+    spec = TRAVERSALS[traversal]
+    columns = re.findall(r"\bAS\s+(\w+)", spec.sql)
+    if not columns:
+        raise SystemExit(f"no COLUMNS aliases parsed out of {traversal!r} SQL")
+    return {
+        "sql": spec.sql.strip(),
+        "params": list(spec.params),
+        "columns": columns,
+        "tables_read": list(spec.tables_read),
+    }
+
+
 for _name, _meta in GRAPH_META.items():
     _meta.update(_traversal_holders(_meta["traversal"]))
+    _meta.update(_traversal_sql(_meta["traversal"]))
 
 
 def _now() -> str:
@@ -156,12 +181,37 @@ def build_catalog() -> dict:
         "by_persona": _counted(entries, lambda a: a.persona),
         "by_value_branch": _counted(entries, lambda a: a.value_branch),
         "by_apqc": _counted(entries, lambda a: a.apqc_code),
+        # The literal code strings above include seven compound codes, and the
+        # catalog spells two pairs both ways round -- "4.3.1 / 9.1.2" and
+        # "9.1.2 / 4.3.1" are one process pair filed as two. Rolling up to the
+        # atomic code is what makes the process view answer "how much of the
+        # estate touches health and safety", which is the question a client
+        # asks. An agent spanning two domains counts in both, so these counts
+        # sum above the entrypoint total by design.
+        "by_apqc_code": _counted_multi(
+            entries, lambda a: [p.strip() for p in a.apqc_code.split("/")]
+        ),
+        "compound_apqc_codes": sorted(
+            {a.apqc_code for a in entries if "/" in a.apqc_code}
+        ),
         "tool_usage": dict(
             collections.Counter(t for a in entries for t in a.tools).most_common()
         ),
         "apqc_names": APQC_NAMES,
         "swarms": swarms,
         "agents": [_agent_record(a) for a in ALL_AGENTS],
+    }
+
+
+def _counted_multi(entries, keys) -> dict:
+    """Like _counted, but an entry may belong to several groups at once."""
+    grouped = collections.defaultdict(list)
+    for agent in entries:
+        for key in keys(agent):
+            grouped[key].append(agent.agent_id)
+    return {
+        k: {"count": len(v), "agents": sorted(v)}
+        for k, v in sorted(grouped.items(), key=lambda kv: (-len(kv[1]), kv[0]))
     }
 
 
@@ -318,8 +368,13 @@ def build_graph_from_local() -> dict:
                 ),
             } if row is not None else {"stocked": False},
         })
+    # Direction matters and is not arbitrary: MiningSupplyChainGraph declares
+    # WorkOrder -[REPLACED_PART]-> SparePart, which is why stockout_exposure
+    # spells the hop as (p:SparePart) <-[:REPLACED_PART]- (wo:WorkOrder). A
+    # screen that draws the arrow the other way is drawing an edge the
+    # warehouse does not have.
     for wo_id, part in sorted(set(wo_parts)):
-        edges.append({"source": part, "target": wo_id,
+        edges.append({"source": wo_id, "target": part,
                       "label": "REPLACED_PART", "graph": "supply_chain"})
 
     # --- MiningOperationsSafetyGraph: FatigueLog -> Operator -> Vehicle -> Incident ---
@@ -375,10 +430,15 @@ def build_graph_from_local() -> dict:
                       "detail": {"shift_date": assignment["shift_date"],
                                  "shift_type": assignment["shift_type"]}})
 
+    # safety_incidents has neither a parquet nor an entry in the calibration
+    # profile, so severity_level -- a column fatigue_to_incident selects -- is
+    # not locally derivable. It is declared here as an explicit null rather than
+    # left absent, so the screen can print "not in local files" in that cell
+    # instead of an empty one that reads as a severity of nothing.
     for involvement in stats["incident_involvements"]:
         incident_id = involvement["incident_id"]
         nodes.append({"id": incident_id, "label": incident_id, "type": "Incident",
-                      "graph": "safety", "detail": {}})
+                      "graph": "safety", "detail": {"severity_level": None}})
         edges.append({"source": involvement["vehicle_id"], "target": incident_id,
                       "label": "INVOLVED_IN", "graph": "safety"})
 
@@ -499,6 +559,129 @@ def _assemble_graph(nodes: list[dict], edges: list[dict], source: str,
     }
 
 
+# The CEO tree from docs/personas-and-value-tree.md section 1, rooted on AISC
+# per tonne, expressed as compositions of the catalog's finer value_branch
+# values. The catalog decides membership; this only says which branch a
+# value_branch rolls into, and build_value_tree refuses to emit a tree whose
+# parts do not add back to 52.
+CEO_TREE = {
+    "B1": {
+        "title": "Asset availability and unplanned downtime",
+        "apqc": "11.0.3",
+        "branches": ["asset_reliability", "maintenance_execution"],
+        "mechanism": (
+            "Detect the fault before it stops the mill, and rank what to fix by "
+            "what fails behind it rather than by who asked loudest."
+        ),
+        "anchored": True,
+    },
+    "B2": {
+        "title": "Ore realisation — grade and dilution against plan",
+        "apqc": "2.0.1",
+        "branches": ["geology"],
+        "mechanism": (
+            "Reconcile what the block model promised against what the mill "
+            "received, so dilution is caught in the pit rather than in the "
+            "month-end variance."
+        ),
+        "anchored": False,
+    },
+    "B3": {
+        "title": "Processing recovery and throughput",
+        "apqc": "11.0.3",
+        "branches": ["processing"],
+        "mechanism": (
+            "Hold recovery against feed variability by moving the plant set "
+            "points on evidence rather than on the last shift's habit."
+        ),
+        "anchored": False,
+    },
+    "B4": {
+        "title": "Haulage productivity and cycle efficiency",
+        "apqc": "11.0.1",
+        "branches": ["mine_ops"],
+        "mechanism": (
+            "Find the queue, the detour and the idling truck while the shift is "
+            "still running and the dispatch can still change."
+        ),
+        "anchored": False,
+    },
+    "B5": {
+        "title": "Materials and procurement cost leakage",
+        "apqc": "4.1.2 / 3.0.1",
+        "branches": ["supply_chain", "procurement"],
+        "mechanism": (
+            "Know a part will not be on the shelf before the crew is standing at "
+            "the store, and buy it on a contract someone checked."
+        ),
+        "anchored": False,
+    },
+    "B6": {
+        "title": "Safety, fatigue and licence to operate",
+        "apqc": "9.1.2",
+        "branches": ["safety"],
+        "mechanism": (
+            "Connect the fatigue signal to the operator, the vehicle and the "
+            "incident, so the intervention lands before the incident does."
+        ),
+        "anchored": False,
+    },
+}
+
+# S12 is deliberately not a branch: it is the convergence layer where all six
+# resolve into one narrative, and the CEO/GM surface.
+CONVERGENCE_BRANCH = "site_wide"
+
+
+def build_value_tree(catalog: dict) -> dict:
+    """The six-branch CEO tree, reconciled against the catalog.
+
+    docs/personas-and-value-tree.md carries an arithmetic slip here: its table
+    gives Branch 6 a count of 10 while listing 9 entrypoints, which absorbs S12
+    into a branch the same document's prose explicitly places above all six. The
+    catalog settles it -- safety holds 9, site_wide holds S12 alone -- and the
+    assertion below stops that slip from reaching a screen.
+    """
+    by_branch = catalog["by_value_branch"]
+    tree, claimed = [], []
+    for code, spec in CEO_TREE.items():
+        agents = sorted(
+            a for b in spec["branches"] for a in by_branch.get(b, {}).get("agents", [])
+        )
+        claimed += agents
+        tree.append(dict(spec, code=code, agents=agents, count=len(agents),
+                         personas=sorted({
+                             a["persona"] for a in catalog["agents"]
+                             if a["agent_id"] in set(agents) and a["persona"]
+                         })))
+
+    convergence = by_branch.get(CONVERGENCE_BRANCH, {}).get("agents", [])
+    total = len(claimed) + len(convergence)
+    expected = catalog["counts"]["entrypoints"]
+    if sorted(claimed + convergence) != sorted(
+        a["agent_id"] for a in catalog["agents"] if a["is_entrypoint"]
+    ):
+        raise SystemExit(
+            f"the CEO tree covers {total} entrypoints, the catalog has {expected}. "
+            "Every entrypoint must land in exactly one branch or in the "
+            "convergence layer; re-derive CEO_TREE against the catalog."
+        )
+
+    return {
+        "root": "All-in Sustaining Cost (AISC) per tonne",
+        "root_source": "docs/personas-and-value-tree.md section 1",
+        "branches": tree,
+        "convergence": {
+            "agents": convergence,
+            "note": (
+                "S12 is deliberately not a branch. It sits above the six as the "
+                "layer where every branch's day resolves into one narrative, "
+                "which is also the CEO and GM surface."
+            ),
+        },
+    }
+
+
 def build_facts() -> dict:
     """The site as the demo actually holds it, counted rather than remembered.
 
@@ -588,7 +771,8 @@ def main() -> None:
     facts = build_facts()
 
     payloads = {"catalog": catalog, "personas": personas,
-                "graph": graph, "facts": facts}
+                "graph": graph, "facts": facts,
+                "value_tree": build_value_tree(catalog)}
     for name, payload in payloads.items():
         path = args.out / f"{name}.json"
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")

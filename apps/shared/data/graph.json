@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-13T00:05:23+00:00",
+  "generated_at": "2026-08-13T00:21:05+00:00",
   "source": "local files, two vintages: asset, vehicle, assignment and incident records from data/profile/stats.json (Calibration profile of mining_data BEFORE regeneration. Captured 2026-08-10); work orders, parts and fatigue logs from data/generated/*.parquet, the current generated data. BigQuery is authoritative for both and was unreachable at build time.",
   "graphs": {
     "asset": {
@@ -14,6 +14,19 @@
       "entrypoints": [
         "D05",
         "S01"
+      ],
+      "sql": "SELECT * FROM GRAPH_TABLE(\n  mining_data.MiningAssetGraph\n  MATCH (origin:assets WHERE origin.asset_id = @asset_id)\n        -[:DEPENDS_ON]->{1,3} (impacted:assets)\n  COLUMNS (origin.asset_id AS fail_origin,\n           impacted.asset_id AS impacted_asset,\n           impacted.criticality_rating AS impacted_criticality)\n)",
+      "params": [
+        "asset_id"
+      ],
+      "columns": [
+        "fail_origin",
+        "impacted_asset",
+        "impacted_criticality"
+      ],
+      "tables_read": [
+        "mining_data.assets",
+        "mining_data.asset_dependencies"
       ],
       "scope": "All 5 assets and all 3 dependency edges. Nothing filtered.",
       "nodes": 5,
@@ -38,6 +51,25 @@
       "entrypoints": [
         "S05",
         "S11"
+      ],
+      "sql": "SELECT * FROM GRAPH_TABLE(\n  mining_data.MiningOperationsSafetyGraph\n  MATCH (f:FatigueLog) -[:LOGGED_FOR]->\n        (o:Operator WHERE o.operator_id = @operator_id)\n        -[:OPERATES]-> (v:Vehicle) -[:INVOLVED_IN]-> (i:Incident)\n  COLUMNS (f.log_id AS log_id, o.operator_id AS operator_id,\n           v.vehicle_id AS vehicle_id, i.incident_id AS incident_id,\n           i.severity_level AS severity_level)\n)",
+      "params": [
+        "operator_id"
+      ],
+      "columns": [
+        "log_id",
+        "operator_id",
+        "vehicle_id",
+        "incident_id",
+        "severity_level"
+      ],
+      "tables_read": [
+        "mining_data.fatigue_logs_node",
+        "mining_data.operators_node",
+        "mining_data.operator_vehicle_assignments",
+        "mining_data.fleet_vehicles",
+        "mining_data.incident_involvements",
+        "mining_data.safety_incidents"
       ],
       "scope": "Fatigue logs that raised an alert: 117 of 3340. Only 5 of 20 operators hold a vehicle assignment, so the traversal returns rows for those and is empty for the rest.",
       "nodes": 147,
@@ -69,6 +101,27 @@
         "D31",
         "S02",
         "S08"
+      ],
+      "sql": "SELECT * FROM GRAPH_TABLE(\n  mining_data.MiningSupplyChainGraph\n  MATCH (p:SparePart WHERE p.part_number IN UNNEST(@below_rop_parts))\n        <-[:REPLACED_PART]- (wo:WorkOrder) <-[:HAS_WORK_ORDER]- (a:Asset)\n  COLUMNS (p.part_number AS part_number, wo.work_order_id AS work_order_id,\n           wo.priority AS priority, wo.repair_cost AS repair_cost,\n           a.asset_id AS asset_id, a.criticality_rating AS criticality_rating)\n)\nWHERE @asset_id IS NULL OR asset_id = @asset_id\nORDER BY part_number, work_order_id",
+      "params": [
+        "below_rop_parts",
+        "asset_id"
+      ],
+      "columns": [
+        "part_number",
+        "work_order_id",
+        "priority",
+        "repair_cost",
+        "asset_id",
+        "criticality_rating"
+      ],
+      "tables_read": [
+        "mining_data.inventory_levels",
+        "mining_data.erp_work_orders",
+        "mining_data.work_order_parts_edge",
+        "mining_data.assets",
+        "mining_data.procurement_bids",
+        "mining_data.bid_parts_edge"
       ],
       "scope": "Work orders that consumed a part: 126 of 500. Parts consumed: 5 of 105 held in inventory.",
       "nodes": 136,
@@ -1700,35 +1753,45 @@
       "label": "INC-5004",
       "type": "Incident",
       "graph": "safety",
-      "detail": {}
+      "detail": {
+        "severity_level": null
+      }
     },
     {
       "id": "INC-5006",
       "label": "INC-5006",
       "type": "Incident",
       "graph": "safety",
-      "detail": {}
+      "detail": {
+        "severity_level": null
+      }
     },
     {
       "id": "INC-5030",
       "label": "INC-5030",
       "type": "Incident",
       "graph": "safety",
-      "detail": {}
+      "detail": {
+        "severity_level": null
+      }
     },
     {
       "id": "INC-5048",
       "label": "INC-5048",
       "type": "Incident",
       "graph": "safety",
-      "detail": {}
+      "detail": {
+        "severity_level": null
+      }
     },
     {
       "id": "INC-5059",
       "label": "INC-5059",
       "type": "Incident",
       "graph": "safety",
-      "detail": {}
+      "detail": {
+        "severity_level": null
+      }
     },
     {
       "id": "OP-101",
@@ -5175,1122 +5238,6 @@
       "graph": "supply_chain"
     },
     {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990014",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990015",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990021",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990075",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990111",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990116",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990148",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990173",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990174",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990196",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990197",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990212",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990213",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990248",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990260",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990278",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990290",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990344",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990365",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990450",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990453",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990478",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990483",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990494",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990497",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-AIR-FILTER-08",
-      "target": "WO-990500",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990018",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990032",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990044",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990052",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990073",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990093",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990145",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990150",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990180",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990188",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990195",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990201",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990266",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990289",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990294",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990300",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990312",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990366",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990378",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990387",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990394",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990424",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990429",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990444",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990456",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990470",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990471",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990474",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990475",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990476",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990481",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990488",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BEARING-PUMP-G1",
-      "target": "WO-990493",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990008",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990011",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990027",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990068",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990088",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990144",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990165",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990184",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990207",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990218",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990223",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990299",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990301",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990304",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990316",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990324",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990331",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990332",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990359",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990374",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990376",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990398",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990419",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990436",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990437",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990457",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990460",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990462",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990467",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990479",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990482",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990484",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990485",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-BELT-SPLICE-G2",
-      "target": "WO-990492",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990004",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990008",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990011",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990027",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990047",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990068",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990088",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990130",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990140",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990144",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990160",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990165",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990171",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990184",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990202",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990207",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990209",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990218",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990222",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990223",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990232",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990253",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990255",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990286",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990299",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990301",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990303",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990304",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990314",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990316",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990324",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990331",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990332",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990339",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990351",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990359",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990374",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990376",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990398",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990403",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990407",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990419",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990436",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990437",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990441",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990451",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990452",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990457",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990460",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990462",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990463",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990465",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990466",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990467",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990472",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990473",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990477",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990479",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990482",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990484",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990485",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990486",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990489",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990492",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990495",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990496",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-LUBE-HEAVY-T2",
-      "target": "WO-990499",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990014",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990015",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990021",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990075",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990111",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990116",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990148",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990173",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990174",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990196",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990197",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990212",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990213",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990248",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990260",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990278",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990290",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990344",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990365",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990450",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990453",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990478",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990483",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990494",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990497",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
-      "source": "SKU-VALVE-SEAL-22",
-      "target": "WO-990500",
-      "label": "REPLACED_PART",
-      "graph": "supply_chain"
-    },
-    {
       "source": "TRUCK-08",
       "target": "WO-990011",
       "label": "HAS_WORK_ORDER",
@@ -6450,6 +5397,1122 @@
       "source": "TRUCK-08",
       "target": "WO-990494",
       "label": "HAS_WORK_ORDER",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990004",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990008",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990008",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990011",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990011",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990014",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990014",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990015",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990015",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990018",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990021",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990021",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990027",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990027",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990032",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990044",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990047",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990052",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990068",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990068",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990073",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990075",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990075",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990088",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990088",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990093",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990111",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990111",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990116",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990116",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990130",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990140",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990144",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990144",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990145",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990148",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990148",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990150",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990160",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990165",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990165",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990171",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990173",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990173",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990174",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990174",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990180",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990184",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990184",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990188",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990195",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990196",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990196",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990197",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990197",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990201",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990202",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990207",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990207",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990209",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990212",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990212",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990213",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990213",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990218",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990218",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990222",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990223",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990223",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990232",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990248",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990248",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990253",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990255",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990260",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990260",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990266",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990278",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990278",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990286",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990289",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990290",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990290",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990294",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990299",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990299",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990300",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990301",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990301",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990303",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990304",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990304",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990312",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990314",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990316",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990316",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990324",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990324",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990331",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990331",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990332",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990332",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990339",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990344",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990344",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990351",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990359",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990359",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990365",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990365",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990366",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990374",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990374",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990376",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990376",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990378",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990387",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990394",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990398",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990398",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990403",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990407",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990419",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990419",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990424",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990429",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990436",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990436",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990437",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990437",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990441",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990444",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990450",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990450",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990451",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990452",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990453",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990453",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990456",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990457",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990457",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990460",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990460",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990462",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990462",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990463",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990465",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990466",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990467",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990467",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990470",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990471",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990472",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990473",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990474",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990475",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990476",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990477",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990478",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990478",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990479",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990479",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990481",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990482",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990482",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990483",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990483",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990484",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990484",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990485",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990485",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990486",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990488",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990489",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990492",
+      "target": "SKU-BELT-SPLICE-G2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990492",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990493",
+      "target": "SKU-BEARING-PUMP-G1",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990494",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990494",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990495",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990496",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990497",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990497",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990499",
+      "target": "SKU-LUBE-HEAVY-T2",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990500",
+      "target": "SKU-AIR-FILTER-08",
+      "label": "REPLACED_PART",
+      "graph": "supply_chain"
+    },
+    {
+      "source": "WO-990500",
+      "target": "SKU-VALVE-SEAL-22",
+      "label": "REPLACED_PART",
       "graph": "supply_chain"
     }
   ]

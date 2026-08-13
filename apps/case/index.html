@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · The proposition — Mining Agents</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">The case for change</div>
+    <h1>Fifty-two questions a person asks today, answered by an agent that already knows the answer's shape.</h1>
+    <p class="lede">
+      Not a chatbot over a data lake. Fifty-two named entry points, each owned by a
+      named role, each bound to the tables it is allowed to read, the process it
+      belongs to, and the approval it must seek before it acts. This screen states
+      what is deployed. Every figure on it is counted from the catalog that builds
+      the agents, not from a slide.
+    </p>
+  </section>
+
+  <section>
+    <div class="eyebrow">The unit of consequence</div>
+    <div class="bento">
+      <div class="card c5 stat">
+        <div>
+          <div class="metric accent" id="anchor"></div>
+          <div class="metric-sub">Per hour of mill downtime</div>
+        </div>
+        <div class="mono" style="color:var(--fg-dim)" id="anchor-src"></div>
+      </div>
+      <div class="card c7">
+        <div class="card-cap">Why this is the only dollar figure here</div>
+        <p style="margin-top:0">
+          It is the only one this repository establishes. The Reliability Engineer
+          states it in their own words, and the value tree carries it as the anchor
+          for asset reliability. Every other magnitude — the cost of a stockout, the
+          value of an hour recovered, the price of a deferred shipment — depends on
+          this site's contracts and volumes, which are the client's to supply.
+        </p>
+        <p style="margin-bottom:0">
+          So this deck does not print an ROI it cannot source. Where a number belongs
+          and is not ours to know, it says so, in orange, at a size no one can mistake
+          for a result.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What is deployed</div>
+    <h2>The shape of it</h2>
+    <div class="bento" id="scale"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The change</div>
+    <h2>What it replaces</h2>
+    <div class="bento">
+      <div class="card c6">
+        <div class="card-cap">Today, in their words</div>
+        <div id="today"></div>
+      </div>
+      <div class="card c6">
+        <div class="card-cap">With an agent</div>
+        <p style="margin-top:0">
+          The same question goes to one entry point. The agent already holds the
+          schema, the site clock, the process it belongs to, and the tables it may
+          read. It returns the answer with the query it ran and the rows it read
+          attached, so the engineer checks the working rather than reassembling it.
+        </p>
+        <div class="note info" style="margin-top:14px">
+          <strong>Measured, not claimed</strong><br>
+          D01 — Telemetry Anomaly Detector — currently answers
+          <span class="mono">"Which assets show abnormal telemetry in the last 24 hours?"</span>
+          in <span class="mono">48.0s</span> on a warm container, spending 5 of its 9
+          BigQuery calls working out what the tables contain. Removing that orientation
+          cost is the open backend workstream; the figure above is what it does today,
+          before that fix.
+        </div>
+        <p class="mono" style="color:var(--fg-dim);font-size:11px;margin-bottom:0">
+          The human baseline this compares against is
+          <span style="color:var(--warning)">[CLIENT INPUT REQUIRED]</span>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div id="prov"></div>
+
+  <div class="btn-row" style="margin-top:32px">
+    <a class="btn primary" href="scenario.html">Next — the mine as the demo holds it</a>
+  </div>
+
+</div>
+
+<script src="../shared/data/bundle.js"></script>
+<script src="../shared/shell.js"></script>
+<script src="proposition.js"></script>
+</body>
+</html>

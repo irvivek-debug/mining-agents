@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · The graph, traversed — Mining Agents</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">The graph, traversed</div>
+    <h1>Three graphs. Three questions no table can answer.</h1>
+    <p class="lede">
+      A join answers "what is related to this row". A graph answers "what is
+      reachable from this row, and how far". Those are different questions, and
+      the second is the one an operator asks at 3am. Pick an origin below and the
+      traversal runs in front of you — the same pattern, hop by hop, that the
+      deployed agent sends to BigQuery.
+    </p>
+  </section>
+
+  <section>
+    <div class="eyebrow">The estate</div>
+    <h2>What is actually traversed</h2>
+    <div class="card">
+      <table class="data">
+        <thead><tr>
+          <th>BigQuery graph</th><th>Traversal</th><th>The question</th>
+          <th style="text-align:right">Nodes</th><th style="text-align:right">Edges</th>
+          <th>Entry points</th>
+        </tr></thead>
+        <tbody id="estate"></tbody>
+      </table>
+    </div>
+    <div id="estate-note" style="margin-top:16px"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Run it</div>
+    <h2>Pick an origin, watch the pattern walk</h2>
+
+    <div class="tabstrip" id="tabs" role="tablist"></div>
+
+    <div style="margin:16px 0" id="scope"></div>
+
+    <div class="graph-layout">
+      <div>
+        <div id="cy"></div>
+        <div class="legend" id="legend" style="margin-top:10px"></div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-cap">Bind the parameters</div>
+          <div id="controls"></div>
+          <div class="btn-row" style="margin-top:14px">
+            <button class="btn primary" id="run">Run traversal</button>
+            <button class="btn" id="reset">Reset</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-cap">Tool call</div>
+          <div class="console" id="console"></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-cap">Node inspector</div>
+          <div class="inspect" id="inspect"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Returned rows</div>
+    <h2 id="rows-head">The traversal's own columns</h2>
+    <p class="lede" id="rows-lede"></p>
+    <div class="card">
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr id="rows-head-row"></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The pattern</div>
+    <h2>The SQL the agent sends</h2>
+    <p class="lede">
+      Not a paraphrase. This is lifted out of
+      <span class="mono">mining_agents/tools/graph_traverse.py</span> at build
+      time, so the text on this screen cannot drift from the text in the deployed
+      container.
+    </p>
+    <div class="card"><div class="console" id="sql"></div></div>
+    <div id="sql-note" style="margin-top:16px"></div>
+  </section>
+
+  <div id="prov"></div>
+
+  <div class="btn-row" style="margin-top:32px">
+    <a class="btn" href="solution.html">Back</a>
+    <a class="btn" href="index.html">Start again</a>
+  </div>
+
+</div>
+
+<script src="../shared/vendor/cytoscape.min.js"></script>
+<script src="../shared/data/bundle.js"></script>
+<script src="../shared/shell.js"></script>
+<script src="graph.js"></script>
+</body>
+</html>
