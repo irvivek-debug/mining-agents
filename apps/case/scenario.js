@@ -51,7 +51,7 @@ const DAYS = GAP.rows[0].days;
 el("hero-lede").innerHTML =
   `Below are ${esc(DAYS)} days of this plant's own operation. Every bar is a ` +
   "day the site actually ran, at the rate it actually ran. The distance " +
-  "between the ordinary day and the good day is the whole of the argument " +
+  "between the ordinary day and the best day is the whole of the argument " +
   "that follows: no new plant, no vendor claim, nothing that has to be taken " +
   "on trust.";
 
