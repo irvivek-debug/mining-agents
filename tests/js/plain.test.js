@@ -62,6 +62,20 @@ test("a failed response names what failed", () => {
   );
 });
 
+test("failLine bq_query on a non-articled table still carries the article", () => {
+  assert.equal(
+    P.failLine("bq_query", { sql: "SELECT * FROM `mining_data.telemetry_stream` LIMIT 10" }),
+    "Couldn't read the sensor readings — that lookup failed."
+  );
+});
+
+test("callLine bq_query on an articled table does not double the article", () => {
+  assert.equal(
+    P.callLine("bq_query", { sql: "SELECT * FROM `mining_data.assets` LIMIT 10" }),
+    "Reading the machine register"
+  );
+});
+
 test("tableFromSql finds the first qualified table and nothing else", () => {
   assert.equal(
     P.tableFromSql("SELECT a FROM `mining_data.assets` JOIN `mining_data.maintenance_logs`"),

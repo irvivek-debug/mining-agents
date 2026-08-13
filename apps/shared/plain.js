@@ -32,7 +32,7 @@ var TOOL_DOING = {
 /* The verb for the composed form, "Reading the sensor readings". Only the two
  * tools that take a noun need one. */
 var TOOL_VERB = { bq_query: "Reading the", graph_traverse: "Tracing" };
-var TOOL_FAILED = { bq_query: "Couldn't read", graph_traverse: "Couldn't trace" };
+var TOOL_FAILED = { bq_query: "Couldn't read the", graph_traverse: "Couldn't trace" };
 
 var TRAVERSALS = {
   blast_radius: "what else stops if this stops",
@@ -42,7 +42,7 @@ var TRAVERSALS = {
 
 var TABLES = {
   asset_dependencies: "which machines depend on which",
-  assets: "the machine register",
+  assets: "machine register",
   bid_parts_edge: "which parts each supplier quoted",
   biometric_fatigue_logs: "crew fatigue readings",
   crusher_states: "crusher run states",
@@ -50,15 +50,15 @@ var TABLES = {
   drill_holes: "drill hole records",
   erp_work_orders: "work orders in the ERP",
   fatigue_logs_node: "crew fatigue records",
-  fleet_vehicles: "the truck and loader fleet",
-  geological_block_models: "the ore body block model",
+  fleet_vehicles: "truck and loader fleet",
+  geological_block_models: "ore body block model",
   haulage_routes: "haul routes",
   incident_involvements: "who was involved in each incident",
   inventory_levels: "parts on hand",
   maintenance_logs: "maintenance history",
   metallurgical_recovery: "plant recovery records",
   operator_vehicle_assignments: "who drove what",
-  operators_node: "the operator roster",
+  operators_node: "operator roster",
   procurement_bids: "supplier bids",
   radio_communications: "radio traffic",
   rfp_items: "items out to tender",
