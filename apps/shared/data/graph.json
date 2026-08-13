@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-12T23:57:00+00:00",
-  "source": "local-profile-cache",
+  "generated_at": "2026-08-13T00:05:23+00:00",
+  "source": "local files, two vintages: asset, vehicle, assignment and incident records from data/profile/stats.json (Calibration profile of mining_data BEFORE regeneration. Captured 2026-08-10); work orders, parts and fatigue logs from data/generated/*.parquet, the current generated data. BigQuery is authoritative for both and was unreachable at build time.",
   "graphs": {
     "asset": {
       "bigquery_graph": "MiningAssetGraph",
@@ -2061,10 +2061,12 @@
       "type": "SparePart",
       "graph": "supply_chain",
       "detail": {
-        "on_hand": null,
-        "reorder_point": null,
+        "description": "Engine Air Filter Cartridge Set",
+        "stock_level": 2,
+        "reorder_point_limit": 4,
         "lead_time_days": 7,
-        "unit_price_usd": null
+        "unit_price_usd": 450,
+        "below_reorder_point": true
       }
     },
     {
@@ -2073,10 +2075,12 @@
       "type": "SparePart",
       "graph": "supply_chain",
       "detail": {
-        "on_hand": null,
-        "reorder_point": null,
+        "description": "High-load Centrifugal Slurry Pump Bearing Unit",
+        "stock_level": 0,
+        "reorder_point_limit": 8,
         "lead_time_days": 14,
-        "unit_price_usd": null
+        "unit_price_usd": 1250,
+        "below_reorder_point": true
       }
     },
     {
@@ -2085,10 +2089,12 @@
       "type": "SparePart",
       "graph": "supply_chain",
       "detail": {
-        "on_hand": null,
-        "reorder_point": null,
+        "description": "Pit-to-Crusher Conveyor Belt Vulcanizing Splice Kit",
+        "stock_level": 2,
+        "reorder_point_limit": 4,
         "lead_time_days": 7,
-        "unit_price_usd": null
+        "unit_price_usd": 450,
+        "below_reorder_point": true
       }
     },
     {
@@ -2097,10 +2103,12 @@
       "type": "SparePart",
       "graph": "supply_chain",
       "detail": {
-        "on_hand": null,
-        "reorder_point": null,
+        "description": "Conveyor Belt Gearbox Heavy Lubricant Fluid (20L)",
+        "stock_level": 1,
+        "reorder_point_limit": 3,
         "lead_time_days": 3,
-        "unit_price_usd": null
+        "unit_price_usd": 180,
+        "below_reorder_point": true
       }
     },
     {
@@ -2109,10 +2117,12 @@
       "type": "SparePart",
       "graph": "supply_chain",
       "detail": {
-        "on_hand": null,
-        "reorder_point": null,
+        "description": "Hydraulic Valve Gasket and Seal Kit",
+        "stock_level": 2,
+        "reorder_point_limit": 3,
         "lead_time_days": 7,
-        "unit_price_usd": null
+        "unit_price_usd": 450,
+        "below_reorder_point": true
       }
     },
     {
@@ -2124,7 +2134,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 4500
+        "repair_cost": 4500,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2136,7 +2147,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 2070
+        "repair_cost": 2070,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2148,7 +2160,8 @@
         "asset_id": "TRUCK-08",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 2010
+        "repair_cost": 2010,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2160,7 +2173,8 @@
         "asset_id": "MILL-01",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 13320
+        "repair_cost": 13320,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2172,7 +2186,8 @@
         "asset_id": "MILL-01",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 4080
+        "repair_cost": 4080,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2184,7 +2199,8 @@
         "asset_id": "TRUCK-08",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11270
+        "repair_cost": 11270,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2196,7 +2212,8 @@
         "asset_id": "TRUCK-08",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 15750
+        "repair_cost": 15750,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2208,7 +2225,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 2940
+        "repair_cost": 2940,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2220,7 +2238,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 5345
+        "repair_cost": 5345,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2232,7 +2251,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4940
+        "repair_cost": 4940,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2244,7 +2264,8 @@
         "asset_id": "MILL-01",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 4020
+        "repair_cost": 4020,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2256,7 +2277,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 7190
+        "repair_cost": 7190,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2268,7 +2290,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 8010
+        "repair_cost": 8010,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2280,7 +2303,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 6110
+        "repair_cost": 6110,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2292,7 +2316,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 6975
+        "repair_cost": 6975,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2304,7 +2329,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 3105
+        "repair_cost": 3105,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2316,7 +2342,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 2285
+        "repair_cost": 2285,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2328,7 +2355,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3090
+        "repair_cost": 3090,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2340,7 +2368,8 @@
         "asset_id": "MILL-01",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 6480
+        "repair_cost": 6480,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2352,7 +2381,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 3105
+        "repair_cost": 3105,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2364,7 +2394,8 @@
         "asset_id": "TRUCK-08",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3030
+        "repair_cost": 3030,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2376,7 +2407,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 8010
+        "repair_cost": 8010,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2388,7 +2420,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 10250
+        "repair_cost": 10250,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2400,7 +2433,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11160
+        "repair_cost": 11160,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2412,7 +2446,8 @@
         "asset_id": "PUMP-104A",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4085
+        "repair_cost": 4085,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2424,7 +2459,8 @@
         "asset_id": "MILL-01",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 4200
+        "repair_cost": 4200,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2436,7 +2472,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4095
+        "repair_cost": 4095,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2448,7 +2485,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 7515
+        "repair_cost": 7515,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2460,7 +2498,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 5220
+        "repair_cost": 5220,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2472,7 +2511,8 @@
         "asset_id": "TRUCK-08",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 6030
+        "repair_cost": 6030,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2484,7 +2524,8 @@
         "asset_id": "MILL-01",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 4310
+        "repair_cost": 4310,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2496,7 +2537,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 2745
+        "repair_cost": 2745,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2508,7 +2550,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 10190
+        "repair_cost": 10190,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2520,7 +2563,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 6560
+        "repair_cost": 6560,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2532,7 +2576,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 12720
+        "repair_cost": 12720,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2544,7 +2589,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 3915
+        "repair_cost": 3915,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2556,7 +2602,8 @@
         "asset_id": "PUMP-104A",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 4130
+        "repair_cost": 4130,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2568,7 +2615,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 5265
+        "repair_cost": 5265,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2580,7 +2628,8 @@
         "asset_id": "TRUCK-08",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 10950
+        "repair_cost": 10950,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2592,7 +2641,8 @@
         "asset_id": "TRUCK-08",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 1440
+        "repair_cost": 1440,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2604,7 +2654,8 @@
         "asset_id": "PUMP-104A",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 2790
+        "repair_cost": 2790,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2616,7 +2667,8 @@
         "asset_id": "PUMP-104A",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 8280
+        "repair_cost": 8280,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2628,7 +2680,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 14940
+        "repair_cost": 14940,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2640,7 +2693,8 @@
         "asset_id": "MILL-01",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11220
+        "repair_cost": 11220,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2652,7 +2706,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 5280
+        "repair_cost": 5280,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2664,7 +2719,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 2100
+        "repair_cost": 2100,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2676,7 +2732,8 @@
         "asset_id": "TRUCK-08",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 9180
+        "repair_cost": 9180,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -2688,7 +2745,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 5340
+        "repair_cost": 5340,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2700,7 +2758,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 3330
+        "repair_cost": 3330,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2712,7 +2771,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3600
+        "repair_cost": 3600,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2724,7 +2784,8 @@
         "asset_id": "MILL-01",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 17360
+        "repair_cost": 17360,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2736,7 +2797,8 @@
         "asset_id": "PUMP-104A",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 9180
+        "repair_cost": 9180,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2748,7 +2810,8 @@
         "asset_id": "TRUCK-08",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 1590
+        "repair_cost": 1590,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2760,7 +2823,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 8765
+        "repair_cost": 8765,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2772,7 +2836,8 @@
         "asset_id": "MILL-01",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3270
+        "repair_cost": 3270,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2784,7 +2849,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 6515
+        "repair_cost": 6515,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2796,7 +2862,8 @@
         "asset_id": "MILL-01",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 1800
+        "repair_cost": 1800,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -2808,7 +2875,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 2150
+        "repair_cost": 2150,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2820,7 +2888,8 @@
         "asset_id": "PUMP-104A",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 8730
+        "repair_cost": 8730,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2832,7 +2901,8 @@
         "asset_id": "TRUCK-08",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 6540
+        "repair_cost": 6540,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2844,7 +2914,8 @@
         "asset_id": "PUMP-104A",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 2880
+        "repair_cost": 2880,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -2856,7 +2927,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 5090
+        "repair_cost": 5090,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2868,7 +2940,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 4590
+        "repair_cost": 4590,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2880,7 +2953,8 @@
         "asset_id": "MILL-01",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 4500
+        "repair_cost": 4500,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2892,7 +2966,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 6795
+        "repair_cost": 6795,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2904,7 +2979,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 12510
+        "repair_cost": 12510,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2916,7 +2992,8 @@
         "asset_id": "PUMP-104A",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 2025
+        "repair_cost": 2025,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2928,7 +3005,8 @@
         "asset_id": "MILL-01",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 4680
+        "repair_cost": 4680,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2940,7 +3018,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 4770
+        "repair_cost": 4770,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -2952,7 +3031,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 8325
+        "repair_cost": 8325,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -2964,7 +3044,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 9690
+        "repair_cost": 9690,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -2976,7 +3057,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 8775
+        "repair_cost": 8775,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -2988,7 +3070,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 9575
+        "repair_cost": 9575,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3000,7 +3083,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 7890
+        "repair_cost": 7890,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -3012,7 +3096,8 @@
         "asset_id": "PUMP-104A",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4500
+        "repair_cost": 4500,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3024,7 +3109,8 @@
         "asset_id": "MILL-01",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3800
+        "repair_cost": 3800,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3036,7 +3122,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 8150
+        "repair_cost": 8150,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -3048,7 +3135,8 @@
         "asset_id": "PUMP-104A",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 11420
+        "repair_cost": 11420,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -3060,7 +3148,8 @@
         "asset_id": "TRUCK-08",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 4200
+        "repair_cost": 4200,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3072,7 +3161,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 2520
+        "repair_cost": 2520,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3084,7 +3174,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 9900
+        "repair_cost": 9900,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3096,7 +3187,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4455
+        "repair_cost": 4455,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3108,7 +3200,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 6830
+        "repair_cost": 6830,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3120,7 +3213,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 3995
+        "repair_cost": 3995,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -3132,7 +3226,8 @@
         "asset_id": "PUMP-104A",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 5670
+        "repair_cost": 5670,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -3144,7 +3239,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 5370
+        "repair_cost": 5370,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3156,7 +3252,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3840
+        "repair_cost": 3840,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -3168,7 +3265,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 6050
+        "repair_cost": 6050,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3180,7 +3278,8 @@
         "asset_id": "TRUCK-08",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 5700
+        "repair_cost": 5700,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3192,7 +3291,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4905
+        "repair_cost": 4905,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3204,7 +3304,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 8940
+        "repair_cost": 8940,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3216,7 +3317,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11220
+        "repair_cost": 11220,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3228,7 +3330,8 @@
         "asset_id": "TRUCK-08",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 5630
+        "repair_cost": 5630,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3240,7 +3343,8 @@
         "asset_id": "MILL-01",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 4590
+        "repair_cost": 4590,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -3252,7 +3356,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 17280
+        "repair_cost": 17280,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3264,7 +3369,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 1350
+        "repair_cost": 1350,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3276,7 +3382,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 1395
+        "repair_cost": 1395,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -3288,7 +3395,8 @@
         "asset_id": "MILL-01",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3450
+        "repair_cost": 3450,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3300,7 +3408,8 @@
         "asset_id": "PUMP-104A",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 1530
+        "repair_cost": 1530,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3312,7 +3421,8 @@
         "asset_id": "MILL-01",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11010
+        "repair_cost": 11010,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3324,7 +3434,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 6170
+        "repair_cost": 6170,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     },
     {
@@ -3336,7 +3447,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11990
+        "repair_cost": 11990,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3348,7 +3460,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4410
+        "repair_cost": 4410,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -3360,7 +3473,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 2940
+        "repair_cost": 2940,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3372,7 +3486,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 4430
+        "repair_cost": 4430,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3384,7 +3499,8 @@
         "asset_id": "TRUCK-08",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 3620
+        "repair_cost": 3620,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -3396,7 +3512,8 @@
         "asset_id": "MILL-01",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11510
+        "repair_cost": 11510,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -3408,7 +3525,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 7620
+        "repair_cost": 7620,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3420,7 +3538,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 5400
+        "repair_cost": 5400,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3432,7 +3551,8 @@
         "asset_id": "MILL-01",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 5190
+        "repair_cost": 5190,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3444,7 +3564,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 13250
+        "repair_cost": 13250,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3456,7 +3577,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 5625
+        "repair_cost": 5625,
+        "description": "Replace scraper blade due to severe wear."
       }
     },
     {
@@ -3468,7 +3590,8 @@
         "asset_id": "CRUSHER-03",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 6030
+        "repair_cost": 6030,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3480,7 +3603,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "CRITICAL",
         "status": "COMPLETED",
-        "repair_cost": 16560
+        "repair_cost": 16560,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -3492,7 +3616,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 8190
+        "repair_cost": 8190,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3504,7 +3629,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 4185
+        "repair_cost": 4185,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3516,7 +3642,8 @@
         "asset_id": "TRUCK-08",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 7610
+        "repair_cost": 7610,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3528,7 +3655,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 3060
+        "repair_cost": 3060,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3540,7 +3668,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 3825
+        "repair_cost": 3825,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3552,7 +3681,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 8585
+        "repair_cost": 8585,
+        "description": "Vibration spike on bearings. Perform inspection."
       }
     },
     {
@@ -3564,7 +3694,8 @@
         "asset_id": "TRUCK-08",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 7695
+        "repair_cost": 7695,
+        "description": "Inspect lubrication line nozzle for blockages."
       }
     },
     {
@@ -3576,7 +3707,8 @@
         "asset_id": "CONVEYOR-02",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 7605
+        "repair_cost": 7605,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3588,7 +3720,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 7740
+        "repair_cost": 7740,
+        "description": "Hydraulic valve fluid leak detected - replace gaskets."
       }
     },
     {
@@ -3600,7 +3733,8 @@
         "asset_id": "PUMP-104A",
         "priority": "HIGH",
         "status": "COMPLETED",
-        "repair_cost": 11100
+        "repair_cost": 11100,
+        "description": "Adjust drive belt tensioning system."
       }
     },
     {
@@ -3612,7 +3746,8 @@
         "asset_id": "MILL-01",
         "priority": "MEDIUM",
         "status": "COMPLETED",
-        "repair_cost": 5535
+        "repair_cost": 5535,
+        "description": "Re-vulcanize splice on belt segment."
       }
     },
     {
@@ -3624,7 +3759,8 @@
         "asset_id": "PUMP-104A",
         "priority": "LOW",
         "status": "COMPLETED",
-        "repair_cost": 2250
+        "repair_cost": 2250,
+        "description": "Air filter clog warning - replace filter cartridges."
       }
     }
   ],

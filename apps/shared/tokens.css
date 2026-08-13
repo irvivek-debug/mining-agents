@@ -1,0 +1,249 @@
+/* Copied from docs/ux/tokens.css by scripts/build_app_data.py.
+   Edit the source, not this file. */
+/* Design tokens from the ui-ux-design-system skill.
+   Dark-mode first, pure matte, zero gloss, 1px crisp borders, no drop shadows. */
+
+:root {
+  --bg:            #131313;
+  --surface:       #1F2020;
+  --surface-high:  #2A2A2A;
+  --surface-top:   #353535;
+  --fg:            #E4E2E1;
+  --fg-muted:      #A0A3A8;
+  --fg-dim:        #6E7176;
+  --border:        #374151;
+  --border-soft:   rgba(255, 255, 255, 0.08);
+  --accent:        #A7CAED;
+  --success:       #059669;
+  --warning:       #D97706;
+  --critical:      #EA580C;
+  --sans: "Work Sans", "Inter", system-ui, -apple-system, sans-serif;
+  --display: "Bricolage Grotesque", "Outfit", "Work Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 700; line-height: 1.2; }
+h1 { font-size: 34px; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 25px; margin: 0 0 12px; letter-spacing: -0.01em; }
+h3 { font-size: 18px; margin: 0 0 8px; }
+h4 { font-size: 15px; margin: 0 0 6px; }
+
+a { color: var(--accent); }
+
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+/* ---------- structure ---------- */
+
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 28px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.topbar .brand {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em; color: var(--fg-muted);
+}
+.topbar nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.topbar nav a {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--fg-muted); text-decoration: none;
+  padding: 8px 10px; min-height: 32px; display: inline-flex; align-items: center;
+  border: 1px solid transparent;
+}
+.topbar nav a:hover { color: var(--fg); border-color: var(--border); }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 32px 28px 96px; }
+
+section { margin: 0 0 64px; scroll-margin-top: 76px; }
+
+.eyebrow {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em; color: var(--accent);
+  margin-bottom: 6px;
+}
+.lede { color: var(--fg-muted); max-width: 78ch; }
+
+hr.rule { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+
+/* ---------- cards ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 16px;
+}
+.bento { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+.c3 { grid-column: span 3; } .c4 { grid-column: span 4; }
+.c5 { grid-column: span 5; } .c6 { grid-column: span 6; }
+.c7 { grid-column: span 7; } .c8 { grid-column: span 8; }
+.c9 { grid-column: span 9; } .c12 { grid-column: span 12; }
+@media (max-width: 900px) { .bento > * { grid-column: span 12 !important; } }
+
+.card-cap {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted);
+  border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px;
+}
+
+/* ---------- badges & pills ---------- */
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 3px 7px; border-radius: 0; border: 1px solid;
+  white-space: nowrap;
+}
+.b-ok    { color: var(--success);  border-color: var(--success);  background: rgba(5,150,105,0.14); }
+.b-warn  { color: var(--warning);  border-color: var(--warning);  background: rgba(217,119,6,0.14); }
+.b-crit  { color: var(--critical); border-color: var(--critical); background: rgba(234,88,12,0.14); }
+.b-info  { color: var(--accent);   border-color: var(--accent);   background: rgba(167,202,237,0.12); }
+.b-idle  { color: var(--fg-dim);   border-color: var(--border);   background: transparent; }
+
+.pill {
+  display: inline-flex; align-items: center; border-radius: 999px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  padding: 4px 10px; border: 1px solid var(--border); color: var(--fg-muted);
+}
+
+/* ---------- telemetry console ---------- */
+
+.console {
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed var(--border);
+  padding: 12px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.55;
+  color: var(--accent);
+  white-space: pre-wrap; overflow-x: auto;
+}
+.console .dim { color: var(--fg-dim); }
+.console .ok { color: var(--success); }
+.console .warn { color: var(--warning); }
+.console .crit { color: var(--critical); }
+
+/* ---------- tables ---------- */
+
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data th {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-muted);
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.data td {
+  padding: 9px 10px; border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+table.data tr:last-child td { border-bottom: 0; }
+table.data td.num { font-family: var(--mono); font-size: 12px; text-align: right; }
+
+/* On a handheld the table scrolls, the page does not. Several personas work
+   from a tablet in the pit or a plant handheld, and a page that drifts
+   sideways under a gloved thumb is unusable there. Measured at 414px: the
+   tables were pushing the document 132px wider than the viewport. */
+@media (max-width: 760px) {
+  table.data { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .console { overflow-x: auto; }
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  min-height: 44px; padding: 0 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface-high); color: var(--fg);
+  cursor: pointer; position: relative; overflow: hidden;
+}
+.btn:hover  { background: var(--surface-top); }
+.btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.btn.primary { border-color: var(--accent); color: var(--accent); }
+.btn.danger  { border-color: var(--critical); color: var(--critical); }
+.btn[disabled] { opacity: 0.38; cursor: not-allowed;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.05) 5px, rgba(255,255,255,0.05) 10px); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* hold-to-confirm progress stroke */
+.hold-fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%;
+  background: rgba(234,88,12,0.28); pointer-events: none; transition: width 60ms linear;
+}
+.btn .lbl { position: relative; z-index: 1; }
+
+/* ---------- wireframe chrome ---------- */
+
+.screen {
+  border: 1px solid var(--border); background: var(--bg);
+}
+.screen-chrome {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 9px 14px; border-bottom: 1px solid var(--border); background: var(--surface);
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--fg-muted);
+}
+.screen-chrome .spacer { flex: 1; }
+.screen-body { padding: 16px; }
+
+.tabstrip { display: flex; gap: 2px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.tabstrip button {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  background: transparent; color: var(--fg-muted); cursor: pointer;
+  border: 0; border-bottom: 2px solid transparent;
+  min-height: 44px; padding: 0 14px;
+}
+.tabstrip button:hover { color: var(--fg); background: rgba(255,255,255,0.04); }
+.tabstrip button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---------- misc ---------- */
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13px; }
+.kv dt { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase;
+         letter-spacing: 0.06em; color: var(--fg-muted); padding-top: 3px; }
+.kv dd { margin: 0; }
+
+.metric { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1; }
+
+/* A missing baseline is rendered as text, not as a number, so it can never be
+   mistaken for one at a glance. It also has to fit: [CLIENT INPUT REQUIRED] at
+   the full metric size overflowed its tile. */
+.metric.gap {
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
+  line-height: 1.25; letter-spacing: 0.02em; color: var(--warning);
+}
+.metric-sub { font-family: var(--mono); font-size: 10.5px; color: var(--fg-muted);
+              text-transform: uppercase; letter-spacing: 0.06em; margin-top: 6px; }
+
+.note {
+  border-left: 2px solid var(--warning); background: rgba(217,119,6,0.07);
+  padding: 10px 14px; font-size: 13.5px; color: var(--fg);
+}
+.note.info { border-left-color: var(--accent); background: rgba(167,202,237,0.06); }
+.note strong { font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+               letter-spacing: 0.06em; }
+
+ul.tight { margin: 8px 0; padding-left: 18px; }
+ul.tight li { margin-bottom: 5px; }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--mono);
+          font-size: 10.5px; color: var(--fg-muted); text-transform: uppercase;
+          letter-spacing: 0.06em; }

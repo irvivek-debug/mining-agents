@@ -288,10 +288,11 @@ def build_graph_from_local() -> dict:
             "type": "WorkOrder",
             "graph": "supply_chain",
             "detail": {
-                "asset_id": getattr(row, "asset_id", None),
-                "priority": getattr(row, "priority", None),
-                "status": getattr(row, "status", None),
-                "repair_cost": _num(getattr(row, "repair_cost", None)),
+                "asset_id": _field(row, "asset_id"),
+                "priority": _field(row, "priority"),
+                "status": _field(row, "status"),
+                "repair_cost": _field(row, "repair_cost"),
+                "description": _field(row, "description"),
             } if row is not None else {},
         })
         if row is not None and getattr(row, "asset_id", None):
@@ -307,10 +308,14 @@ def build_graph_from_local() -> dict:
             "type": "SparePart",
             "graph": "supply_chain",
             "detail": {
-                "on_hand": _num(getattr(row, "quantity_on_hand", None)),
-                "reorder_point": _num(getattr(row, "reorder_point", None)),
-                "lead_time_days": _num(getattr(row, "lead_time_days", None)),
-                "unit_price_usd": _num(getattr(row, "unit_price", None)),
+                "description": _field(row, "part_description"),
+                "stock_level": _field(row, "stock_level"),
+                "reorder_point_limit": _field(row, "reorder_point_limit"),
+                "lead_time_days": _field(row, "lead_time_days"),
+                "unit_price_usd": _field(row, "unit_price_usd"),
+                "below_reorder_point": bool(
+                    _field(row, "stock_level") <= _field(row, "reorder_point_limit")
+                ),
             } if row is not None else {"stocked": False},
         })
     for wo_id, part in sorted(set(wo_parts)):
@@ -398,7 +403,39 @@ def build_graph_from_local() -> dict:
             "for those and is empty for the rest."
         ),
     }
-    return _assemble_graph(nodes, edges, source="local-profile-cache", scope=scope)
+    # Provenance, stated at the precision a screen can repeat. These are two
+    # different vintages of the same site and saying so matters: stats.json
+    # self-describes as the calibration profile captured BEFORE the data was
+    # regenerated, and it is the only local source for the edge tables, which
+    # have no parquet. So the entities come from the older snapshot and the
+    # measurements from the current one. BigQuery settles both; re-run this
+    # export against it once credentials are back.
+    source = (
+        "local files, two vintages: asset, vehicle, assignment and incident "
+        f"records from {(PROFILE / 'stats.json').relative_to(REPO)} "
+        f"({stats['_note'].rstrip('.')}); work orders, parts and fatigue logs "
+        f"from {GENERATED.relative_to(REPO)}/*.parquet, the current generated "
+        "data. BigQuery is authoritative for both and was unreachable at build "
+        "time."
+    )
+    return _assemble_graph(nodes, edges, source=source, scope=scope)
+
+
+def _field(row, name):
+    """Read a column off an itertuples row, refusing to invent a missing one.
+
+    getattr(row, name, None) is the obvious spelling and the wrong one: it
+    returns None for a column that does not exist, which is indistinguishable
+    from a column that exists and is null. That is how every SparePart on the
+    supply chain screen came to render an empty price -- inventory_levels calls
+    the column stock_level, not quantity_on_hand, and nothing said so.
+    """
+    if not hasattr(row, name):
+        raise SystemExit(
+            f"column {name!r} is not in this frame; available: "
+            f"{sorted(f for f in row._fields if not f.startswith('_'))}"
+        )
+    return _num(getattr(row, name))
 
 
 def _num(value):
@@ -462,6 +499,83 @@ def _assemble_graph(nodes: list[dict], edges: list[dict], source: str,
     }
 
 
+def build_facts() -> dict:
+    """The site as the demo actually holds it, counted rather than remembered.
+
+    Every entry carries the file it was counted from, so screen 1.2 can cite a
+    source per figure. Anything the local files cannot settle is left out
+    entirely rather than filled in from an earlier note -- the fleet size is the
+    live example: data/profile only keeps a three-row vehicle sample, so this
+    export cannot honestly state how many vehicles the site runs.
+    """
+    import pandas as pd
+
+    def parquet(name):
+        return pd.read_parquet(GENERATED / f"{name}.parquet")
+
+    telemetry = parquet("telemetry_stream")
+    work_orders = parquet("erp_work_orders")
+    fatigue = parquet("fatigue_logs_node")
+    inventory = parquet("inventory_levels")
+    stats = json.loads((PROFILE / "stats.json").read_text())
+    generated = f"{GENERATED.relative_to(REPO)}"
+
+    def entry(label, value, unit, source):
+        return {"label": label, "value": value, "unit": unit, "source": source}
+
+    return {
+        "generated_at": _now(),
+        "mill_downtime_usd_per_hour": MILL_DOWNTIME_USD_PER_HOUR,
+        "mill_downtime_source": "docs/personas-and-value-tree.md",
+        "note": (
+            "This is the only monetary figure this repository establishes. Every "
+            "other magnitude renders as [CLIENT INPUT REQUIRED]."
+        ),
+        "site": [
+            entry("Assets under management", len(stats["assets"]), "assets",
+                  "data/profile/stats.json"),
+            entry("Telemetry readings", len(telemetry), "readings",
+                  f"{generated}/telemetry_stream.parquet"),
+            entry("Distinct telemetry metrics", telemetry["metric_name"].nunique(),
+                  "metrics", f"{generated}/telemetry_stream.parquet"),
+            entry("Work orders", len(work_orders), "orders",
+                  f"{generated}/erp_work_orders.parquet"),
+            entry("Parts held in inventory", len(inventory), "SKUs",
+                  f"{generated}/inventory_levels.parquet"),
+            entry("Parts at or below reorder point",
+                  int((inventory["stock_level"] <= inventory["reorder_point_limit"]).sum()),
+                  "SKUs", f"{generated}/inventory_levels.parquet"),
+            entry("Operators monitored for fatigue", fatigue["operator_id"].nunique(),
+                  "operators", f"{generated}/fatigue_logs_node.parquet"),
+            entry("Fatigue readings", len(fatigue), "readings",
+                  f"{generated}/fatigue_logs_node.parquet"),
+            entry("Maintenance log entries", len(parquet("maintenance_logs")), "entries",
+                  f"{generated}/maintenance_logs.parquet"),
+            entry("Geological block model cells", len(parquet("geological_block_models")),
+                  "blocks", f"{generated}/geological_block_models.parquet"),
+            entry("Drill assay intervals", len(parquet("drill_assay_logs")), "intervals",
+                  f"{generated}/drill_assay_logs.parquet"),
+            entry("Metallurgical recovery records", len(parquet("metallurgical_recovery")),
+                  "records", f"{generated}/metallurgical_recovery.parquet"),
+        ],
+        "window": {
+            "from": str(telemetry["timestamp"].min()),
+            "to": str(telemetry["timestamp"].max()),
+            "source": f"{generated}/telemetry_stream.parquet",
+        },
+        "not_locally_derivable": [
+            {
+                "figure": "Fleet vehicle count",
+                "why": (
+                    "data/profile/stats.json keeps a three-row sample of "
+                    "fleet_vehicles, not the table. Only the 5 vehicles carrying "
+                    "an operator assignment are known locally. BigQuery settles it."
+                ),
+            },
+        ],
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=pathlib.Path, default=DEFAULT_OUT)
@@ -471,21 +585,36 @@ def main() -> None:
     catalog = build_catalog()
     personas = build_personas(catalog)
     graph = build_graph_from_local()
-    facts = {
-        "generated_at": _now(),
-        "mill_downtime_usd_per_hour": MILL_DOWNTIME_USD_PER_HOUR,
-        "mill_downtime_source": "docs/personas-and-value-tree.md",
-        "note": (
-            "This is the only monetary figure this repository establishes. Every "
-            "other magnitude renders as [CLIENT INPUT REQUIRED]."
-        ),
-    }
+    facts = build_facts()
 
-    for name, payload in (("catalog", catalog), ("personas", personas),
-                          ("graph", graph), ("facts", facts)):
+    payloads = {"catalog": catalog, "personas": personas,
+                "graph": graph, "facts": facts}
+    for name, payload in payloads.items():
         path = args.out / f"{name}.json"
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
         print(f"wrote {path.relative_to(REPO)} ({path.stat().st_size:,} bytes)")
+
+    # The same payloads as one script tag. fetch() is blocked under file://, and
+    # someone will open these screens by double-clicking them; a demo that shows
+    # an empty page because of an origin rule is a demo that fails in the room.
+    bundle = args.out / "bundle.js"
+    bundle.write_text(
+        "/* Generated by scripts/build_app_data.py. Do not edit. */\n"
+        "window.MINING_DATA = " + json.dumps(payloads, sort_keys=False) + ";\n"
+    )
+    print(f"wrote {bundle.relative_to(REPO)} ({bundle.stat().st_size:,} bytes)")
+
+    # tokens.css has one home, docs/ux/. Copying rather than importing keeps a
+    # forked apps/ tree self-contained without giving the design system a
+    # second editable copy.
+    tokens_src = REPO / "docs" / "ux" / "tokens.css"
+    tokens_dst = args.out.parent / "tokens.css"
+    tokens_dst.write_text(
+        "/* Copied from docs/ux/tokens.css by scripts/build_app_data.py.\n"
+        "   Edit the source, not this file. */\n" + tokens_src.read_text()
+    )
+    print(f"wrote {tokens_dst.relative_to(REPO)} "
+          f"({tokens_dst.stat().st_size:,} bytes)")
 
     print(f"\nagent nodes {catalog['counts']['agent_nodes']}, "
           f"entrypoints {catalog['counts']['entrypoints']}, "
