@@ -18,15 +18,18 @@ el("anchor-src").textContent = facts.mill_downtime_source;
 /* The industry condition, in the order that makes the argument rather than the
    order the source file happens to hold.
  *
- *  It got worse. The information to fix it was already being collected and
- *  thrown away. The industry is behind the industries it competes with for
- *  capital. And the obvious remedy has, so far, mostly not paid.
+ *  The ore got harder. The information to work it was already being collected
+ *  and thrown away. The industry knows it is behind — its own chief executives
+ *  say so. And the obvious remedy has, so far, mostly not paid.
  *
- *  The last of those four is on this screen deliberately. A case that carries
- *  only upside reads as a brochure, and that particular figure is the one a
- *  sceptical chief executive already has in mind before the meeting starts.
+ *  The last two are on this screen deliberately. A case that carries only
+ *  upside reads as a brochure, and those are the figures a sceptical chief
+ *  executive already has in mind before the meeting starts.
+ *
+ *  Four publishers, four different years, so the section cannot be read as one
+ *  house's opinion restated four ways.
  */
-const CONDITION = ["productivity_decline", "data_unused", "digital_maturity", "genai_reality"];
+const CONDITION = ["grade_decline", "data_unused", "pwc_ai_fitness", "ai_value_gap"];
 
 CONDITION.forEach((id) => {
   const b = BENCH.by_id[id];

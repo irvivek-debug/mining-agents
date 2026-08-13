@@ -370,3 +370,137 @@ then widens until the displayed columns subtract to the displayed delta. This
 lives in `shell.js` rather than per screen, because the landing and the value
 screen quote the same recovery gap and a measurement printed two ways across two
 screens is the same failure in slower motion.
+
+---
+
+# Revision — the uplift slot, and the evidence base re-verified
+
+Dated 2026-08-13. Two changes, one prompted by the other.
+
+## What the pool cards print
+
+The pool card's headline slot used to hold either a dollar figure or the words
+`[CLIENT INPUT REQUIRED]`. In practice that meant five of the six pools printed
+the words, which was honest and told a chief executive nothing whatever about
+five sixths of the argument. A reader who cannot see a magnitude cannot rank the
+pools, and ranking them is the only thing they were going to do with the screen.
+
+The slot now holds a **percentage**, and beside it a **badge naming the class of
+evidence** behind it:
+
+| Badge | Means | Pools |
+|---|---|---|
+| Measured here | this plant's own record, 167 days, ordinary day to best day | B3, B4 |
+| Published elsewhere | a third party's study, publisher and year named | B1, B2, B5, B6 |
+
+A percentage is the right unit for this slot for three reasons. It is what both
+this site's record and every published study actually measure. It needs neither
+a throughput nor a price to mean something, so the card carries a magnitude
+without the screen asserting a dollar it cannot source. And it survives a reader
+who has not yet settled their commodity assumptions — which, per the standing
+instruction not to trip on the type of metal, is every reader on first pass.
+
+The badge is not decoration. *Measured here* and *published elsewhere* are
+different classes of evidence, and the difference is the entire argument of these
+screens: a number from this site's own 167 days cannot be waved away, and a
+number from somebody else's mine can. Marking which is which is what earns the
+right to print both on one card.
+
+Where a pool has both, the published range is printed **directly beneath** the
+measured figure rather than in a separate block. B3 is the reason: `+1.96 pts`
+measured here, sitting immediately above `1–4 pts recovery` published by two
+houses. The site's best day is *inside* the range the industry publishes as an
+achievable uplift — that is the whole case in two lines, and separating them
+would have thrown it away.
+
+Where several publishers measured the same mechanism and disagree, the range
+**spans all of them**. B3's throughput reads `2–15%` because BCG's 2026 flagship
+says 2–5%, McKinsey's 100-asset study says 8–10%, and McKinsey's own concentrator
+case says 10–15%. Quoting only the low end would be selective; quoting only the
+high end would be worse.
+
+## Uplift ranges are derived, not typed
+
+The numbers in that slot are not written in JavaScript. Each benchmark entry in
+`docs/external-benchmarks.yaml` carries an optional `uplift:` list — the
+machine-readable form of numbers that already exist inside its verbatim `figure`
+— and the build refuses to emit an uplift whose bounds do not appear in the
+quoted text, in digits or in English words. That check exists because a
+restatement drifts from its original: somebody widens a range on a screen and
+nobody re-reads the sentence it came from. Publishers write "one to three
+percentage points" in the same paragraph as "8 to 10 percent", so the checker
+reads both forms.
+
+The pool a figure speaks to is also recorded in that file, beside the figure,
+rather than in a second map held by the screen. The screen's old `POOL_BENCH`
+object could have disagreed with the source file without anything failing.
+
+## Commodity neutrality, applied
+
+Per the standing instruction: the value case names no metal, and money is a
+range.
+
+- **The calculator** asks for a throughput and a **price band** — low and high —
+  and returns a band. The physical half stays exact, because tonnes of contained
+  metal per point of recovery is metallurgy and is commodity-agnostic once the
+  metal is not named. The money half is a market, and a market is quoted in
+  bands. Printing one figure for both halves would present the weaker half with
+  the confidence of the stronger one. The two price fields are sorted before use,
+  so a reader who fills them the other way round gets the same answer.
+- **The B2 evidence chart** plotted `gold_grade_gpt_est` in g/t while the
+  calculator ran on a percent feed assay. It now plots the percent assay and is
+  labelled "Estimated grade across the block model". Its caption explicitly
+  refuses the comparison a reader might otherwise draw: the block model includes
+  waste and the mill only ever sees ore above cut-off, so the two distributions
+  are not the same population. That was checked numerically before the change —
+  block-model median 0.486% against mill feed median 1.080% — and the difference
+  is cut-off, not a discrepancy.
+- **Headlines stay off the metal even where the quote cannot.** Deloitte's
+  finding is about copper grades and is quoted verbatim; the headline set in
+  display type reads "Head grades down ~40% in three decades", because the
+  headline is what a reader takes away at a glance and the finding is true of the
+  industry rather than of one commodity.
+
+## The evidence base, re-verified
+
+Every URL in `docs/external-benchmarks.yaml` was fetched and its quoted text read
+on the publisher's own page on 2026-08-13. Seventeen figures are cited, thirteen
+recorded as unverifiable, four recorded as **superseded** — a new category, kept
+apart from the rejected ones because these were properly sourced when they were
+printed and the distinction matters to anyone reviewing an older screenshot.
+
+Retired at this pass:
+
+- **BCG's 2021 digital-maturity gap (30–40%).** BCG's own January 2026 flagship
+  says mining "has gone from near the bottom to the middle of the pack". Printing
+  the 2021 gap alongside the 2026 publication would misrepresent the publisher.
+- **McKinsey's 2015 productivity decline (3.5%/yr, 28% less efficient).**
+  McKinsey's 2022 work restates the same period as "marginal growth of around 1
+  percent". Both cannot be printed. Replaced by PwC's current and unambiguous
+  finding that output per worker has fallen since 2020.
+- **McKinsey's 2018 4–8% throughput / 1–3pp recovery.** Superseded within the
+  range by three better-scoped and more recent sources. Its "roughly equivalent
+  to opening a new mine without the capital cost" aside is deliberately not
+  carried forward: it is the kind of line that makes a deck read as a brochure.
+- **McKinsey's ~5% gen-AI EBIT figure.** Replaced by BCG's "60% of companies are
+  reaping hardly any material value", which measures the same scepticism from the
+  majority side and is the more recent survey.
+
+Newly rejected, and recorded so nobody re-adds them:
+
+- **McKinsey's "Performing under pressure" ($370bn/yr, 17% of the cost base) has
+  been withdrawn by its publisher.** The page now reads "The article you are
+  looking for is being revised". Not citable in any form until republished.
+- **Bain** returns HTTP 403 behind Cloudflare to automated fetch and to a real
+  browser alike. No Bain figure has ever been confirmed.
+- **WEF is dropped entirely.** The 2017 DTI "$425bn" was rejected for the second
+  time — the publisher's own PDF still redirects. The Lighthouse and MINDS cohort
+  figures are operator-supplied and survivorship-biased by the award's design.
+  One WEF case tagged Mining & Metals turns out to be a hydraulic-support
+  *factory*, not a mine; it is recorded as a trap.
+- **"Gen AI cut fleet fuel consumption by up to 10 percent"** — the figure is in
+  the primary source but attributed there to *traditional* AI models. The
+  circulating snippet misattributes it.
+
+The condition section on case screen 1 now carries four publishers across four
+different years, so it cannot be read as one house's opinion restated four times.

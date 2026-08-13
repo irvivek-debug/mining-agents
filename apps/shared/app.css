@@ -258,6 +258,20 @@ blockquote.verbatim cite {
 
 /* ---------- value pool cards ---------- */
 
+/* The headline magnitude and the badge saying who established it, on one
+   baseline. They belong together: a percentage with no provenance beside it is
+   the exact thing these screens exist to avoid, so the layout should make them
+   hard to separate. Wrapping is allowed because "Published elsewhere" beside a
+   three-figure range does not fit a 360px card, and a badge that overflows its
+   card is worse than a badge on its own line. */
+.uplift { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.uplift .badge { position: relative; top: -2px; }
+
+/* Consecutive benchlines are the several publishers who measured one pool. A
+   single rule down the whole run reads as one voice; separate rules with air
+   between them read as several, which is what they are. */
+.benchline + .benchline { margin-top: 8px; }
+
 .pool-measured .row { display: grid; grid-template-columns: 1fr auto auto;
                       gap: 10px; align-items: baseline; padding: 6px 0;
                       border-top: 1px solid var(--border-soft); font-size: 12.5px; }

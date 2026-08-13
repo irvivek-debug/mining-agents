@@ -849,9 +849,12 @@ GAP_METRICS = [
     {"id": "recovery", "label": "Metallurgical recovery",
      "table": "metallurgical_recovery", "column": "recovery_rate_pct",
      "unit": "%", "delta_kind": "points", "benchmark": "throughput_100_assets"},
+    # Recovery cites the recovery half of the 100-asset study; feed rate cites
+    # the most recent published throughput range rather than the throughput half
+    # of the same paper, so the two rows are answered by two publishers.
     {"id": "feed_rate", "label": "Crusher feed rate",
      "asset_id": "CRUSHER-03", "column": "feed_rate_tph",
-     "unit": "t/h", "delta_kind": "percent", "benchmark": "throughput_recovery"},
+     "unit": "t/h", "delta_kind": "percent", "benchmark": "mature_ai_uplift"},
     {"id": "payload", "label": "Truck payload",
      "asset_id": "TRUCK-08", "column": "payload_tons",
      "unit": "t", "delta_kind": "percent", "benchmark": "haulage_ahs"},
@@ -862,6 +865,37 @@ GAP_METRICS = [
 
 BENCHMARKS = REPO / "docs" / "external-benchmarks.yaml"
 BENCHMARK_FIELDS = ("id", "headline", "figure", "title", "publisher", "year", "url")
+
+# Publishers write ranges in words as often as in digits -- "one to three
+# percentage points" sits in the same paragraph as "8 to 10 percent". The
+# uplift check below has to recognise both, or half the entries would have to
+# carry a bound the checker cannot find in the sentence it came from.
+NUMBER_WORDS = {
+    0: "zero", 1: "one", 2: "two", 3: "three", 4: "four", 5: "five",
+    6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten",
+    11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen",
+    15: "fifteen", 16: "sixteen", 17: "seventeen", 18: "eighteen",
+    19: "nineteen", 20: "twenty", 30: "thirty", 40: "forty", 50: "fifty",
+}
+
+
+def _bound_is_quoted(bound: float, text: str) -> bool:
+    """Does this number actually appear in the sentence it was drawn from?
+
+    The uplift blocks in the benchmarks file are a machine-readable restatement
+    of numbers that already exist in `figure`. A restatement can drift from its
+    original -- somebody widens a range on the screen and nobody re-reads the
+    quote. This is the check that makes that impossible: an uplift bound must
+    be findable in the published text, in digits or in English.
+    """
+    forms = {f"{bound:g}"}
+    if float(bound).is_integer():
+        forms.add(str(int(bound)))
+        word = NUMBER_WORDS.get(int(bound))
+        if word:
+            forms.add(word)
+    lowered = text.lower()
+    return any(form in lowered for form in forms)
 
 
 def build_benchmarks() -> dict:
@@ -899,14 +933,65 @@ def build_benchmarks() -> dict:
             f"{BENCHMARKS.relative_to(REPO)} does not define."
         )
 
+    # Pools in file order, so the screen's "what others published" range is
+    # assembled from the source file rather than from a second list kept by
+    # hand in JavaScript, where it could disagree with this one silently.
+    by_pool: dict[str, list[str]] = {}
+    units: dict[tuple[str, str], str] = {}
+    for entry in entries:
+        pool = entry.get("pool")
+        uplifts = entry.get("uplift") or []
+        if uplifts and not pool:
+            raise SystemExit(
+                f"benchmark {entry['id']!r} carries an uplift but no pool; "
+                "an uplift with nowhere to be shown is an uplift nobody checks."
+            )
+        if pool:
+            by_pool.setdefault(pool, []).append(entry["id"])
+        for up in uplifts:
+            for field in ("metric", "low", "high", "unit"):
+                if up.get(field) in (None, ""):
+                    raise SystemExit(
+                        f"benchmark {entry['id']!r} has an uplift missing {field!r}."
+                    )
+            if up["low"] > up["high"]:
+                raise SystemExit(
+                    f"benchmark {entry['id']!r} uplift {up['metric']!r} runs "
+                    f"{up['low']} to {up['high']}, which is backwards."
+                )
+            quoted = f"{entry['figure']} {entry.get('aside') or ''}"
+            for bound in (up["low"], up["high"]):
+                if not _bound_is_quoted(bound, quoted):
+                    raise SystemExit(
+                        f"benchmark {entry['id']!r} claims an uplift bound of "
+                        f"{bound}, which does not appear in the text it quotes. "
+                        "Every number on a screen has to be findable in the "
+                        "publisher's own sentence."
+                    )
+            # Two entries in one pool describing the same metric are merged into
+            # a single range on the screen, which is only legitimate if they are
+            # in the same unit. Points and percent are not interchangeable.
+            key = (pool, up["metric"])
+            if units.setdefault(key, up["unit"]) != up["unit"]:
+                raise SystemExit(
+                    f"pool {pool} describes {up['metric']!r} in both "
+                    f"{units[key]!r} and {up['unit']!r}; the screen would merge "
+                    "them into one range and the range would be meaningless."
+                )
+
     return {
         "generated_at": _now(),
         "source": str(BENCHMARKS.relative_to(REPO)),
         "by_id": by_id,
         "order": [e["id"] for e in entries],
+        "by_pool": by_pool,
         # Carried into the bundle so the excluded list travels with the screens
         # it is protecting. Nobody re-adds a figure they can see was rejected.
         "excluded": doc.get("excluded") or [],
+        # Retired figures are kept apart from rejected ones: these were properly
+        # sourced when they were printed, and the distinction matters to anyone
+        # reviewing an older screenshot.
+        "superseded": doc.get("superseded") or [],
     }
 
 
@@ -1007,10 +1092,17 @@ def build_roi(gap: dict, recovery) -> dict:
     goes through the mill, what the ore carries, and what the metal sells for.
     This site's own record settles the middle one -- 167 days of concentrator
     feed assays -- and says nothing about the other two. So the export stops
-    exactly there: it publishes tonnes of contained copper per million tonnes
+    exactly there: it publishes tonnes of contained metal per million tonnes
     milled per point of recovery, and leaves throughput and price to the only
     people who hold them. A screen that guessed either would be inventing the
     client's business in front of the client.
+
+    The metal is deliberately not named. The physical half of this calculation
+    is metallurgy and does not care which metal the assay is of -- a point of
+    recovery on a 1.08% feed is 108 t per Mt whatever is in the concentrate.
+    Naming a metal here would invite an argument about the wrong thing, and a
+    single spot price would be stale before the deck was read, which is why the
+    price side is asked for as a range.
 
     Contained metal, not payable: smelter payability, treatment and refining
     charges take a cut that this repository has no terms for. Stating the
@@ -1019,22 +1111,25 @@ def build_roi(gap: dict, recovery) -> dict:
     """
     row = next(r for r in gap["rows"] if r["id"] == "recovery")
     grade = float(recovery["feed_grade_pct"].median())
-    # One tonne of ore carries grade/100 t of copper. A point of recovery is
+    # One tonne of ore carries grade/100 t of metal. A point of recovery is
     # one percent of that. Per million tonnes milled, the 1e6 and the 100s
     # collapse to grade * 100.
     per_point = grade * 100.0
     return {
         "generated_at": _now(),
-        "commodity": "copper",
         "feed_grade_pct": _num(grade),
         "feed_grade_days": int(len(recovery)),
         "feed_grade_source": (f"{GENERATED.relative_to(REPO)}/"
                               "metallurgical_recovery.parquet"),
         "recovery_gap_pts": row["delta"],
         "t_per_mt_per_point": _num(per_point),
-        "client_inputs": ["Annual mill throughput", "Copper price"],
+        "client_inputs": [
+            "Annual mill throughput",
+            "Realised metal price, low",
+            "Realised metal price, high",
+        ],
         "basis": (
-            "Contained copper, before smelter payability and treatment and "
+            "Contained metal, before smelter payability and treatment and "
             "refining charges, for which this repository holds no terms."
         ),
     }
@@ -1120,12 +1215,23 @@ def build_signals() -> dict:
         "equal duration."
     )
 
-    b2 = dict(_histogram(blocks["gold_grade_gpt_est"], 24), kind="distribution",
-              label="Estimated gold grade across the block model", unit="g/t",
+    # The block model carries two assays. Plotting one of them by name on a
+    # screen whose calculator deliberately does not name a metal invites a
+    # reader to spend their attention on which commodity this deck is about,
+    # which is the wrong question -- the mechanism is reconciliation and it is
+    # the same mechanism whatever is in the ore. The percent assay is used
+    # because a grade in percent reads as a grade rather than as one metal's
+    # convention, and because the mill feed figure elsewhere on the screen is
+    # also in percent, so the two are at least in the same units.
+    b2 = dict(_histogram(blocks["copper_grade_pct_est"], 24), kind="distribution",
+              label="Estimated grade across the block model", unit="%",
               source=f"{generated}/geological_block_models.parquet")
     b2["caption"] = (
-        f"{b2['n']:,} block cells by estimated grade. The block model is spatial, "
-        "not timed, so this is a distribution and not a trend."
+        f"{b2['n']:,} block cells by estimated grade, waste included. This is "
+        "the model's own spread and not a comparison against mill feed: the "
+        "mill only ever sees ore above cut-off, so the two distributions are "
+        "not the same population. The block model is spatial, not timed, so "
+        "this is a distribution and not a trend."
     )
 
     below = int((inventory["stock_level"] <= inventory["reorder_point_limit"]).sum())
@@ -1232,9 +1338,9 @@ def main() -> None:
         print(f"gap {row['label']:<24} median {row['median']:>10,.2f} "
               f"p90 {row['p90']:>10,.2f}  +{row['delta_pct']:.1f}%")
     roi = signals["roi"]
-    print(f"roi feed grade {roi['feed_grade_pct']}% Cu over "
+    print(f"roi feed grade {roi['feed_grade_pct']}% over "
           f"{roi['feed_grade_days']} days -> {roi['t_per_mt_per_point']:,.0f} t "
-          f"contained Cu per Mt milled per recovery point")
+          f"contained metal per Mt milled per recovery point")
     for name, info in graph["graphs"].items():
         print(f"graph {name:<14} {info['nodes']:>4} nodes {info['edges']:>4} edges  "
               f"{info['node_types']}")
