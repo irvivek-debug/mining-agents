@@ -7,8 +7,11 @@
  * disagreeing with the catalog it claims to describe.
  */
 
-const DATA = window.MINING_DATA;
-if (!DATA) {
+/* `typeof window` rather than plain `window`: this file is also `require`d from
+ * Node by the JS tests, which need esc/fig/num/rowPlaces without a DOM. In a
+ * browser both guards are true and nothing below changes. */
+const DATA = typeof window !== "undefined" ? window.MINING_DATA : undefined;
+if (!DATA && typeof document !== "undefined") {
   document.addEventListener("DOMContentLoaded", () => {
     document.body.innerHTML =
       '<div class="wrap"><div class="note"><strong>Data missing</strong><br>' +
@@ -196,4 +199,12 @@ function el(id) {
   const node = document.getElementById(id);
   if (!node) throw new Error(`no element #${id} on this page`);
   return node;
+}
+
+/* The pure half only. mountNav, provenance and el read the document or the
+ * bundle global, and exporting them would invite a test to call one and get a
+ * DOM error instead of an answer. Everything below is a function of its
+ * arguments alone, which is what makes it worth pinning from Node. */
+if (typeof module !== "undefined") {
+  module.exports = { esc, num, places, fig, rowPlaces, clientInput, technicalDrawer };
 }

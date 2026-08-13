@@ -55,6 +55,11 @@ async function showRuntime() {
   el("sidecar").prepend(box);
   try {
     const reply = await fetch("/api/runtime");
+    // A FastAPI 500 answers {"detail": "Internal Server Error"} — valid JSON,
+    // with no `connected` field. Read without this guard it renders as though
+    // the server had reported a real not-connected state, and the page reports
+    // a fault in the runtime that is actually a fault in the endpoint.
+    if (!reply.ok) throw new Error(`/api/runtime answered ${reply.status}`);
     const state = await reply.json();
     if (state.connected) {
       box.className = "runtime-state ok";
@@ -68,6 +73,10 @@ async function showRuntime() {
   } catch (err) {
     // The one case where the build-time constant is the true answer: the page
     // is open off disk or behind a static file server, and there is no API.
+    // The reader gets that sentence; whoever is debugging gets the cause,
+    // because a network failure and a 500 are the same sentence on screen and
+    // very different problems behind it.
+    console.warn("/api/runtime could not be read:", err);
     box.className = "runtime-state warn";
     box.textContent = DATA.workspace.runtime.reason;
   }
@@ -77,6 +86,25 @@ const CODE = currentCode();
 mountNav("workspace", "persona.html");
 mountPicker(CODE);
 el("role-lede").textContent = PERSONAS[CODE].title;
+
+/* A7: the Mine Controller reads this from the control room's overhead display
+ * rather than at a desk, where the audit measured 14px body text as illegible.
+ * The whole page steps up together, applied by persona so that the person does
+ * not have to know to ask for it. The screen this one replaced carried the same
+ * accommodation and this is the one P7 opens daily, so it belongs here.
+ *
+ * The note says what the scale is for and not what it is: the factor lives in
+ * .scale-lg, and a ratio quoted in copy is a number that goes stale the first
+ * time the stylesheet is touched. It is also a figure nothing on this page can
+ * check, which is the whole objection this screen exists to answer.
+ */
+if (CODE === "P7") {
+  el("wrap").classList.add("scale-lg");
+  el("scale-note").textContent =
+    "Overhead type scale — this role's page is read from the control room " +
+    "display rather than at a desk.";
+}
+
 el("panel").innerHTML = renderPanel(CODE, DATA);
 el("foot").innerHTML = technicalDrawer(drawerBody(CODE), "agent ids, tables, model tiers") +
   provenance();

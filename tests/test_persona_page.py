@@ -8,6 +8,7 @@ when no persona-to-asset mapping exists, or a screen that outlives the workbench
 it replaced.
 """
 import pathlib
+import re
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 WORKSPACE = REPO / "apps" / "workspace"
@@ -37,6 +38,22 @@ def test_the_page_loads_every_module_the_panel_needs():
     assert html.index("../shared/plain.js") < html.index("router.js")
     assert html.index("router.js") < html.index("persona-data.js")
     assert html.index("persona-data.js") < html.index("persona-panel.js")
+    # The one that actually throws when it is wrong: persona.js is the only
+    # file that *calls* renderPanel, at load, so it has to be last.
+    assert html.index("persona-panel.js") < html.index("persona.js"), (
+        "persona.js runs before persona-panel.js defines renderPanel"
+    )
+
+
+def test_every_script_the_page_loads_is_on_disk():
+    """Load order is worth nothing if the file 404s. Nothing else checks this."""
+    html = (WORKSPACE / "persona.html").read_text()
+    srcs = re.findall(r'<script src="([^"]+)"', html)
+    assert srcs, "persona.html loads no scripts at all"
+    for src in srcs:
+        assert (WORKSPACE / src).resolve().is_file(), (
+            f"persona.html loads {src}, which does not exist"
+        )
 
 
 def test_the_machines_block_does_not_claim_the_machines_are_the_readers():
@@ -56,9 +73,61 @@ def test_the_panel_handles_all_three_evidence_kinds():
 
 
 def test_the_panel_renders_the_gap_caveats_verbatim():
+    """Assert on the calls, not on the words.
+
+    A bare `"caveat" in panel` is satisfied by the CSS class `pcaveat`,
+    `"caption"` by `ev-caption`, and `"excluded"` by the comment explaining why
+    the list is printed — so three of the four fields could be deleted from the
+    output with the test still green. What has to survive is the call that puts
+    the string on the screen.
+    """
     panel = (WORKSPACE / "persona-panel.js").read_text()
-    for field in ("caveat", "excluded", "method", "caption"):
-        assert field in panel, f"gap.{field} is never rendered"
+    for call in ("esc(gap.method)", "esc(gap.caveat)", "esc(e.caption)",
+                 "gap.excluded.map("):
+        assert call in panel, f"{call} is gone, so that text never reaches the screen"
+
+
+def test_the_panel_applies_one_precision_to_both_ends_of_a_range():
+    """Fix for "0.00 alerts to 7.00 alerts" — P3's evidence is a count.
+
+    fig() left to itself reads magnitude alone, so each end of a range is
+    rounded independently and anything under ten gets two decimals. The
+    rendered proof is in tests/js/persona-panel.test.js; this pins the call
+    shape, because passing `dp` to one end and not the other is the regression.
+    """
+    panel = (WORKSPACE / "persona-panel.js").read_text()
+    assert "fig(e.min, e.unit, dp) + \" to \" + fig(e.max, e.unit, dp)" in panel, (
+        "the two ends of the range are no longer printed at a shared precision"
+    )
+
+
+def test_the_mine_controller_keeps_the_overhead_type_scale():
+    """A7. This screen replaced the workbench, which applied it and was deleted.
+
+    P7 reads the page from a control-room display several metres back, where the
+    audit measured 14px body text as illegible. The rule survives in
+    workspace.css; what went missing with the workbench was anything applying it
+    here.
+    """
+    page = (WORKSPACE / "persona.js").read_text()
+    assert 'CODE === "P7"' in page, "nothing on the persona page tests for P7"
+    assert 'classList.add("scale-lg")' in page, (
+        "the P7 large-type accommodation is not applied on the role page"
+    )
+    assert ".scale-lg" in (WORKSPACE / "workspace.css").read_text()
+    assert 'id="wrap"' in (WORKSPACE / "persona.html").read_text(), (
+        "persona.js reaches for #wrap, which persona.html does not define"
+    )
+
+
+def test_the_runtime_check_does_not_swallow_a_failed_request():
+    """A 500 answers valid JSON with no `connected` field, and reads as a state."""
+    page = (WORKSPACE / "persona.js").read_text()
+    assert "reply.ok" in page, "the runtime fetch never checks its status"
+    assert "console.warn" in page, (
+        "the catch discards the error, so a network failure and a malformed "
+        "payload are the same event to whoever is debugging"
+    )
 
 
 def test_the_page_ends_with_one_technical_drawer():

@@ -12,6 +12,17 @@
  * without failing the check that enforces it.
  */
 
+/* esc/fig/num/places/rowPlaces come from shell.js and branchEvidenceFor/
+ * gapRowsFor from persona-data.js. In the browser those are globals, because
+ * classic script tags share one scope and persona.html loads both files first.
+ * Node gives every module its own scope, so the same names are resolved through
+ * require and published where the function bodies below already look for them.
+ * Guarded on the absence of a window so the browser path is untouched. */
+if (typeof require !== "undefined" && typeof window === "undefined") {
+  Object.assign(globalThis, require("../shared/shell.js"));
+  Object.assign(globalThis, require("./persona-data.js"));
+}
+
 function _sparkline(points) {
   if (!points || points.length < 2) return "";
   var lo = Math.min.apply(null, points);
@@ -67,10 +78,17 @@ function _evidence(row) {
   var e = row.evidence;
   var body = "";
   if (e.kind === "series") {
+    // One precision for the pair, not one each. Left to itself fig() reads
+    // magnitude alone, which prints a whole-number count of alerts as "0.00 to
+    // 7.00" — a precision the count does not have — and, for a range straddling
+    // ten, prints the same measurement two ways: "9.85 t to 12.4 t".
+    var dp = Number.isInteger(e.min) && Number.isInteger(e.max)
+      ? 0
+      : Math.max(places(e.min), places(e.max));
     body =
       _sparkline(e.points) +
       '<p class="ev-range">' + esc(e.label || row.branch.title) + " · " +
-      fig(e.min, e.unit) + " to " + fig(e.max, e.unit) +
+      fig(e.min, e.unit, dp) + " to " + fig(e.max, e.unit, dp) +
       " over " + num(e.readings) + " readings</p>";
   } else if (e.kind === "distribution") {
     body =
@@ -214,4 +232,8 @@ function renderPanel(code, DATA) {
     _blockSignoffs(persona, DATA) +
     _blockJobs(persona)
   );
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { renderPanel, _evidence, _gapTable };
 }
