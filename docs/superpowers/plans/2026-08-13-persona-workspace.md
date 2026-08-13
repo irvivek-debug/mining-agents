@@ -1063,7 +1063,7 @@ If the `gapRowsFor` expectations do not match, **check `row.source` first** — 
 
 ```bash
 cd /Users/amritharajendran/VivekWork/src/mining-agents
-node --test tests/js/
+node --test 'tests/js/*.test.js'
 git add apps/workspace/persona-data.js tests/js/persona-data.test.js
 git commit -m "feat(workspace): derive what a role may claim, instead of asserting it"
 ```
@@ -2839,7 +2839,7 @@ and call it **after** `mountChat`.
 Run:
 ```bash
 cd /Users/amritharajendran/VivekWork/src/mining-agents
-node --test tests/js/
+node --test 'tests/js/*.test.js'
 ```
 Expected: PASS, all five JS test files.
 
@@ -3368,7 +3368,7 @@ Same shape as Task 10, Step 4. The persona page already has one from Task 7; con
 ```bash
 cd /Users/amritharajendran/VivekWork/src/mining-agents
 /Users/amritharajendran/.local/pythons/py312/bin/python -m pytest -q
-node --test tests/js/
+node --test 'tests/js/*.test.js'
 ```
 Expected: everything green, including `tests/test_workspace_image.py` and `tests/test_screen_copy.py` in full.
 
@@ -3397,7 +3397,7 @@ Nothing counts until it has been seen working on the deployed revision. A static
 ```bash
 cd /Users/amritharajendran/VivekWork/src/mining-agents
 /Users/amritharajendran/.local/pythons/py312/bin/python -m pytest -q
-node --test tests/js/
+node --test 'tests/js/*.test.js'
 ```
 Expected: all green. Do not deploy over a red suite.
 
