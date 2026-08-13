@@ -17,11 +17,12 @@ Run: python -m uvicorn apps.workspace.server:app --port 8800 --reload
 """
 from __future__ import annotations
 
+import json
 import pathlib
 
 import httpx
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from mining_agents.config import settings
@@ -42,6 +43,11 @@ RUN_API = f"https://run.googleapis.com/v2/projects/{{project}}/locations/{REGION
 # this repo's, and are spelled here rather than guessed at call time.
 SESSION_PATH = "/apps/{app}/users/{user}/sessions/{session}"
 RUN_PATH = "/run"
+# ADK's streaming twin of /run. Same body, same session requirement; the reply
+# is text/event-stream instead of one JSON array, which is the whole reason
+# /api/stream exists — a real question takes ~100 seconds and a reader watching
+# a spinner for that long cannot tell it from a hang.
+RUN_SSE_PATH = "/run_sse"
 
 app = FastAPI(title="Mining Agents workspace")
 
@@ -169,6 +175,20 @@ def runtime() -> JSONResponse:
     )
 
 
+def _agent_client(base: str, token: str) -> httpx.AsyncClient:
+    """The one place an agent-facing client is built.
+
+    A function rather than an inline constructor so a test can substitute a
+    transport and exercise the streaming path without Cloud Run. `timeout=None`
+    on the streaming path is deliberate: the ceiling that matters is the one the
+    service is deployed with, and a shorter one here would cut off a working
+    call and report it as a proxy failure.
+    """
+    return httpx.AsyncClient(
+        base_url=base, timeout=None, headers={"Authorization": f"Bearer {token}"}
+    )
+
+
 @app.post("/api/invoke/{agent_id}")
 async def invoke(agent_id: str, request: Request) -> JSONResponse:
     """Forward one prompt to one agent, over an OIDC identity token.
@@ -210,8 +230,7 @@ async def invoke(agent_id: str, request: Request) -> JSONResponse:
             status_code=503,
         )
 
-    headers = {"Authorization": f"Bearer {token}"}
-    async with httpx.AsyncClient(base_url=base, timeout=300, headers=headers) as client:
+    async with _agent_client(base, token) as client:
         # ADK requires the session to exist before /run accepts a message for
         # it. Re-creating an existing session answers 400, which is not an
         # error here: it means the session is already there.
@@ -236,6 +255,104 @@ async def invoke(agent_id: str, request: Request) -> JSONResponse:
         )
     return JSONResponse({"connected": True, "agent_id": agent_id,
                          "events": reply.json()})
+
+
+def _sse(event: str, payload: dict) -> bytes:
+    """One server-sent event, framed. Named events, because the browser has to
+    tell a message the agent sent from a message this proxy sent."""
+    return f"event: {event}\ndata: {json.dumps(payload)}\n\n".encode()
+
+
+@app.get("/api/stream/{agent_id}")
+async def stream(
+    agent_id: str,
+    prompt: str = "",
+    user_id: str = "workspace",
+    session_id: str = "workspace-session",
+) -> Response:
+    """Relay one agent's event stream to the browser, unedited.
+
+    GET with query parameters rather than POST so the browser's own EventSource
+    can read it; a POST would need a streaming-fetch parser in every screen.
+
+    The reply is ADK's own stream, passed through byte for byte. Reshaping the
+    events here would put a second opinion between the screen and the agent,
+    which is the same objection /api/invoke already records.
+    """
+    expected = _entrypoints()
+    if agent_id not in expected:
+        return JSONResponse(
+            {"connected": False, "stage": "catalog",
+             "detail": f"{agent_id} is not an externally callable entrypoint"},
+            status_code=404,
+        )
+    prompt = (prompt or "").strip()
+    if not prompt:
+        return JSONResponse(
+            {"connected": False, "stage": "request", "detail": "prompt is required"},
+            status_code=400,
+        )
+
+    # Everything that can fail with a status code fails here, before a single
+    # byte of the stream is written. After that the status is spent.
+    try:
+        live = _services()
+        base = live.get(expected[agent_id])
+        if not base:
+            raise NotConnected(
+                "cloud run", f"service {expected[agent_id]} is not deployed in {REGION}"
+            )
+        token = _identity_token(base)
+    except NotConnected as exc:
+        return JSONResponse(
+            {"connected": False, "stage": exc.stage, "detail": exc.detail},
+            status_code=503,
+        )
+
+    async def relay():
+        try:
+            async with _agent_client(base, token) as client:
+                # As in /api/invoke: a 400 here means the session already exists.
+                await client.post(
+                    SESSION_PATH.format(app=agent_id, user=user_id, session=session_id),
+                    json={},
+                )
+                async with client.stream(
+                    "POST",
+                    RUN_SSE_PATH,
+                    json={
+                        "app_name": agent_id,
+                        "user_id": user_id,
+                        "session_id": session_id,
+                        "new_message": {"role": "user", "parts": [{"text": prompt}]},
+                        "streaming": False,
+                    },
+                ) as upstream:
+                    if upstream.status_code != 200:
+                        detail = (await upstream.aread()).decode(errors="replace")
+                        yield _sse("proxy-error", {
+                            "connected": False, "stage": "agent",
+                            "detail": f"HTTP {upstream.status_code}: {detail[:800]}",
+                        })
+                    else:
+                        async for chunk in upstream.aiter_raw():
+                            yield chunk
+        except Exception as exc:  # noqa: BLE001 - the text is the product here
+            yield _sse("proxy-error", {
+                "connected": False, "stage": "stream",
+                "detail": f"{type(exc).__name__}: {exc}",
+            })
+        finally:
+            # EventSource reconnects when a connection closes. Without an
+            # explicit end the browser would silently re-ask the agent the same
+            # hundred-second question, forever.
+            yield b"event: proxy-done\ndata: {}\n\n"
+
+    return StreamingResponse(
+        relay(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/")
