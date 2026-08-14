@@ -161,6 +161,6 @@ el("hitl").innerHTML = CAT.agents
   .join("");
 
 el("prov").innerHTML = provenance(
-  `<dt>Runtime</dt><dd>${esc(WS.runtime.reason)}</dd>` +
+  `<dt>Runtime</dt><dd>${runtimeNote()}</dd>` +
     `<dt>Approvals</dt><dd class="mono">${esc(WS.approval.table)}</dd>`
 );

@@ -48,24 +48,99 @@ function agentName(id) {
   return AGENTS[id] ? AGENTS[id].display_name : id;
 }
 
+/* One /api/runtime call per page, shared by every block that needs the answer.
+ *
+ * This used to render DATA.workspace.runtime — a constant baked into bundle.js
+ * when it was generated — so five call sites printed NOT CONNECTED in
+ * production while the service was connected to all 52 agents. Being wrong in
+ * the pessimistic direction is still being wrong, and it is the more expensive
+ * kind here: it says the thing does not work.
+ *
+ * Three outcomes, kept apart because they are three different problems. The
+ * server answered and said yes; the server answered and said no, with its own
+ * reason; or there was no server to ask, which is the only case where the baked
+ * constant is the true answer.
+ */
+let _runtimePromise = null;
+
+function runtimeState() {
+  if (!_runtimePromise) {
+    _runtimePromise = fetch("/api/runtime")
+      .then((reply) =>
+        reply
+          .json()
+          .then((body) =>
+            typeof body.connected === "boolean"
+              ? body
+              : Promise.reject(new Error(`HTTP ${reply.status}`))
+          )
+          // Answered, but not with an answer: a 500, or a proxy's error page.
+          // Reporting that as "no server" would send someone looking for a
+          // server that is running and broken.
+          .catch((err) => ({
+            connected: false,
+            detail:
+              "The workspace server answered the connection check with " +
+              `something this page could not read (${err.message}).`,
+          }))
+      )
+      // The one case where the baked constant is the true answer: no API to
+      // ask, because the page is open off disk or behind a static file server.
+      .catch(() => ({ connected: false, ...WS.runtime, offline: true }));
+  }
+  return _runtimePromise;
+}
+
+let _pendingBlocks = 0;
+
 /** The block every screen shows where an agent's generated text would appear.
  *
- *  This repository holds no recorded agent responses, and the build says so in
- *  workspace.runtime rather than each screen deciding for itself. Writing a
- *  plausible transcript here would be the single most damaging thing this
- *  artifact could do: everything else on the screen is checkable against the
- *  catalog, and one invented paragraph would put all of it in doubt. */
+ *  Renders neutral and then corrects itself from the wire. Writing a plausible
+ *  transcript here would be the single most damaging thing this artifact could
+ *  do: everything else on the screen is checkable against the catalog, and one
+ *  invented paragraph would put all of it in doubt. Stating that the agents are
+ *  unreachable when they are reachable is the same fault pointed the other way,
+ *  and until the wire answers, neither sentence is available. */
 function notConnected(what) {
-  const r = WS.runtime;
+  const id = `nc-${(_pendingBlocks += 1)}`;
+  runtimeState().then((state) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.innerHTML = state.connected
+      ? '<div class="badge b-ok">✓ READY</div>' +
+        `<p class="nc-what">${esc(what)}</p>` +
+        `<p class="nc-why">${esc(state.deployed.length)} of ${esc(state.expected)} ` +
+        "agents are deployed and can be asked to write this.</p>"
+      : '<div class="badge b-warn">⚠ NOT CONNECTED</div>' +
+        `<p class="nc-what">${esc(what)}</p>` +
+        `<p class="nc-why">${esc(state.detail || state.reason || "")}</p>` +
+        (state.consequence ? `<p class="nc-why">${esc(state.consequence)}</p>` : "");
+  });
   return (
-    '<div class="not-connected">' +
-    `<div class="badge b-warn">⚠ NOT CONNECTED</div>` +
-    `<p class="nc-what">${esc(what)}</p>` +
-    `<p class="nc-why">${esc(r.reason)}</p>` +
-    `<p class="nc-why">${esc(r.consequence)}</p>` +
-    `<p class="nc-route mono">POST ${esc(r.proxy_route)}</p>` +
-    "</div>"
+    `<div class="not-connected" id="${id}">` +
+    '<div class="badge">CHECKING…</div>' +
+    `<p class="nc-what">${esc(what)}</p></div>`
   );
+}
+
+/** The same answer in one line, for the provenance row at the foot of a screen.
+ *
+ *  A footer asserting that the estate is unreachable, on a page served by the
+ *  proxy that just reached it, is the same untruth in smaller type. */
+function runtimeNote() {
+  const id = `rt-${(_pendingBlocks += 1)}`;
+  runtimeState().then((state) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.textContent = state.connected
+      ? `${state.deployed.length} of ${state.expected} agents are deployed and ` +
+        "reachable from this page."
+      : state.offline
+        ? "These screens are being served without the workspace server, so " +
+          "nothing on this page has asked the deployed agents anything."
+        : "Not connected to the deployed agents when this page loaded.";
+  });
+  return `<span id="${id}">Checking the connection to the deployed agents…</span>`;
 }
 
 /** The live runtime band. Asks the server which of the 52 services exist.
@@ -92,39 +167,44 @@ function runState(node) {
       "</div></div>";
   };
 
-  fetch("/api/runtime")
-    .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
-    .then((r) => {
-      if (!r.connected) {
-        offline(`${r.stage}: could not reach the deployed agents.`, r.detail);
-        return;
-      }
-      const n = r.deployed.length;
-      node.innerHTML =
-        '<div class="card"><div class="card-cap">Runtime</div>' +
-        '<div class="run-state">' +
-        `<span class="badge ${n === r.expected ? "b-ok" : "b-warn"}">` +
-        `${n === r.expected ? "✓" : "⚠"} ${n} / ${r.expected} DEPLOYED</span>` +
-        `<div><div>${esc(r.project)} · ${esc(r.region)}</div>` +
-        `<div class="dim" style="font-size:12.5px;margin-top:4px">${esc(r.note)}</div>` +
-        (r.missing.length
-          ? `<div class="dim mono" style="font-size:11px;margin-top:4px">not deployed: ${esc(
-              r.missing.join(" ")
-            )}</div>`
-          : "") +
-        "</div></div></div>";
-    })
-    .catch(() =>
-      /* Opened straight off disk, or the server is not running. Both are normal
-         ways to read these screens and neither is an error worth alarming
-         about — but neither can be described as connected either. */
+  /* The same promise every other block on this page waits on. It used to be its
+     own fetch, which meant the cockpit asked twice and could in principle print
+     two different answers to the same question in two places on one screen. */
+  runtimeState().then((r) => {
+    if (r.offline) {
+      /* Opened straight off disk, or the server is not running. Both are
+         normal ways to read these screens and neither is an error worth
+         alarming about — but neither can be described as connected either. */
       offline(
         "No runtime to query.",
         "These screens are being served without apps/workspace/server.py, so " +
           "there is nothing to ask about the deployed services. Run " +
           "`python -m uvicorn apps.workspace.server:app` to check them."
-      )
-    );
+      );
+      return;
+    }
+    if (!r.connected) {
+      offline(
+        `${r.stage || "The connection check"}: could not reach the deployed agents.`,
+        r.detail
+      );
+      return;
+    }
+    const n = r.deployed.length;
+    node.innerHTML =
+      '<div class="card"><div class="card-cap">Runtime</div>' +
+      '<div class="run-state">' +
+      `<span class="badge ${n === r.expected ? "b-ok" : "b-warn"}">` +
+      `${n === r.expected ? "✓" : "⚠"} ${n} / ${r.expected} DEPLOYED</span>` +
+      `<div><div>${esc(r.project)} · ${esc(r.region)}</div>` +
+      `<div class="dim" style="font-size:12.5px;margin-top:4px">${esc(r.note)}</div>` +
+      (r.missing.length
+        ? `<div class="dim mono" style="font-size:11px;margin-top:4px">not deployed: ${esc(
+            r.missing.join(" ")
+          )}</div>`
+        : "") +
+      "</div></div></div>";
+  });
 }
 
 /** One entrypoint as a rail row: id, name, and the two facts that change how
@@ -310,10 +390,16 @@ function flagsFor(ids) {
     });
   }
 
+  /* Not "the agents are unreachable" — whether they are is a fact about right
+     now, and this list is built before the wire has been asked. What is true
+     whenever this runs is that nothing already on the page came from an agent. */
   flags.push({
-    what: "No response from the deployed agent",
-    detail: WS.runtime.reason,
-    remedy: "Serve these screens through apps/workspace/server.py with credentials.",
+    what: "No sentence on this page was written by an agent",
+    detail:
+      "Structure, method and tables are read from the deployed catalog. The prose " +
+      "an agent would write is not recorded anywhere in this repository, and this " +
+      "build does not compose it on the agent's behalf.",
+    remedy: "Ask the agent through the workspace server and read what comes back.",
   });
 
   return flags;

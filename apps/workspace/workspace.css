@@ -348,12 +348,15 @@ table.audit td.t { white-space: nowrap; }
 .transcript .you { margin: 12px 0 6px; font-weight: 600; }
 .transcript .you p, .transcript .pick p, .transcript .error p { margin: 0; }
 .transcript .pick { font-size: 12px; color: var(--fg-muted); margin-bottom: 8px; }
-.transcript .log { margin: 6px 0; }
-.transcript .step { font-size: 12px; color: var(--fg-muted); margin: 3px 0;
-  padding-left: 14px; position: relative; }
-.transcript .step::before { content: "·"; position: absolute; left: 2px; }
-.transcript .step.failed { color: var(--fg); }
-.transcript .step.failed::before { content: "×"; }
+/* An activity line means the same thing wherever a stream runs, so the sidecar
+   and the handover share one set of rules rather than keeping two that drift. */
+.transcript .log, .brief-out .log { margin: 6px 0; }
+.transcript .step, .brief-out .step { font-size: 12px; color: var(--fg-muted);
+  margin: 3px 0; padding-left: 14px; position: relative; }
+.transcript .step::before, .brief-out .step::before { content: "·";
+  position: absolute; left: 2px; }
+.transcript .step.failed, .brief-out .step.failed { color: var(--fg); }
+.transcript .step.failed::before, .brief-out .step.failed::before { content: "×"; }
 /* Stopped is not failed: the reader ended it, and nothing went wrong. */
 .transcript .step.stopped::before { content: "–"; }
 .transcript .answer { white-space: pre-wrap; margin: 8px 0 4px; }
@@ -374,6 +377,15 @@ table.audit td.t { white-space: nowrap; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- SC-5: writing the brief ---------- */
+
+/* The control sits above the sheet because it is what fills the sheet, and the
+   answer lands directly under it rather than a screen further down, where a
+   reader watching for the first line would not see it arrive. */
+.run-brief { margin-top: 16px; }
+.brief-out { font-size: 13px; }
+.brief-out .answer { white-space: pre-wrap; margin: 10px 0 4px; max-width: 80ch; }
 
 /* At desk widths the sidecar is pinned, and a pinned column taller than the
    viewport hides its own bottom — which is where the Ask button is, the one
@@ -425,4 +437,11 @@ table.audit td.t { white-space: nowrap; }
      the component, not the application that first needed them on paper. */
 
   .card, .tbl, .unverified, .not-connected { page-break-inside: avoid; }
+
+  /* The button and the step-by-step log are how the brief got here; the brief
+     is what goes on paper. The beforeprint hook already opens every <details>,
+     so the drawer prints in full. */
+  .run-brief { display: none; }
+  .brief-out .log { display: none; }
+  .brief-out .answer { white-space: pre-wrap; color: #111; }
 }

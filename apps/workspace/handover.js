@@ -1,10 +1,12 @@
-/* SC-5 — the shift handover brief. One agent, no controls, and a print button.
+/* SC-5 — the shift handover brief. One agent, two buttons, and a document.
  *
  * Every other screen in this application is a place to ask something. This one
- * is not: the Shift Supervisor reads it at the change of shift, decides what to
- * carry forward, and often walks away with it on paper. So there is no rail, no
- * parameter, nothing to click that changes what is on the page, and the whole
- * document is written to survive being printed.
+ * is a thing to read: the Shift Supervisor reads it at the change of shift,
+ * decides what to carry forward, and often walks away with it on paper. So
+ * there is no rail and no parameter — nothing that changes what the sheet is
+ * about — and the whole document is written to survive being printed. The two
+ * controls it does carry are the two things the reader does with it: write it,
+ * and print it.
  *
  * The brief has four parts because the swarm has four working nodes. Three
  * summarisers each own a domain — availability, production, safety — and the
@@ -65,8 +67,8 @@ function section(id, index) {
     `<div class="mono dim" style="font-size:11px;margin-bottom:12px">${esc(id)} · ` +
     `reads ${a.source_tables.length} tables</div>` +
     notConnected(
-      `The ${a.display_name.toLowerCase()} writes this section in prose from the ` +
-        "tables below. It has not run."
+      `The ${a.display_name.toLowerCase()} writes this section in prose, and the ` +
+        `${a.source_tables.length} tables below are what it is entitled to draw on.`
     ) +
     '<div style="margin-top:14px">' +
     inputs(id) +
@@ -86,10 +88,12 @@ function omission() {
     '<div class="unverified-cap"><span class="badge b-crit">⚠ OMISSION CRITIC</span>' +
     `<span>${esc(critic.display_name)} · ${esc(swarm.critic)}</span></div>` +
     "<ul><li><strong>Coverage has not been checked for this window.</strong>" +
-    '<div class="dim mono">' +
-    esc(WS.runtime.reason) +
+    '<div class="dim">' +
+    runtimeNote() +
     "</div>" +
-    '<div class="remedy">This band is never empty and never hidden. When the ' +
+    '<div class="remedy">Write the brief above and the critic runs with the other ' +
+    "three; what it finds, or does not find, comes back in the same answer. " +
+    "This band is never empty and never hidden. When the " +
     "critic runs and finds nothing, it says it found nothing — which is a " +
     "different statement from saying nothing, and only one of the two can be " +
     "relied on.</div></li>" +
@@ -119,6 +123,88 @@ function why() {
     "</div>"
   );
 }
+
+/* One streamed call, to the one agent the catalogue permits.
+ *
+ * The sheet has four sections, and it is tempting to run four things. The
+ * catalogue does not allow it: the swarm names a coordinator, three specialists
+ * and a critic, and only the coordinator carries is_entrypoint. The other four
+ * are the swarm's internal decomposition, not four things a reader may invoke.
+ *
+ * EventSource reconnects by itself whenever a connection closes, and this
+ * question was measured at a little under two minutes of real model time. So
+ * every path that could leave one open closes it: a second click, a stream that
+ * breaks, and a reader who walks away mid-answer.
+ */
+function mountRun() {
+  el("run").innerHTML =
+    '<div class="run-brief">' +
+    '<button class="ask primary" id="run-brief" type="button">Write this brief now</button>' +
+    '<p class="pnote">One agent writes the whole sheet. It takes a minute or two, ' +
+    "and each step it takes appears below as it happens. Asking again starts over " +
+    "and stops the answer in progress.</p></div>" +
+    '<div class="brief-out" id="brief-out" aria-live="polite"></div>';
+
+  let live = null;
+
+  function stop() {
+    const was = live;
+    live = null;
+    if (!was) return;
+    was.abandoned = true; // so a late frame does not write into a dead answer
+    if (was.handle) was.handle.close();
+  }
+
+  // Leaving the page stops the reader reading. It does not, on its own, stop
+  // the stream costing anything.
+  addEventListener("pagehide", stop);
+
+  el("run-brief").addEventListener("click", () => {
+    stop();
+    el("brief-out").innerHTML =
+      '<div class="log" id="brief-log"></div>' +
+      '<div class="answer" id="brief-answer"></div>';
+    const log = el("brief-log");
+    const answer = el("brief-answer");
+
+    function say(text, cls) {
+      const line = document.createElement("p");
+      line.className = cls;
+      line.textContent = text;
+      log.appendChild(line);
+    }
+
+    const mine = { abandoned: false, handle: null };
+    live = mine; // assigned first: a stream can finish inside the call that
+                 // starts it, and its onDone runs before streamAgent returns.
+    mine.handle = streamAgent({
+      agentId: "S12",
+      prompt:
+        "Write the shift handover brief for this site: what changed, what is at " +
+        "risk, what the next shift must pick up, and what was left unsaid.",
+      userId: "workspace",
+      sessionId: `handover-${Date.now()}`,
+      onStep: (step) => {
+        if (mine.abandoned) return;
+        if (step.kind === "text") {
+          answer.textContent += step.text;
+          return;
+        }
+        say(step.text, step.kind === "step-failed" ? "step failed" : "step");
+      },
+      onError: (detail) => {
+        if (mine.abandoned) return;
+        say(detail, "step failed");
+      },
+      onDone: () => {
+        if (live === mine) live = null;
+      },
+    });
+    if (mine.abandoned && mine.handle) mine.handle.close();
+  });
+}
+
+mountRun();
 
 el("brief").innerHTML =
   '<div style="margin-top:16px">' +
@@ -157,5 +243,5 @@ el("print").addEventListener("click", () => window.print());
 el("prov").innerHTML = provenance(
   `<dt>Swarm</dt><dd class="mono">${esc(members.join(" · "))}</dd>` +
     `<dt>Reader</dt><dd>${esc(supervisor.title || S12.persona)}</dd>` +
-    `<dt>Runtime</dt><dd>${esc(WS.runtime.reason)}</dd>`
+    `<dt>Runtime</dt><dd>${runtimeNote()}</dd>`
 );

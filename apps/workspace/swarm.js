@@ -167,5 +167,5 @@ if (coord.hitl_required) {
 
 el("prov").innerHTML = provenance(
   `<dt>Swarm</dt><dd class="mono">${esc(members.join(" · "))}</dd>` +
-    `<dt>Runtime</dt><dd>${esc(WS.runtime.reason)}</dd>`
+    `<dt>Runtime</dt><dd>${runtimeNote()}</dd>`
 );
