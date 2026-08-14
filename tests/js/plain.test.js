@@ -76,6 +76,30 @@ test("callLine bq_query on an articled table does not double the article", () =>
   );
 });
 
+test("a table phrase that is a relative clause is framed without an article", () => {
+  // "Reading the which parts each supplier quoted" is not English. Five of the
+  // twenty-five table phrases are clauses, not noun phrases.
+  assert.equal(P.articleFor("machine register"), "the ");
+  assert.equal(P.articleFor("which parts each supplier quoted"), "");
+  assert.equal(P.articleFor("who was involved in each incident"), "");
+  assert.equal(
+    P.callLine("bq_query", { sql: "SELECT * FROM `mining_data.bid_parts_edge`" }),
+    "Reading which parts each supplier quoted"
+  );
+  assert.equal(
+    P.failLine("bq_query", { sql: "SELECT * FROM `mining_data.incident_involvements`" }),
+    "Couldn't read who was involved in each incident — that lookup failed."
+  );
+});
+
+test("every tool has a bare-verb phrase for the ability frame", () => {
+  for (const id of Object.keys(P.TOOLS)) {
+    assert.notEqual(P.TOOL_ABILITY[id], undefined, `${id} has no ability phrase`);
+    assert.equal(P.plainToolAbility(id), P.TOOL_ABILITY[id]);
+  }
+  assert.equal(P.plainToolAbility("no_such_tool"), "no_such_tool");
+});
+
 test("tableFromSql finds the first qualified table and nothing else", () => {
   assert.equal(
     P.tableFromSql("SELECT a FROM `mining_data.assets` JOIN `mining_data.maintenance_logs`"),

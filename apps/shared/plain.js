@@ -29,10 +29,21 @@ var TOOL_DOING = {
   request_approval: "Asking for your sign-off",
 };
 
+/* The bare-verb phrase for a tool, used after a modal — "It can look up
+ * records". TOOLS is the gerund and reads wrong in that position. */
+var TOOL_ABILITY = {
+  bq_query: "look up records",
+  bqml_predict: "run a prediction",
+  graph_traverse: "trace connections",
+  operational_math: "work out the numbers",
+  request_approval: "ask for your sign-off",
+};
+
 /* The verb for the composed form, "Reading the sensor readings". Only the two
- * tools that take a noun need one. */
-var TOOL_VERB = { bq_query: "Reading the", graph_traverse: "Tracing" };
-var TOOL_FAILED = { bq_query: "Couldn't read the", graph_traverse: "Couldn't trace" };
+ * tools that take a noun need one. The article is not part of the verb: see
+ * articleFor. */
+var TOOL_VERB = { bq_query: "Reading", graph_traverse: "Tracing" };
+var TOOL_FAILED = { bq_query: "Couldn't read", graph_traverse: "Couldn't trace" };
 
 var TRAVERSALS = {
   blast_radius: "what else stops if this stops",
@@ -101,6 +112,20 @@ function plainTool(id) {
   return TOOLS[id] || String(id || "");
 }
 
+function plainToolAbility(id) {
+  return TOOL_ABILITY[id] || plainTool(id);
+}
+
+/* The article a table phrase needs from whatever frames it, and the one place
+ * that decides. Most phrases here are noun phrases and read as "the machine
+ * register". A few are relative clauses — they begin with which/who/what and
+ * are already complete — and "the which parts each supplier quoted" is not
+ * English. The phrases themselves carry no article so that a frame which wants
+ * none ("Show me who drove what") can have none. */
+function articleFor(phrase) {
+  return /^(?:which|who|what)\b/i.test(String(phrase || "")) ? "" : "the ";
+}
+
 function plainTraversal(id) {
   return TRAVERSALS[id] || String(id || "");
 }
@@ -138,16 +163,23 @@ function _noun(name, args) {
   return null;
 }
 
+/* A traversal phrase is a clause and never takes an article; a table phrase
+ * takes whichever articleFor says. */
+function _framed(verb, noun) {
+  var article = noun.kind === "table" ? articleFor(noun.plain) : "";
+  return verb + " " + article + noun.plain;
+}
+
 function callLine(name, args) {
   var noun = _noun(name, args);
-  if (noun && TOOL_VERB[name]) return TOOL_VERB[name] + " " + noun.plain;
+  if (noun && TOOL_VERB[name]) return _framed(TOOL_VERB[name], noun);
   return TOOL_DOING[name] || String(name || "");
 }
 
 function failLine(name, args) {
   var noun = _noun(name, args);
   var head = noun && TOOL_FAILED[name]
-    ? TOOL_FAILED[name] + " " + noun.plain
+    ? _framed(TOOL_FAILED[name], noun)
     : "Couldn't finish " + (TOOLS[name] || String(name || ""));
   return head + " — that lookup failed.";
 }
@@ -176,8 +208,8 @@ function unmapped(DATA) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    TOOLS, TRAVERSALS, TABLES, JARGON,
-    bareTable, plainTable, plainTool, plainTraversal, plainJargon,
-    tableFromSql, callLine, failLine, unmapped,
+    TOOLS, TOOL_ABILITY, TRAVERSALS, TABLES, JARGON,
+    bareTable, plainTable, plainTool, plainToolAbility, plainTraversal, plainJargon,
+    articleFor, tableFromSql, callLine, failLine, unmapped,
   };
 }

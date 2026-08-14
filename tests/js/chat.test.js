@@ -46,10 +46,42 @@ test("the pick line never prints an agent id when a name exists", () => {
 });
 
 test("every persona's sidecar opens with three starters and a valid first pick", () => {
+  const R = require("../../apps/workspace/router.js");
   for (const code of Object.keys(DATA.personas.personas)) {
     const opening = C.opening(code, DATA);
     assert.equal(opening.starters.length, 3, `${code} opened with ${opening.starters.length}`);
-    assert.ok(opening.title.length > 0);
+    assert.equal(opening.title, DATA.personas.personas[code].title,
+      `${code} opened under a title that is not its own`);
+
+    // The pick the reader gets if they click the first starter, which is the
+    // most likely first thing to happen on this screen.
+    const decision = R.route(opening.starters[0], code, DATA);
+    assert.ok(DATA.personas.personas[code].agents.includes(decision.agent_id),
+      `${code}: its own first starter routed to ${decision.agent_id}`);
+    const line = C.pickLine(decision, DATA);
+    const name = DATA.catalog.agents
+      .find((a) => a.agent_id === decision.agent_id).display_name;
+    assert.equal(line, `Asking ${name}. ${decision.reason}`);
+    assert.ok(!line.includes(decision.agent_id),
+      `${code}: the agent id is jargon and leaked into: ${line}`);
+  }
+});
+
+test("the pick line names the agent once, not once per clause", () => {
+  const R = require("../../apps/workspace/router.js");
+  for (const code of Object.keys(DATA.personas.personas)) {
+    for (const q of C.opening(code, DATA).starters.concat([
+      "What should I look at first?",
+      "Which assets are most at risk right now?",
+      "Is anything waiting on my sign-off?",
+    ])) {
+      const decision = R.route(q, code, DATA);
+      const name = DATA.catalog.agents
+        .find((a) => a.agent_id === decision.agent_id).display_name;
+      const line = C.pickLine(decision, DATA);
+      assert.equal(line.split(name).length - 1, 1,
+        `${code}: "${q}" produced a line that says the agent's name twice: ${line}`);
+    }
   }
 });
 
@@ -98,14 +130,45 @@ function stubElement(tag) {
   };
 }
 
+/* The selectors persona.html actually contains. A stub that minted a node for
+ * anything asked of it would let `#transcirpt` pass here and fail in a browser,
+ * which is the one direction a stub must never be wrong in. */
+const SELECTORS = ["#transcript", "#composer", "#question"];
+
+/* The inverse of shell.js's esc(). A browser decodes entities as it parses the
+ * markup, so the text on a starter button is the question, not its escaped
+ * source — and the button's text is what gets sent when it is clicked. */
+function unesc(text) {
+  return String(text)
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
+}
+
 function stubRoot() {
   const found = {};
+  let starters = null;
   const root = stubElement("aside");
   root.querySelector = function (selector) {
+    if (!SELECTORS.includes(selector)) return null;
     if (!found[selector]) found[selector] = stubElement("div");
     return found[selector];
   };
-  root.querySelectorAll = function () { return []; };
+  root.querySelectorAll = function (selector) {
+    if (selector !== ".starter") return [];
+    if (starters) return starters;      // the same nodes, so listeners survive
+    starters = [];
+    const re = /<button class="starter" type="button">([\s\S]*?)<\/button>/g;
+    let match;
+    while ((match = re.exec(root.innerHTML))) {
+      const button = stubElement("button");
+      button.className = "starter";
+      button.textContent = unesc(match[1]);
+      starters.push(button);
+    }
+    return starters;
+  };
   return root;
 }
 
@@ -180,8 +243,22 @@ test("the abandoned question says it was stopped rather than trailing off", () =
 
   const logs = transcript.children.filter((c) => c.className === "log");
   const stopped = logs[0].children.map((line) => line.textContent);
-  assert.ok(stopped.some((t) => t.includes("Stopped")),
+  assert.ok(stopped.includes("Stopped — you asked something else."),
     `the abandoned log ends without saying why: ${JSON.stringify(stopped)}`);
+});
+
+test("clicking a starter asks that starter's question, as the reader sees it", () => {
+  const rec = recorder();
+  const { root } = mount("P1", rec);
+  const buttons = root.querySelectorAll(".starter");
+  const starters = C.opening("P1", DATA).starters;
+
+  assert.equal(buttons.length, 3, "the starter buttons were never written or never found");
+  buttons[1].listeners.click[0]();
+
+  assert.equal(rec.opened.length, 1, "clicking a starter reached no agent");
+  assert.equal(rec.opened[0].options.prompt, starters[1],
+    "the question that reached the agent is not the one on the button");
 });
 
 test("a question reaches the agent the router picked, with the reader's words", () => {
@@ -210,7 +287,7 @@ test("a finished stream leaves nothing open and says the answer was empty", () =
   rec.opened[0].options.onDone();
 
   const answers = transcript.children.filter((c) => c.className === "answer");
-  assert.ok(answers[0].textContent.length > 0,
+  assert.equal(answers[0].textContent, "The agent finished without writing an answer.",
     "an agent that wrote nothing leaves the reader with an empty box");
 
   chat.close();
@@ -235,6 +312,27 @@ test("one tool call is one line, though it crosses the wire twice", () => {
     "Reading the sensor readings.",
     "Tracing what else stops if this stops.",
     "Couldn't trace what else stops if this stops.",
+  ]);
+});
+
+test("two calls of the same tool are two lines, not one", () => {
+  // operational_math renders the same sentence whatever it is given, so the
+  // only thing separating one invocation from the next is that the pair
+  // arrives twice. A suppressor that swallowed every repeat would report two
+  // pieces of work as one — and the measured run made ten calls.
+  const rec = recorder();
+  const { chat, transcript } = mount("P1", rec);
+  chat.ask("which assets are most at risk?");
+  const on = rec.opened[0].options.onStep;
+  on({ kind: "step", text: "Working out the numbers." });   // first call
+  on({ kind: "step", text: "Working out the numbers." });   // its response
+  on({ kind: "step", text: "Working out the numbers." });   // second call
+  on({ kind: "step", text: "Working out the numbers." });   // its response
+
+  const log = transcript.children.filter((c) => c.className === "log")[0];
+  assert.deepEqual(log.children.map((p) => p.textContent), [
+    "Working out the numbers.",
+    "Working out the numbers.",
   ]);
 });
 

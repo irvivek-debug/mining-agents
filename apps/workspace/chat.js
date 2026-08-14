@@ -15,18 +15,24 @@
 var CHAT_ROUTER = typeof require !== "undefined" ? require("./router.js") : window;
 var CHAT_STREAM = typeof require !== "undefined" ? require("./agent-stream.js") : window;
 
-/* esc comes from shell.js. In the browser it is a global, because classic script
- * tags share one scope and persona.html loads shell.js first. Node gives every
- * module its own scope, so the same name is resolved through require and
- * published where the function bodies below already look for it. Guarded on the
- * absence of a window so the browser path is untouched. */
-if (typeof require !== "undefined" && typeof window === "undefined") {
-  Object.assign(globalThis, require("../shared/shell.js"));
-}
+/* esc comes from shell.js: a global in the browser, where classic script tags
+ * share one scope and persona.html loads shell.js first, and a require under
+ * Node. Same shape as every sibling module, so nothing here writes into a scope
+ * it does not own. */
+var CHAT_SHELL = typeof require !== "undefined" ? require("../shared/shell.js") : window;
+
+/* One agent lookup per bundle, not one per name. alternatives() asks for a name
+ * per runner-up and the catalogue holds every agent in the estate, so building
+ * the map inside _name made a 52-entry object three times to print one line. */
+var CHAT_AGENTS = null;
+var CHAT_AGENTS_OF = null;
 
 function _agentsById(DATA) {
+  if (CHAT_AGENTS_OF === DATA) return CHAT_AGENTS;
   var byId = {};
   DATA.catalog.agents.forEach(function (a) { byId[a.agent_id] = a; });
+  CHAT_AGENTS_OF = DATA;
+  CHAT_AGENTS = byId;
   return byId;
 }
 
@@ -35,6 +41,8 @@ function _name(agentId, DATA) {
   return agent ? agent.display_name : agentId;
 }
 
+/* The one place the agent's name is framed. router.js returns a name-free
+ * reason so that this prefix is not repeated inside it. */
 function pickLine(decision, DATA) {
   return "Asking " + _name(decision.agent_id, DATA) + ". " + decision.reason;
 }
@@ -66,13 +74,13 @@ function mountChat(node, personaCode, DATA, deps) {
 
   node.innerHTML =
     '<div class="chat-head"><h2>Ask your agents</h2>' +
-    '<p class="pnote">These agents belong to the ' + esc(start.title) +
+    '<p class="pnote">These agents belong to the ' + CHAT_SHELL.esc(start.title) +
     " role. Start with one of the questions below, or write your own. A real " +
     "answer takes a minute or two; every step the agent takes appears here as " +
     "it happens.</p></div>" +
     '<div class="starters">' +
     start.starters.map(function (q) {
-      return '<button class="starter" type="button">' + esc(q) + "</button>";
+      return '<button class="starter" type="button">' + CHAT_SHELL.esc(q) + "</button>";
     }).join("") +
     "</div>" +
     '<div class="transcript" id="transcript" aria-live="polite"></div>' +
@@ -100,16 +108,20 @@ function mountChat(node, personaCode, DATA, deps) {
     if (was.handle) was.handle.close();
   }
 
+  // Scroll the transcript, never the page. A stream that ran scrollIntoView on
+  // every step would yank the document out from under a reader who is halfway
+  // down the left-hand panel, once every few seconds, for the whole minute or
+  // two the answer takes.
+  function pin() {
+    transcript.scrollTop = transcript.scrollHeight;
+  }
+
   function block(html, cls) {
     var div = document.createElement("div");
     div.className = cls;
     div.innerHTML = html;
     transcript.appendChild(div);
-    // Scroll the transcript, never the page. A stream that ran scrollIntoView
-    // on every step would yank the document out from under a reader who is
-    // halfway down the left-hand panel, once every few seconds, for the whole
-    // minute or two the answer takes.
-    transcript.scrollTop = transcript.scrollHeight;
+    pin();
     return div;
   }
 
@@ -120,15 +132,25 @@ function mountChat(node, personaCode, DATA, deps) {
    * own to say anything more with. Printed as they come, a successful call reads
    * as the same line twice in a row, which reads as a rendering fault. A call
    * that fails does not repeat itself: its second line is the failure, and that
-   * one is worth every bit of the room it takes. */
+   * one is worth every bit of the room it takes.
+   *
+   * So a line absorbs one repeat and no more. Several tools render a constant
+   * sentence whatever their arguments — working out the numbers, running a
+   * prediction, asking for your sign-off — and an agent that works out the
+   * numbers four times in a row is doing four things, not one. Suppressing all
+   * repeats turned a measured ten-call run into a handful of lines, which is
+   * under-reporting the only evidence the reader has that the wait is work. */
   function line(log, text, cls) {
     var previous = log.children[log.children.length - 1];
-    if (previous && previous.textContent === text) return previous;
+    if (previous && previous.textContent === text && !previous.absorbedRepeat) {
+      previous.absorbedRepeat = true;   // its response; the next one is a new call
+      return previous;
+    }
     var p = document.createElement("p");
     p.className = cls;
     p.textContent = text;
     log.appendChild(p);
-    transcript.scrollTop = transcript.scrollHeight;
+    pin();
     return p;
   }
 
@@ -139,8 +161,8 @@ function mountChat(node, personaCode, DATA, deps) {
       ? { agent_id: forcedAgentId, reason: "You picked this one.", runners_up: [] }
       : CHAT_ROUTER.route(question, personaCode, DATA);
 
-    block("<p>" + esc(question) + "</p>", "you");
-    var head = block("<p>" + esc(pickLine(decision, DATA)) + "</p>", "pick");
+    block("<p>" + CHAT_SHELL.esc(question) + "</p>", "you");
+    var head = block("<p>" + CHAT_SHELL.esc(pickLine(decision, DATA)) + "</p>", "pick");
 
     alternatives(decision, DATA).forEach(function (alt) {
       var button = document.createElement("button");
@@ -171,7 +193,7 @@ function mountChat(node, personaCode, DATA, deps) {
         if (mine.abandoned) return;
         if (step.kind === "text") {
           answer.textContent += step.text;
-          transcript.scrollTop = transcript.scrollHeight;
+          pin();
           return;
         }
         line(log, step.text, step.kind === "step-failed" ? "step failed" : "step");
@@ -179,7 +201,7 @@ function mountChat(node, personaCode, DATA, deps) {
       onError: function (detail) {
         if (mine.abandoned) return;
         mine.failed = true;
-        block("<p>" + esc(detail) + "</p>", "error");
+        block("<p>" + CHAT_SHELL.esc(detail) + "</p>", "error");
       },
       onDone: function () {
         if (mine.abandoned) return;

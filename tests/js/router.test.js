@@ -48,6 +48,72 @@ test("every persona's routing stays inside that persona's own agents", () => {
   }
 });
 
+/* The reason is a clause, and chat.js prints it after "Asking <agent>." — so a
+ * reason that names the agent itself says the name twice, and the names on this
+ * catalogue run to seven words. */
+test("no reason ever names an agent, because the caller already has", () => {
+  const questions = [
+    "What should I look at first?",
+    "What changed since yesterday?",
+    "Which assets are most at risk right now?",
+    "Show me the crew fatigue readings",
+    "Is anything waiting on my sign-off?",
+    "the and of a to is it",
+  ];
+  const names = DATA.catalog.agents
+    .map((a) => a.display_name)
+    .filter((n) => n && n.length);
+  for (const code of CODES) {
+    for (const q of questions.concat(R.starterQuestions(code, DATA))) {
+      const reason = R.route(q, code, DATA).reason;
+      for (const name of names) {
+        assert.ok(!reason.includes(name),
+          `${code}: the reason for "${q}" names ${name}: ${reason}`);
+      }
+    }
+  }
+});
+
+test("a question that named no capability says so, without naming the agent", () => {
+  const pick = R.route("What should I look at first?", "P1", DATA);
+  assert.equal(pick.reason,
+    "Nothing in the question named a capability, so it goes to the agent " +
+    "this role leads with.");
+});
+
+test("a table in the reason carries the article its phrase does not", () => {
+  // TABLES phrases hold no leading article, because the frame that uses them
+  // owns it — "Reading the machine register", "What's in the machine register".
+  assert.equal(R.route("What does the machine register say?", "P1", DATA).reason,
+    "It reads the machine register.");
+});
+
+test("a table phrase that is already a clause takes no article", () => {
+  assert.equal(R.route("Show me who drove what.", "P7", DATA).reason,
+    "It reads who drove what.");
+});
+
+test("two matches sharing a verb say the verb once", () => {
+  assert.equal(R.route("What's in the parts on hand right now?", "P2", DATA).reason,
+    "It reads the parts each work order needs and the parts on hand.");
+});
+
+test("a tool in the reason reads as an ability, not as a bare gerund", () => {
+  // TOOLS phrases are gerunds for prose elsewhere; "It asking for your
+  // sign-off." is not a sentence.
+  assert.equal(R.route("Is anything waiting on my sign-off?", "P1", DATA).reason,
+    "It can ask for your sign-off.");
+});
+
+test("a match on the agent's own name does not restate the name as a capability", () => {
+  // "risk" is a word of Fatigue Risk Scorer's name and of nothing else it has.
+  const pick = R.route("Which assets are most at risk right now?", "P3", DATA);
+  assert.equal(
+    DATA.catalog.agents.find((a) => a.agent_id === pick.agent_id).display_name,
+    "Fatigue Risk Scorer");
+  assert.equal(pick.reason, "Your question matched its name and nothing more specific.");
+});
+
 test("P8 has one agent, so it names it and offers nothing to change to", () => {
   assert.deepEqual(DATA.personas.personas.P8.agents, ["S12"]);
   const pick = R.route("What happened on the last shift?", "P8", DATA);

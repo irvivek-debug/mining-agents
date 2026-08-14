@@ -112,9 +112,10 @@ el("foot").innerHTML = technicalDrawer(drawerBody(CODE), "agent ids, tables, mod
   provenance();
 showRuntime();
 
-/* The sidecar is mounted after the panel so the "Ask this one" buttons in the
-   sign-off block have something to call. */
 const CHAT = mountChat(el("chat"), CODE, DATA);
+
+/* The "Ask this one" buttons in the sign-off block are handled by delegation on
+   the panel, so they keep working however the panel is re-rendered. */
 
 el("panel").addEventListener("click", (event) => {
   const button = event.target.closest("button.ask[data-agent]");

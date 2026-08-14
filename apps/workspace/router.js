@@ -57,8 +57,10 @@ function termsFor(agent) {
   (agent.tools || []).forEach(function (t) {
     terms.push({ kind: "tool", id: t, plain: PLAIN.plainTool(t), weight: WEIGHT.tool });
   });
+  /* A value branch is a business area, not a tool, and reads as one in the
+   * reason. It keeps the tool weight: naming a branch is as weak a signal. */
   branchesOf(agent.value_branch).forEach(function (b) {
-    terms.push({ kind: "tool", id: b, plain: b.replace(/_/g, " "), weight: WEIGHT.tool });
+    terms.push({ kind: "branch", id: b, plain: b.replace(/_/g, " "), weight: WEIGHT.tool });
   });
   return terms;
 }
@@ -96,18 +98,57 @@ function _better(a, b) {
   return a.agent.agent_id < b.agent.agent_id;
 }
 
-function _reason(scored, agent) {
-  if (!scored.matched.length) {
-    return "Nothing in the question named a capability, so it goes to " +
-      (agent.display_name || agent.agent_id) + ", the agent this role leads with.";
-  }
-  var phrases = scored.matched.slice(0, 2).map(function (m) {
-    if (m.term.kind === "table") return "reads " + m.term.plain;
-    if (m.term.kind === "traversal") return "traces " + m.term.plain;
-    if (m.term.kind === "tool") return m.term.plain;
-    return "covers " + m.term.plain.toLowerCase();
+/* The clause after "Asking <agent>." — and it carries no agent name of its own.
+ * The caller frames the name once; a reason that named it again produced
+ * "Asking Cascading Failure Impact & Recovery Coordinator. Nothing in the
+ * question named a capability, so it goes to Cascading Failure Impact &
+ * Recovery Coordinator, the agent this role leads with."
+ *
+ * Each matched term becomes a verb and an object, kept apart so that two
+ * matches sharing a verb read as "It reads the work orders and the parts on
+ * hand" rather than "It reads work orders and reads parts on hand".
+ */
+function _clause(m) {
+  var kind = m.term.kind;
+  var plain = m.term.plain;
+  // Table phrases carry no article of their own — the frame that uses them
+  // owns it, and whether one is wanted depends on the phrase.
+  if (kind === "table") return { verb: "reads", object: PLAIN.articleFor(plain) + plain };
+  if (kind === "traversal") return { verb: "traces", object: plain };
+  if (kind === "tool") return { verb: "can", object: PLAIN.plainToolAbility(m.term.id) };
+  if (kind === "branch") return { verb: "covers", object: plain };
+  if (kind === "apqc") return { verb: "covers", object: plain.toLowerCase() };
+  // kind "name": the question echoed the agent's own name back. "It covers
+  // fatigue risk scorer" tells a reader who typed those words nothing, so the
+  // term yields no clause and another match speaks instead.
+  return null;
+}
+
+function _reason(scored) {
+  var named = false;
+  var parts = [];
+  scored.matched.forEach(function (m) {
+    if (parts.length >= 2) return;
+    var clause = _clause(m);
+    if (!clause) { named = true; return; }
+    parts.push(clause);
   });
-  return "It " + phrases.join(" and ") + ".";
+
+  if (parts.length === 2 && parts[0].verb === parts[1].verb) {
+    return "It " + parts[0].verb + " " + parts[0].object + " and " +
+      parts[1].object + ".";
+  }
+  if (parts.length) {
+    return "It " + parts.map(function (p) {
+      return p.verb + " " + p.object;
+    }).join(" and ") + ".";
+  }
+  // Only the agent's own name matched. Saying so is both the reason and a
+  // warning that the pick is a weak one, which is what the buttons beside it
+  // are for.
+  if (named) return "Your question matched its name and nothing more specific.";
+  return "Nothing in the question named a capability, so it goes to the agent " +
+    "this role leads with.";
 }
 
 function route(question, personaCode, DATA) {
@@ -137,21 +178,19 @@ function route(question, personaCode, DATA) {
 
   return {
     agent_id: winner.agent.agent_id,
-    reason: _reason(winner.detail, winner.agent),
+    reason: _reason(winner.detail),
     runners_up: runners,
   };
 }
 
 /* Turn a table phrase into a question. Table phrases that are relative clauses
- * (they begin with "which", "who" or "what") compose as "Show me …" because
+ * — the ones articleFor gives no article to — compose as "Show me …" because
  * they are already a complete clause and the container frame would be redundant.
  * All other phrases use "What's in the … right now?" — this frame works for
  * both singular and plural nouns without any number-agreement logic, and it
  * never reintroduces an article into the phrase itself. */
 function _tableQuestion(phrase) {
-  if (/^(?:which|who|what)\b/i.test(phrase)) {
-    return "Show me " + phrase + ".";
-  }
+  if (!PLAIN.articleFor(phrase)) return "Show me " + phrase + ".";
   return "What's in the " + phrase + " right now?";
 }
 
