@@ -32,6 +32,29 @@ const supervisor = PERSONAS[S12.persona] || {};
 document.title = `${S12.display_name} — Mining Agents workspace`;
 el("title").textContent = "Shift handover brief";
 
+/* What each specialist covers, read off its own name. The sentence below binds
+   a count to a list of subjects, and the two have to be the same list: "3 of
+   them cover availability, production and safety" was typed underneath a
+   derived number and would have gone on reading true, and wrong, the day a
+   fourth specialist joined the team. Every one of them is named "<subject>
+   Summariser" in the catalogue, so the subject is the name without its trade;
+   a member that stops being one stops this screen, exactly as the cockpit and
+   the solution screen stop when the teams change shape under them. */
+const COVERS = swarm.specialists.map((id) => {
+  const name = AGENTS[id].display_name;
+  if (!/\sSummariser$/.test(name)) {
+    throw new Error(`${id} is "${name}"; this sheet says its specialists summarise a subject`);
+  }
+  return name.replace(/\sSummariser$/, "").toLowerCase();
+});
+
+/* The serial comma is load-bearing: two of the three subjects are compound
+   ("production & recovery"), and without it the last two run together. */
+const COVERED =
+  COVERS.length > 1
+    ? COVERS.slice(0, -1).join(", ") + ", and " + COVERS[COVERS.length - 1]
+    : COVERS[0];
+
 /* The lede is the one place the reader is told what they are holding, so it is
    said in the words they would use: how many agents write it, what each of them
    covers, and whether anything on it commits the site to anything. The agent id
@@ -41,8 +64,10 @@ el("lede").textContent =
   "What the last shift leaves the next one, written by an agent team of " +
   members.length +
   ". " +
-  swarm.specialists.length +
-  " of them cover availability, production and safety between them, one more " +
+  COVERS.length +
+  " of them cover " +
+  COVERED +
+  " between them, one more " +
   "reads what they wrote and reports what they left out, and the lead — the " +
   "one you ask — puts the sheet together. " +
   (S12.hitl_required
@@ -225,7 +250,7 @@ function mountRun() {
       log.appendChild(line);
     }
 
-    coverage("The brief is being written now, and the critic runs with it.");
+    coverage("The brief is being written now, and the reviewer runs with it.");
 
     const mine = { abandoned: false, wrote: false, handle: null };
     live = mine; // assigned first: a stream can finish inside the call that
@@ -244,8 +269,8 @@ function mountRun() {
           if (!mine.wrote) {
             mine.wrote = true;
             coverage(
-              "The brief above has been written, and whatever the critic " +
-                "reported about coverage is part of that answer."
+              "The brief above has been written, and whatever the reviewer " +
+                "reported about what it left out is part of that answer."
             );
           }
           return;

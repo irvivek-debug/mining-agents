@@ -235,7 +235,7 @@ function drawerBody() {
       : "") +
     "</dl>" +
     "<h4>How an answer is worked out</h4>" +
-    (method(current) || "<p>Nothing deterministic is declared for this team.</p>") +
+    (drawerMethod(current) || "<p>Nothing deterministic is declared for this team.</p>") +
     "<h4>Every table these members read</h4>" +
     swarmInputs() +
     connectionDetail()

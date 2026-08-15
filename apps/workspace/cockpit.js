@@ -62,6 +62,17 @@ const SPANNERS = CAT.agents.filter(
   (a) => a.is_entrypoint && a.apqc_names.length > 1
 ).length;
 
+/* What a group's line under its heading says. It used to be a count and a
+   fragment glued together — "12 you can talk to", and on the money axis "where
+   the branches meet · 1 you can talk to" — which is a card with no article, no
+   noun and no verb in it. Each group has something to say about what its agents
+   have in common, so it says it, in a sentence that survives a group of one.
+   The verb is given in the plural and takes its "s" for the singular, which is
+   true of every verb these lines need. */
+function agentsWhich(n, verb, rest) {
+  return (n === 1 ? "One agent " + verb + "s" : n + " agents " + verb) + " " + rest + ".";
+}
+
 /* The three axes. Each names where its groups come from and what a group means,
    because "where the money is" is not self-explanatory to someone who has not
    seen the cost tree, and a tab whose contents surprise you is a tab you stop
@@ -78,7 +89,7 @@ const AXES = [
     groups: () =>
       Object.entries(CAT.by_persona).map(([code, g]) => ({
         title: (PERSONAS[code] || {}).title || code,
-        sub: g.count + " you can talk to",
+        sub: agentsWhich(g.count, "take", "questions from this role"),
         /* The paragraph is the catalogue's, not this screen's, and it was
            written in the estate's own words. It is printed without a citation
            against it, so it is description rather than quotation, and it is
@@ -104,7 +115,7 @@ const AXES = [
     groups: () =>
       Object.entries(CAT.by_apqc_code).map(([code, g]) => ({
         title: CAT.apqc_names[code] || code,
-        sub: g.count + " you can talk to",
+        sub: agentsWhich(g.count, "work", "in this process area"),
         detail: null,
         agents: g.agents,
       })),
@@ -124,7 +135,9 @@ const AXES = [
         const b = DATA.value_tree.branches.find((x) => x.branches.includes(branch));
         return {
           title: branch.replace(/_/g, " "),
-          sub: (b ? "" : "where the branches meet · ") + g.count + " you can talk to",
+          sub: b
+            ? agentsWhich(g.count, "work", "on this part of the cost")
+            : agentsWhich(g.count, "sit", "above the parts, where they meet"),
           detail: b ? b.mechanism : DATA.value_tree.convergence.note,
           agents: g.agents,
         };

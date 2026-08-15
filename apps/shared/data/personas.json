@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-13T05:37:08+00:00",
+  "generated_at": "2026-08-15T05:03:21+00:00",
   "source": "docs/persona-profiles.yaml",
   "personas": {
     "P1": {
@@ -129,7 +129,7 @@
       "journey": {
         "title": "Operator Fatigue Stand-down at Hour 9 of a 12-Hour Shift",
         "source_line": 995,
-        "summary": "An operator is six hours into the afternoon shift when D35 flags an elevated fatigue risk score and D36 adds a microsleep trend annotation. S10 is triggered and its three specialists re-score, determine escalation need, and assess shift coverage impact; S10-CRITIC challenges the recommendation before it is surfaced. The HSE Lead reviews aggregate scores and trend indicators (raw biometric values are masked at the application layer) and must assess whether the biometric signal is credible, whether the operator has disclosed a relevant health condition, and whether the enterprise agreement permits a stand-down on this basis. The S10 coordinator then raises an explicit HITL approval prompt; if approved, the decision passes to the Shift Supervisor, who holds operational stand-down authority.\n"
+        "summary": "An operator is six hours into the afternoon shift when D35 flags an elevated fatigue risk score and D36 adds a microsleep trend annotation. S10 is triggered and its three specialists re-score, determine escalation need, and assess shift coverage impact; S10-CRITIC challenges the recommendation before it is surfaced. The HSE Lead reviews aggregate scores and trend indicators (raw biometric values are masked at the application layer) and must assess whether the biometric signal is credible, whether the operator has disclosed a relevant health condition, and whether the enterprise agreement permits a stand-down on this basis. The S10 coordinator then raises an explicit request for the HSE Lead's sign-off; if it is given, the decision passes to the Shift Supervisor, who holds operational stand-down authority.\n"
       },
       "agents": [
         "D35",
@@ -197,7 +197,7 @@
       "journey": {
         "title": "Morning ROP Alert Triage and Emergency Sourcing Expedite",
         "source_line": 779,
-        "summary": "The ERP generates its morning ROP alert report with more flags than usual due to a planned shutdown next week and a vendor delivery slipping by ten days. The Supply Planner runs D31 to replace the fragile SQL query, sees all parts below ROP mapped to open work order dependencies sorted by days-of-cover, and validates two rows against the ERP before trusting the output. Rows at risk are escalated to S08, which requires a HITL approval before the work-order impact assessment is shared with the maintenance manager. The Supply Planner then emails the Procurement Lead with the shortlist, attaching the S08 impact summary as justification. The Procurement Lead opens S09 against the expedite context; after the coordinator runs compliance checking, technical scoring, spend anomaly flagging, and critic challenge, a mandatory HITL approval request is raised, locking the award recommendation with a timestamp and identity audit trail before the PO is raised in the ERP.\n"
+        "summary": "The ERP generates its morning ROP alert report with more flags than usual due to a planned shutdown next week and a vendor delivery slipping by ten days. The Supply Planner runs D31 to replace the fragile SQL query, sees all parts below ROP mapped to open work order dependencies sorted by days-of-cover, and validates two rows against the ERP before trusting the output. Rows at risk are escalated to S08, which needs the Supply Planner's sign-off before the work-order impact assessment is shared with the maintenance manager. The Supply Planner then emails the Procurement Lead with the shortlist, attaching the S08 impact summary as justification. The Procurement Lead opens S09 against the expedite context; after the coordinator runs compliance checking, technical scoring, spend anomaly flagging, and critic challenge, a mandatory request for sign-off is raised, locking the award recommendation with a timestamp and identity audit trail before the PO is raised in the ERP.\n"
       },
       "agents": [
         "D27",
@@ -290,7 +290,7 @@
       "journey": {
         "title": "04:00 Lab Assay Arrival and Shift-Start Recovery Diagnosis",
         "source_line": 703,
-        "summary": "The 04:00 lab assay arrives and the shift metallurgist suspects recovery is running below target before the 06:00 handover. She queries D21 for recovery rate by circuit for the 18:00\u201306:00 window trended by hour against target; if the variance is material, she immediately goes to D22 to understand whether it is grade-driven or process-driven. If a crusher setpoint change is indicated, D25 generates a recommendation and S07 raises a mandatory HITL approval request: the Metallurgist reviews the CSS change, the predicted throughput and recovery impact, and the S07-CRITIC challenge before explicitly approving or refusing, with refusal reasons logged for audit. The DCS does not apply the new setpoint until approval is recorded.\n"
+        "summary": "The 04:00 lab assay arrives and the shift metallurgist suspects recovery is running below target before the 06:00 handover. She queries D21 for recovery rate by circuit for the 18:00\u201306:00 window trended by hour against target; if the variance is material, she immediately goes to D22 to understand whether it is grade-driven or process-driven. If a crusher setpoint change is indicated, D25 generates a recommendation and S07 raises a mandatory request for sign-off: the Metallurgist reviews the CSS change, the predicted throughput and recovery impact, and the S07-CRITIC challenge before explicitly approving or refusing, with refusal reasons logged for audit. The DCS does not apply the new setpoint until approval is recorded.\n"
       },
       "agents": [
         "D21",
@@ -339,7 +339,7 @@
       "journey": {
         "title": "Compound Mid-Shift Disruption \u2014 Truck Breakdown Plus Route Closure",
         "source_line": 548,
-        "summary": "At 11:40 a.m. a rock slide closes one haul road segment at the same time that Truck 14 reports a hydraulic fault. The controller flags both in the FMS and invokes S04, whose specialists run in parallel: SP1 calculates cycle time variance for all affected routes, SP2 models the congestion pattern that will develop under current routing, SP3 checks operator qualifications and remaining shift hours for a replacement vehicle assignment. S04-CRITIC reviews the plan for feasibility. A mandatory HITL approval prompt follows on the FMS workstation; the controller reviews and either approves or modifies specific assignments, after which the approved plan is broadcast to the radio net and logged automatically in the shift report.\n"
+        "summary": "At 11:40 a.m. a rock slide closes one haul road segment at the same time that Truck 14 reports a hydraulic fault. The controller flags both in the FMS and invokes S04, whose specialists run in parallel: SP1 calculates cycle time variance for all affected routes, SP2 models the congestion pattern that will develop under current routing, SP3 checks operator qualifications and remaining shift hours for a replacement vehicle assignment. S04-CRITIC reviews the plan for feasibility. A mandatory request for the controller's sign-off follows on the FMS workstation; the controller reviews and either approves or modifies specific assignments, after which the approved plan is broadcast to the radio net and logged automatically in the shift report.\n"
       },
       "agents": [
         "D11",

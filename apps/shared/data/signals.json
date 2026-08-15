@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-13T05:37:08+00:00",
+  "generated_at": "2026-08-15T05:03:21+00:00",
   "source": "data/generated/*.parquet",
   "buckets": 64,
   "window": {
@@ -1148,7 +1148,7 @@
     ]
   },
   "roi": {
-    "generated_at": "2026-08-13T05:37:08+00:00",
+    "generated_at": "2026-08-15T05:03:21+00:00",
     "feed_grade_pct": 1.08,
     "feed_grade_days": 167,
     "feed_grade_source": "data/generated/metallurgical_recovery.parquet",

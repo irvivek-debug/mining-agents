@@ -552,7 +552,12 @@ test("the omission band stops claiming coverage is unchecked once the brief is w
   assert.doesNotMatch(head.textContent, /has not been checked/);
   assert.doesNotMatch(head.textContent, /being written now/);
   assert.match(head.textContent, /has been written/);
-  assert.match(head.textContent, /critic/);
+  // The agent that checks the brief for omissions is called a reviewer on this
+  // page, in the roster, and in the sentence above the button. It was "the
+  // critic" here and nowhere else on the screen, which asks a reader to hold
+  // two names for one thing.
+  assert.match(head.textContent, /reviewer/);
+  assert.doesNotMatch(head.textContent, /critic/i);
 });
 
 test("a run that fails before writing anything leaves the band saying so", () => {

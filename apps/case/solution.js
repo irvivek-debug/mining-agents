@@ -130,7 +130,13 @@ const TOOL_NOTE = {
   bq_query: "Reads the records. Every agent that answers with evidence uses it.",
   request_approval: "Stops and waits for a named person. Present on exactly the agents that need your sign-off.",
   operational_math: "Fixed arithmetic, so a rate or a ratio is computed rather than written out by a language model.",
-  graph_traverse: "Follows the links between records: what else stops if this stops, what runs out if this part runs out, how crew fatigue connects to incidents.",
+  /* The three questions it can be asked come from the shared vocabulary. Typing
+     them here as well would put a second copy of the graph screen's own list on
+     a screen that cannot see when the first one changes. */
+  graph_traverse:
+    "Follows the links between records: " +
+    Object.values(TRAVERSALS).join(", ") +
+    ".",
   bqml_predict: "Calls a trained forecasting model rather than guessing the forecast.",
 };
 

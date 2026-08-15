@@ -137,6 +137,81 @@ test("the prose the catalogue supplies is said in the reader's words too", () =>
   assert.equal(P.plainProse(undefined), "");
 });
 
+/* The graph screen prints three lines the build wrote — "All 5 assets and all 3
+ * dependency edges. Nothing filtered." — on the one screen whose whole subject
+ * is edges and nodes. The rewriter that was supposed to fix them knew the word
+ * "traversal" and neither of the other two, so it ran over every line and
+ * changed nothing on any of them. */
+test("plainScope says the three structural words in the reader's terms", () => {
+  assert.equal(
+    P.plainScope("All 5 assets and all 3 dependency edges. Nothing filtered."),
+    "All 5 assets and all 3 dependency links. Nothing filtered."
+  );
+  assert.equal(
+    P.plainScope("The traversal returns one row per node it reaches."),
+    "The connection trace returns one row per machine it reaches."
+  );
+  // A leading capital belongs to the sentence, not to the word, so it survives.
+  assert.equal(P.plainScope("Edges only."), "Links only.");
+  assert.equal(P.plainScope(""), "");
+  assert.equal(P.plainScope(undefined), "");
+});
+
+test("plainScope substitutes, and never quietly drops", () => {
+  // Same shape as the prose test below: strike the jargon out of the original
+  // and its replacement out of the rewrite, and the remainders must be
+  // identical. A rewriter that deleted the sentence would satisfy "no edges
+  // left" and fail here.
+  const lines = Object.values(loadData().graph.graphs).map((g) => g.scope);
+  assert.ok(lines.length >= 3, "the graph export no longer carries scope lines");
+  const terms = [
+    ["traversals?", "connection traces?"],
+    ["edges?", "links?"],
+    ["nodes?", "machines?"],
+  ];
+  for (const before of lines) {
+    const after = P.plainScope(before);
+    assert.ok(
+      !/\b(traversals?|edges?|nodes?)\b/i.test(after),
+      `still the build's words: ${after}`
+    );
+    const strip = (text) =>
+      terms
+        .reduce((t, [jargon, plain]) => t.replace(new RegExp(`\\b(${jargon}|${plain})\\b`, "gi"), ""), text)
+        .replace(/\s+/g, " ")
+        .trim();
+    assert.equal(strip(after), strip(before), `text lost rewriting: ${before}`);
+  }
+});
+
+/* plainType and plainLink are what stop "FatigueLog" and "REPLACED_PART"
+ * reaching a reader who opened this screen to avoid exactly that. They are here
+ * rather than in graph.js because the estate has one vocabulary, and a second
+ * copy of it inside one screen is a copy free to drift. */
+test("every record type and link the graph draws has a plain name", () => {
+  const graphs = loadData().graph.graphs;
+  for (const [name, g] of Object.entries(graphs)) {
+    for (const label of Object.keys(g.node_types)) {
+      assert.notEqual(P.NODE_TYPES[label], undefined, `${name}: ${label} unnamed`);
+      assert.equal(P.plainType(label), P.NODE_TYPES[label]);
+      assert.ok(!/[A-Z_]/.test(P.plainType(label)), `${name}: ${label} still reads as a label`);
+    }
+    for (const label of Object.keys(g.edge_labels)) {
+      assert.notEqual(P.LINK_LABELS[label], undefined, `${name}: ${label} unnamed`);
+      assert.equal(P.plainLink(label), P.LINK_LABELS[label]);
+      assert.ok(!/[A-Z_]/.test(P.plainLink(label)), `${name}: ${label} still reads as a label`);
+    }
+  }
+});
+
+test("an unnamed record type or link renders its raw label rather than nothing", () => {
+  // Blank is worse than the label: an empty cell in the estate table reads as
+  // "this graph has no such records", which is a false statement about the mine.
+  assert.equal(P.plainType("NoSuchLabel"), "NoSuchLabel");
+  assert.equal(P.plainLink("NO_SUCH_EDGE"), "NO_SUCH_EDGE");
+  assert.equal(P.plainType(undefined), "");
+});
+
 test("rewriting the catalogue's prose substitutes, and never quietly drops", () => {
   const data = loadData();
   const personas = data.personas.personas || data.personas;

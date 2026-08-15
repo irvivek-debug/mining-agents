@@ -7,8 +7,16 @@
  *
  *   runState()   — whether the deployed agents are reachable at all
  *   agentCard()  — one entrypoint, at the level of detail a rail needs
- *   method()     — the formula, pattern or model behind a result
+ *   drawerMethod() — the formula, pattern or model behind a result
  *   inputs()     — the tables and columns, named, with their gaps
+ *
+ * The "drawer" prefix is not decoration. It says the function writes technical
+ * drawer copy and nothing else, which is what lets tests/test_screen_copy.py
+ * read it as drawer copy: a screen builds its drawer in drawerBody(), and a
+ * builder shared across screens announces itself the same way. Without that,
+ * a shared builder is scanned as body copy on every screen that loads it, and
+ * an expression like "GRAPH TRAVERSAL · blast_radius" is either a false alarm
+ * or an untestable exemption.
  *
  * Nothing here composes prose on an agent's behalf. Where an agent's own words
  * would go, notConnected() goes instead.
@@ -285,7 +293,7 @@ function swarmSize(swarmId) {
  *  traversal prints its SQL, a declared model prints its name — and an agent
  *  whose method is a query the model composes at runtime says exactly that,
  *  rather than implying a rigour it does not have. */
-function method(id) {
+function drawerMethod(id) {
   const a = AGENTS[id];
   const parts = [];
 

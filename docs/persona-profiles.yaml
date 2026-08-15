@@ -2,6 +2,15 @@
 # Persona codes P1..P8 are from the catalog (mining_agents.catalog.definitions).
 # The prose document uses a different local numbering; catalog codes are authoritative.
 # Generated: 2026-08-12. Do not edit quotes; they are verbatim from the source document.
+#
+# The journey summaries are not quotes. They are condensations of a multi-page
+# narrative, written here and cited back to the line the narrative starts at,
+# and the agent-teams screen prints them whole as body copy under that citation.
+# So they are written in the words that screen uses — "needs your sign-off", not
+# "HITL" — because a screen that spends every other sentence avoiding the
+# acronym and then prints it in the one paragraph it did not compose has taught
+# the reader nothing. A summary may condense and may translate; it may not say
+# something the cited passage does not.
 
 P1:
   code: P1
@@ -112,8 +121,9 @@ P3:
       indicators (raw biometric values are masked at the application layer) and must assess
       whether the biometric signal is credible, whether the operator has disclosed a relevant
       health condition, and whether the enterprise agreement permits a stand-down on this basis.
-      The S10 coordinator then raises an explicit HITL approval prompt; if approved, the decision
-      passes to the Shift Supervisor, who holds operational stand-down authority.
+      The S10 coordinator then raises an explicit request for the HSE Lead's sign-off; if it is
+      given, the decision passes to the Shift Supervisor, who holds operational stand-down
+      authority.
   agents: [D35, D36, D37, D38, D39, D40, S05, S10, S11]
   value_branch: safety
 
@@ -159,12 +169,12 @@ P4:
       planned shutdown next week and a vendor delivery slipping by ten days. The Supply Planner
       runs D31 to replace the fragile SQL query, sees all parts below ROP mapped to open work
       order dependencies sorted by days-of-cover, and validates two rows against the ERP before
-      trusting the output. Rows at risk are escalated to S08, which requires a HITL approval
-      before the work-order impact assessment is shared with the maintenance manager. The Supply
-      Planner then emails the Procurement Lead with the shortlist, attaching the S08 impact
+      trusting the output. Rows at risk are escalated to S08, which needs the Supply Planner's
+      sign-off before the work-order impact assessment is shared with the maintenance manager. The
+      Supply Planner then emails the Procurement Lead with the shortlist, attaching the S08 impact
       summary as justification. The Procurement Lead opens S09 against the expedite context; after
       the coordinator runs compliance checking, technical scoring, spend anomaly flagging, and
-      critic challenge, a mandatory HITL approval request is raised, locking the award
+      critic challenge, a mandatory request for sign-off is raised, locking the award
       recommendation with a timestamp and identity audit trail before the PO is raised in the ERP.
   agents: [D27, D28, D29, D30, D31, D32, D33, D34, S08, S09]
   value_branch: [supply_chain, procurement]
@@ -234,7 +244,7 @@ P6:
       18:00–06:00 window trended by hour against target; if the variance is material, she
       immediately goes to D22 to understand whether it is grade-driven or process-driven. If a
       crusher setpoint change is indicated, D25 generates a recommendation and S07 raises a
-      mandatory HITL approval request: the Metallurgist reviews the CSS change, the predicted
+      mandatory request for sign-off: the Metallurgist reviews the CSS change, the predicted
       throughput and recovery impact, and the S07-CRITIC challenge before explicitly approving
       or refusing, with refusal reasons logged for audit. The DCS does not apply the new
       setpoint until approval is recorded.
@@ -272,8 +282,9 @@ P7:
       specialists run in parallel: SP1 calculates cycle time variance for all affected routes,
       SP2 models the congestion pattern that will develop under current routing, SP3 checks
       operator qualifications and remaining shift hours for a replacement vehicle assignment.
-      S04-CRITIC reviews the plan for feasibility. A mandatory HITL approval prompt follows on
-      the FMS workstation; the controller reviews and either approves or modifies specific
+      S04-CRITIC reviews the plan for feasibility. A mandatory request for the controller's
+      sign-off follows on the FMS workstation; the controller reviews and either approves or
+      modifies specific
       assignments, after which the approved plan is broadcast to the radio net and logged
       automatically in the shift report.
   agents: [D11, D12, D13, D14, D15, S04]

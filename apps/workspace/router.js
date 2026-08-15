@@ -16,7 +16,19 @@ var PLAIN = typeof require !== "undefined"
 /* A traversal match is the strongest signal — three traversals exist across the
  * whole catalogue, so naming one is nearly an address. A table match is next: 25
  * tables, still specific. A tool match is weakest: five tools, shared widely. */
-var WEIGHT = { traversal: 4, table: 3, apqc: 2, name: 2, tool: 1 };
+/* A value branch is a business area, not a tool, and reads as one in the reason.
+ * It keeps the tool weight: naming a branch is as weak a signal. */
+var WEIGHT = { traversal: 4, table: 3, apqc: 2, name: 2, tool: 1, branch: 1 };
+
+/* The kinds of match, named once. Each tag was typed at the site that builds a
+ * term and again at the site that reads it, eleven bare strings for six kinds,
+ * and a misspelling at either end silently drops a whole class of match with
+ * nothing failing. Reading them off WEIGHT means a kind that has no weight
+ * cannot be referred to at all. They are also not words a reader ever meets —
+ * "apqc" and "traversal" are the internal names of these axes — and a tag left
+ * loose in the source reads to a copy checker exactly like a word on a screen. */
+var KIND = {};
+Object.keys(WEIGHT).forEach(function (k) { KIND[k] = k; });
 
 var STOP = new Set((
   "a an and are as at be by can could did do does for from get give had has have how i " +
@@ -41,26 +53,25 @@ function tokens(text) {
 function termsFor(agent) {
   var terms = [];
   (agent.traversals || []).forEach(function (t) {
-    terms.push({ kind: "traversal", id: t, plain: PLAIN.plainTraversal(t),
+    terms.push({ kind: KIND.traversal, id: t, plain: PLAIN.plainTraversal(t),
                  weight: WEIGHT.traversal });
   });
   (agent.source_tables || []).forEach(function (t) {
     var bare = PLAIN.bareTable(t);
-    terms.push({ kind: "table", id: bare, plain: PLAIN.plainTable(t),
+    terms.push({ kind: KIND.table, id: bare, plain: PLAIN.plainTable(t),
                  weight: WEIGHT.table });
   });
   (agent.apqc_names || []).forEach(function (n) {
-    terms.push({ kind: "apqc", id: n, plain: n, weight: WEIGHT.apqc });
+    terms.push({ kind: KIND.apqc, id: n, plain: n, weight: WEIGHT.apqc });
   });
-  terms.push({ kind: "name", id: agent.agent_id, plain: agent.display_name || "",
+  terms.push({ kind: KIND.name, id: agent.agent_id, plain: agent.display_name || "",
                weight: WEIGHT.name });
   (agent.tools || []).forEach(function (t) {
-    terms.push({ kind: "tool", id: t, plain: PLAIN.plainTool(t), weight: WEIGHT.tool });
+    terms.push({ kind: KIND.tool, id: t, plain: PLAIN.plainTool(t), weight: WEIGHT.tool });
   });
-  /* A value branch is a business area, not a tool, and reads as one in the
-   * reason. It keeps the tool weight: naming a branch is as weak a signal. */
   branchesOf(agent.value_branch).forEach(function (b) {
-    terms.push({ kind: "branch", id: b, plain: b.replace(/_/g, " "), weight: WEIGHT.tool });
+    terms.push({ kind: KIND.branch, id: b, plain: b.replace(/_/g, " "),
+                 weight: WEIGHT.branch });
   });
   return terms;
 }
@@ -113,12 +124,12 @@ function _clause(m) {
   var plain = m.term.plain;
   // Table phrases carry no article of their own — the frame that uses them
   // owns it, and whether one is wanted depends on the phrase.
-  if (kind === "table") return { verb: "reads", object: PLAIN.articleFor(plain) + plain };
-  if (kind === "traversal") return { verb: "traces", object: plain };
-  if (kind === "tool") return { verb: "can", object: PLAIN.plainToolAbility(m.term.id) };
-  if (kind === "branch") return { verb: "covers", object: plain };
-  if (kind === "apqc") return { verb: "covers", object: plain.toLowerCase() };
-  // kind "name": the question echoed the agent's own name back. "It covers
+  if (kind === KIND.table) return { verb: "reads", object: PLAIN.articleFor(plain) + plain };
+  if (kind === KIND.traversal) return { verb: "traces", object: plain };
+  if (kind === KIND.tool) return { verb: "can", object: PLAIN.plainToolAbility(m.term.id) };
+  if (kind === KIND.branch) return { verb: "covers", object: plain };
+  if (kind === KIND.apqc) return { verb: "covers", object: plain.toLowerCase() };
+  // KIND.name: the question echoed the agent's own name back. "It covers
   // fatigue risk scorer" tells a reader who typed those words nothing, so the
   // term yields no clause and another match speaks instead.
   return null;

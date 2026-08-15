@@ -1704,5 +1704,5 @@
     "consequence": "Structure, method and provenance below are the deployed article. Anything an agent would have generated in its own words is marked NOT CONNECTED rather than written for it.",
     "proxy_route": "/api/invoke/{agent_id}"
   },
-  "generated_at": "2026-08-13T05:37:08+00:00"
+  "generated_at": "2026-08-15T05:03:21+00:00"
 }

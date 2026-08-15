@@ -79,9 +79,38 @@ var TABLES = {
   work_order_parts_edge: "parts each work order needs",
 };
 
+/* What each kind of record in the property graph is, in the words the site uses
+ * for it. These are the ontology's node labels; the graph screen is the only one
+ * that draws them today, but a screen that names one has to name it the way this
+ * one does, which is what this file is for. */
+var NODE_TYPES = {
+  Asset: "machines",
+  WorkOrder: "work orders",
+  SparePart: "spare parts",
+  Operator: "operators",
+  Vehicle: "vehicles",
+  Incident: "incidents",
+  FatigueLog: "crew fatigue readings",
+};
+
+/* And what each link between two records means, read in the direction it is
+ * drawn. "REPLACED_PART" runs from a work order to the part it consumed. */
+var LINK_LABELS = {
+  DEPENDS_ON: "depends on",
+  HAS_WORK_ORDER: "raised work order",
+  REPLACED_PART: "consumed part",
+  LOGGED_FOR: "logged against",
+  OPERATES: "was driving",
+  INVOLVED_IN: "involved in",
+};
+
 /* Used by the copy rewrite. Keys are lowercased as they appear on screen. */
 var JARGON = {
   entrypoint: "agent you can talk to",
+  /* The spaced spelling is the one that reaches a screen: "of 52 entry points
+     placed". Banning the closed-up form alone left the term readable in the
+     copy while the gate reported it gone. */
+  "entry point": "agent you can talk to",
   hitl: "needs your sign-off",
   "human-in-the-loop": "needs your sign-off",
   swarm: "agent team",
@@ -128,6 +157,36 @@ function articleFor(phrase) {
 
 function plainTraversal(id) {
   return TRAVERSALS[id] || String(id || "");
+}
+
+function plainType(label) {
+  return NODE_TYPES[label] || String(label || "");
+}
+
+function plainLink(label) {
+  return LINK_LABELS[label] || String(label || "");
+}
+
+/* The scope lines under the graph are written by the build, in the build's own
+ * words: "All 5 assets and all 3 dependency edges", "so the traversal returns
+ * rows for those". Three structural nouns and no more — this is not a general
+ * rewriter over JARGON, because "provenance" and "median" carry their meaning
+ * mid-sentence and swapping them blind would produce worse English than the
+ * word it removed. The plural is the captured "s": every replacement here takes
+ * one, and a leading capital survives. */
+var SCOPE_TERMS = ["traversal", "edge", "node"];
+
+function plainScope(text) {
+  var out = String(text || "");
+  SCOPE_TERMS.forEach(function (term) {
+    out = out.replace(new RegExp("\\b" + term + "(s?)\\b", "gi"), function (hit, plural) {
+      var said = JARGON[term] + plural;
+      return hit[0] === hit[0].toUpperCase()
+        ? said.charAt(0).toUpperCase() + said.slice(1)
+        : said;
+    });
+  });
+  return out;
 }
 
 function plainJargon(term) {
@@ -246,9 +305,9 @@ function unmapped(DATA) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    TOOLS, TOOL_ABILITY, TRAVERSALS, TABLES, JARGON,
+    TOOLS, TOOL_ABILITY, TRAVERSALS, TABLES, JARGON, NODE_TYPES, LINK_LABELS,
     bareTable, plainTable, plainTool, plainToolAbility, plainTraversal, plainJargon,
-    plainProse,
+    plainType, plainLink, plainScope, plainProse,
     articleFor, tableFromSql, callLine, failLine, unmapped,
   };
 }

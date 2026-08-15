@@ -46,15 +46,35 @@ SCREENS = {
     # and is never navigated to, so its copy has no screen of its own to be
     # checked on — and it was the one surface in this application still
     # explaining itself in column names.
-    "apps/workspace/index.html": ["apps/workspace/cockpit.js"],
-    "apps/workspace/swarm.html": ["apps/workspace/swarm.js", "apps/workspace/hitl.js"],
-    # chat.js writes most of what a reader of the role page actually reads.
-    "apps/workspace/persona.html": [
-        "apps/workspace/persona.js",
-        "apps/workspace/persona-panel.js",
-        "apps/workspace/chat.js",
+    # workspace.js is on three of these four screens and writes a great deal of
+    # what they show — the agent card, the roster, the scenario paragraph. Its
+    # absence from this list is how "raises a mandatory HITL approval request"
+    # reached the agent-teams screen with the suite green. Every script tag a
+    # screen carries belongs here; the list is checked against the markup below.
+    "apps/workspace/index.html": [
+        "apps/workspace/workspace.js",
+        "apps/workspace/cockpit.js",
     ],
-    "apps/workspace/handover.html": ["apps/workspace/handover.js"],
+    "apps/workspace/swarm.html": [
+        "apps/workspace/workspace.js",
+        "apps/workspace/hitl.js",
+        "apps/workspace/swarm.js",
+    ],
+    # chat.js writes most of what a reader of the role page actually reads, and
+    # persona-data.js writes the sentence under every agent on it.
+    "apps/workspace/persona.html": [
+        "apps/workspace/router.js",
+        "apps/workspace/persona-data.js",
+        "apps/workspace/persona-panel.js",
+        "apps/workspace/agent-stream.js",
+        "apps/workspace/chat.js",
+        "apps/workspace/persona.js",
+    ],
+    "apps/workspace/handover.html": [
+        "apps/workspace/agent-stream.js",
+        "apps/workspace/workspace.js",
+        "apps/workspace/handover.js",
+    ],
 }
 
 CASE_SCREENS = [s for s in SCREENS if not s.startswith("apps/workspace/")]
@@ -62,7 +82,11 @@ CASE_SCREENS = [s for s in SCREENS if not s.startswith("apps/workspace/")]
 # Words a functional reader should not have to meet in body copy. Each is
 # allowed inside the technical drawer, which is what the drawer is for.
 JARGON = [
-    "entrypoint", "HITL", "human-in-the-loop", "traversal",
+    # Both spellings. The spaced one is what actually reached a screen — "of 52
+    # entry points placed" — while the gate reported the term gone because it
+    # only knew the closed-up form.
+    "entrypoint", "entry point", "entry points",
+    "HITL", "human-in-the-loop", "traversal",
     "Pattern A", "Pattern B", "value branch", "APQC", "blast radius",
     "p90", "model tier",
 ]
@@ -77,7 +101,13 @@ PLAIN_INSTEAD = {
     "apps/case/scenario.html": ["p90", "median"],
     "apps/case/value.html": ["apqc code", "value branch"],
     "apps/case/solution.html": ["swarm", "pattern a", "pattern b", "hitl"],
-    "apps/case/graph.html": ["traversal", "blast radius", "node", "edge"],
+    # "node" and "edge" were listed here and proved nothing: their plain words
+    # are "machine" and "link", both of which occur in ordinary sentences on a
+    # screen about mining equipment, so the check passed whatever the screen
+    # did with the ontology. "blast radius" proved nothing either once the
+    # screen stopped typing its phrase and started reading it out of plain.js.
+    # All three are covered below by tests that can actually fail.
+    "apps/case/graph.html": ["traversal"],
     "apps/workspace/index.html": ["entrypoint", "hitl", "apqc code", "value branch"],
     # "swarm" is not on the banned list above, because swarm.html is a file
     # name and by_swarm is a field of the catalogue. What can be demanded is
@@ -98,7 +128,9 @@ DRAWER_KEEPS = {
     "apps/case/solution.html": ["a.pattern", "a.model_tier", "a.agent_id", "s.specialists"],
     "apps/case/graph.html": ["g.sql", "g.traversal", "g.bigquery_graph"],
     "apps/workspace/index.html": ["a.persona", "a.apqc_code", "a.model_tier", "WS.approval.table"],
-    "apps/workspace/swarm.html": ["coord.apqc_code", "a.model_tier", "method(current)", "swarmInputs()"],
+    "apps/workspace/swarm.html": [
+        "coord.apqc_code", "a.model_tier", "drawerMethod(current)", "swarmInputs()",
+    ],
     "apps/workspace/handover.html": ["S12.apqc_code", "a.model_tier", "a.source_tables"],
     "apps/workspace/persona.html": ["a.model_tier", "a.apqc_code", "branchesOf("],
 }
@@ -152,6 +184,15 @@ def _strip_balanced_call(text, opener):
         i = j + 1
 
 
+# The drawer's own contents. Each screen writes them in one top-level function,
+# which in this codebase closes on a brace in column one. The name is the
+# declaration: a function called drawerBody(), or drawerMethod() where the
+# builder is shared across screens, writes drawer copy and nothing else. That
+# convention is what lets a shared file like apps/workspace/workspace.js be
+# scanned as body copy on three screens while the block of SQL it renders into
+# the drawer is read as what it is.
+DRAWER_BUILDER = re.compile(r"(?ms)^function drawer[A-Z_]?\w*\s*\(.*?^\}")
+
 STRING_LITERAL = re.compile(
     r"'(?:[^'\\\n]|\\.)*'"
     r"|\"(?:[^\"\\\n]|\\.)*\""
@@ -172,9 +213,7 @@ def _interpolations_out(chunk):
 def visible_js(text):
     text = _strip_js_comments(text)
     text = _strip_balanced_call(text, "technicalDrawer(")
-    # The drawer's own contents. Every screen writes them in one top-level
-    # function, which in this codebase closes on a brace in column one.
-    text = re.sub(r"(?ms)^function drawerBody\b.*?^\}", " ", text)
+    text = re.sub(DRAWER_BUILDER, " ", text)
     # Joined on a single space, not on a newline. A sentence in this codebase is
     # routinely built as `"…records. The " + "best day is the …"`, and a
     # separator that breaks lines would hide every phrase that spans a `+`.
@@ -212,8 +251,8 @@ def drawer_text(paths):
     parts = []
     for path in paths:
         source = _strip_js_comments((REPO / path).read_text())
-        parts.extend(re.findall(r"(?ms)^function drawerBody\b.*?^\}", source))
-        rest = re.sub(r"(?ms)^function drawerBody\b.*?^\}", " ", source)
+        parts.extend(DRAWER_BUILDER.findall(source))
+        rest = DRAWER_BUILDER.sub(" ", source)
         for match in re.finditer(r"technicalDrawer\(", rest):
             depth = 0
             j = match.end() - 1
@@ -229,6 +268,22 @@ def drawer_text(paths):
     return "\n".join(parts)
 
 
+def plain_block(name):
+    """One `var NAME = {...};` map out of apps/shared/plain.js, parsed not retyped."""
+    source = PLAIN_JS.read_text()
+    block = re.search(rf"var {name} = \{{(.*?)\n\}};", source, re.S)
+    assert block, f"apps/shared/plain.js no longer declares {name}"
+    pairs = re.findall(r"(?m)^\s*\"?([A-Za-z0-9_ -]+?)\"?:\s*\"([^\"]+)\"", block.group(1))
+    assert pairs, f"the {name} map parsed to nothing"
+    return dict(pairs)
+
+
+def graph_json():
+    import json
+
+    return json.loads((APPS / "shared" / "data" / "graph.json").read_text())
+
+
 def plain_map():
     """The JARGON map out of apps/shared/plain.js, parsed rather than retyped."""
     source = PLAIN_JS.read_text()
@@ -240,6 +295,33 @@ def plain_map():
 
 
 # -------------------------------------------------------------------- checks
+
+def test_the_screen_list_holds_every_script_a_screen_loads():
+    """The omission that let jargon ship green, made impossible to repeat.
+
+    workspace.js writes the agent card, the roster and the scenario paragraph on
+    three of the four workspace screens, and it was not in SCREENS. Nothing in
+    this file noticed, because everything in this file starts from SCREENS. So
+    the list is checked against the markup: the screen's own scripts are read out
+    of its <script src> tags, and any that this file does not scan is a hole.
+
+    ``shared/`` is out of scope on purpose. plain.js is where the jargon is
+    *defined* — the JARGON map's keys are the banned words — and shell.js is the
+    chrome, which is checked by the nav and pill tests below rather than by
+    reading it as one screen's copy.
+    """
+    problems = []
+    for screen, scripts in SCREENS.items():
+        markup = (REPO / screen).read_text()
+        folder = pathlib.Path(screen).parent
+        for src in re.findall(r'<script[^>]*\bsrc="([^"]+)"', markup):
+            if src.lstrip("./").startswith("shared/"):
+                continue
+            path = str((folder / src).as_posix())
+            if path not in scripts:
+                problems.append(f"{screen}: loads {src} and this file never reads it")
+    assert not problems, "screens loading unchecked copy:\n" + "\n".join(problems)
+
 
 def test_every_screen_ends_with_exactly_one_technical_drawer():
     for screen, scripts in SCREENS.items():
@@ -290,6 +372,90 @@ def test_the_plain_words_are_the_shared_ones():
             if words[key].lower() not in text.lower():
                 problems.append(f"{screen}: says nothing about {key!r} ({words[key]!r})")
     assert not problems, "the plain phrase never replaced the jargon:\n" + "\n".join(problems)
+
+
+def test_no_screen_retypes_a_phrase_plain_js_publishes():
+    """One estate, one wording, and one copy of each sentence that carries it.
+
+    "what else stops if this stops" was typed into the graph screen's lede, into
+    the tool note on the solution screen, and declared in plain.js — three copies
+    of one phrase, two of them free to drift and nothing to notice when they did.
+    A screen that wants the phrase calls plainTraversal(); a screen that types it
+    fails here. The phrases are read out of plain.js, so renaming one there moves
+    this test with it rather than breaking it.
+    """
+    phrases = plain_block("TRAVERSALS")
+    problems = []
+    for screen, scripts in SCREENS.items():
+        for path in [screen] + scripts:
+            source = (REPO / path).read_text()
+            for key, phrase in phrases.items():
+                if phrase in source:
+                    problems.append(f"{path}: types {phrase!r} instead of reading {key}")
+    assert not problems, "the shared phrase copied into a screen:\n" + "\n".join(problems)
+
+
+def test_every_record_type_and_link_the_graph_draws_has_a_plain_name():
+    """The check the graph screen's own guard makes, made before the browser does.
+
+    The estate table, the legend and the tooltip all print plainType() and
+    plainLink(). A record type the build starts emitting and plain.js has never
+    heard of renders as "FatigueLog" at a reader who came to this screen to avoid
+    exactly that, and the same for a link as "REPLACED_PART" and a trace as
+    "blast_radius". Reading the generated graph rather than the source is the
+    point: this fails on a data change, which is when it would actually happen.
+    """
+    types = plain_block("NODE_TYPES")
+    links = plain_block("LINK_LABELS")
+    traces = plain_block("TRAVERSALS")
+    problems = []
+    for name, g in graph_json()["graphs"].items():
+        for label in g["node_types"]:
+            if label not in types:
+                problems.append(f"{name}: record type {label} has no plain name")
+        for label in g["edge_labels"]:
+            if label not in links:
+                problems.append(f"{name}: link {label} has no plain name")
+        if g["traversal"] not in traces:
+            problems.append(f"{name}: trace {g['traversal']} has no plain question")
+    assert not problems, "the graph draws what plain.js cannot name:\n" + "\n".join(problems)
+
+
+def test_the_scope_line_under_the_graph_is_rewritten_not_printed():
+    """The build writes these lines in the build's words; the screen owes a rewrite.
+
+    "All 5 assets and all 3 dependency edges. Nothing filtered." shipped verbatim
+    because the screen's rewriter knew "traversal" and not "edge" or "node" — on
+    the one screen whose whole subject is edges and nodes. So the rewriter is run
+    here over the generated lines, and what comes out must contain none of the
+    three structural words and must still say the shared replacement for each one
+    the line used. A rewriter that deleted the sentence fails the second half.
+    """
+    import subprocess
+
+    words = plain_map()
+    lines = [g["scope"] for g in graph_json()["graphs"].values()]
+    script = (
+        "const P=require(%r);"
+        "console.log(JSON.stringify(%s.map(P.plainScope)));"
+        % (str(PLAIN_JS), repr(lines).replace("'", '"'))
+    )
+    got = subprocess.run(
+        ["node", "-e", script], capture_output=True, text=True, check=True
+    ).stdout
+    import json
+
+    rewritten = json.loads(got)
+    problems = []
+    for before, after in zip(lines, rewritten):
+        for term in ("traversal", "edge", "node"):
+            if re.search(rf"\b{term}s?\b", after, re.I):
+                problems.append(f"{after!r} still says {term!r}")
+            if re.search(rf"\b{term}s?\b", before, re.I) and words[term] not in after.lower():
+                problems.append(f"{after!r} dropped {term!r} instead of saying {words[term]!r}")
+    assert not problems, "the scope line still speaks the build's dialect:\n" + "\n".join(
+        problems
+    )
 
 
 def test_the_drawer_keeps_what_the_body_gave_up():
@@ -414,9 +580,156 @@ def test_the_copy_stays_commodity_neutral():
             )
 
 
-def test_the_only_money_figure_is_the_one_the_repository_establishes():
-    """Every other magnitude is [CLIENT INPUT REQUIRED], and ranges, not points."""
+# Which screens put a currency figure on the page, and on what authority. A
+# screen not named here may not print one at all, which is the half the previous
+# version of this check was missing: it banned "$450,000" and had nothing to say
+# about a screen that computed the same figure and printed it as a point.
+#
+#   "sourced" — the one hourly figure this repository can cite. The element that
+#              carries the currency mark has to be filled from the fact itself.
+#   "range"   — a magnitude the client owns. It is quoted as a band or not at
+#              all, because a market is quoted in bands and a single number
+#              presents an estimate with the confidence of a measurement.
+MONEY_SCREENS = {
+    "apps/index.html": "sourced",
+    "apps/case/index.html": "sourced",
+    "apps/case/value.html": "range",
+}
+
+SOURCED_FACT = "mill_downtime_usd_per_hour"
+
+
+def money_sites(paths):
+    """Every place a screen puts a currency mark on the page.
+
+    Two forms exist: an element that declares ``data-prefix="$"`` for the
+    count-up in apps/shared/motion.js, and a "$" written into a string the JS
+    concatenates. Both are returned as the source line that carries them.
+    """
+    found = []
+    for path in paths:
+        source = (REPO / path).read_text()
+        if path.endswith(".html"):
+            for tag in re.findall(r"<[^>]*data-prefix=\"\$\"[^>]*>", source):
+                found.append((path, tag))
+            continue
+        source = _strip_js_comments(source)
+        for line in source.splitlines():
+            if re.search(r"""(?<!\$)(["'])\$\1""", line):
+                found.append((path, line.strip()))
+    return found
+
+
+def test_no_screen_types_a_money_figure():
+    """A magnitude typed into the copy has no source and cannot be regenerated."""
     for screen, scripts in SCREENS.items():
         text = "\n".join((REPO / p).read_text() for p in [screen] + scripts)
         for hit in re.findall(r"\$[\d,]+", text):
             assert False, f"{screen} prints the literal money figure {hit}"
+
+
+def test_only_the_declared_screens_print_money_at_all():
+    problems = []
+    for screen, scripts in SCREENS.items():
+        sites = money_sites([screen] + scripts)
+        if sites and screen not in MONEY_SCREENS:
+            problems.append(f"{screen} prints a currency figure and declares no basis: {sites[0][1]}")
+        if not sites and screen in MONEY_SCREENS:
+            problems.append(f"{screen} is declared {MONEY_SCREENS[screen]!r} and prints no money")
+    assert not problems, "money on an undeclared screen:\n" + "\n".join(problems)
+
+
+def test_a_sourced_money_figure_is_filled_from_the_fact_it_cites():
+    """The count-up element carrying the "$" must be fed the sourced fact.
+
+    Not "the file mentions the fact somewhere" — the element that shows the
+    currency mark is found by its id in the markup, and the statement that fills
+    that id has to name mill_downtime_usd_per_hour. Repointing the anchor at any
+    other number fails here, and so does an anchor filled with a constant.
+    """
+    problems = []
+    for screen, form in MONEY_SCREENS.items():
+        if form != "sourced":
+            continue
+        scripts = SCREENS[screen]
+        js = "\n".join(_strip_js_comments((REPO / p).read_text()) for p in scripts)
+        for path, site in money_sites([screen] + scripts):
+            if path.endswith(".html"):
+                ident = re.search(r'id="([^"]+)"', site)
+                assert ident, f"{screen}: the currency element has no id to bind: {site}"
+                fill = [
+                    line
+                    for line in js.splitlines()
+                    if f'"{ident.group(1)}"' in line and SOURCED_FACT in line
+                ]
+                if not fill:
+                    problems.append(
+                        f"{screen}: #{ident.group(1)} shows a currency figure "
+                        f"that is not {SOURCED_FACT}"
+                    )
+            elif SOURCED_FACT not in site:
+                # A "$" written inline in JS. It is on the same entry as the
+                # figure it prefixes, so the figure is right there to check.
+                entry = _enclosing_entry(js, site)
+                if SOURCED_FACT not in entry:
+                    problems.append(f"{screen}: a currency figure with no source: {site}")
+    assert not problems, "money without a source:\n" + "\n".join(problems)
+
+
+def _enclosing_entry(js, site):
+    """The `[ … ]` a fact tuple is written as, around a line inside it.
+
+    apps/landing.js writes each figure as `[value, label, note, {prefix: "$"}]`,
+    so the prefix and the value it decorates are on the same entry and nowhere
+    else. Reading the whole file instead would pass on any file that happens to
+    mention the fact once.
+    """
+    at = js.index(site)
+    start = js.rindex("[", 0, at)
+    depth = 0
+    for j in range(start, len(js)):
+        if js[j] == "[":
+            depth += 1
+        elif js[j] == "]":
+            depth -= 1
+            if depth == 0:
+                return js[start : j + 1]
+    return js[start:]
+
+
+def test_a_client_owned_magnitude_is_quoted_as_a_range():
+    """The standing constraint, checked on the form rather than on a word.
+
+    The value screen's calculator is the one place a figure the client owns is
+    rendered, and it is rendered as "low – high". The check is that the money
+    formatter is never reached except through the band that builds that string:
+    a screen that dropped the band and printed `money(t * price)` would satisfy
+    every other test in this file, and would be a point estimate presented as a
+    measurement, which is the thing the constraint exists to stop.
+    """
+    for screen, form in MONEY_SCREENS.items():
+        if form != "range":
+            continue
+        js = "\n".join(_strip_js_comments((REPO / p).read_text()) for p in SCREENS[screen])
+
+        band = re.search(r"const band = \(([a-z]+)\) =>(.*?);", js, re.S)
+        assert band, f"{screen} no longer builds its figures as a band"
+        text = band.group(2)
+        assert "lo" in text and "hi" in text, (
+            f"{screen}: the band does not span the two ends of the price range: {text!r}"
+        )
+        assert "–" in text, (
+            f"{screen}: the band prints no range between its two ends: {text!r}"
+        )
+
+        # Every other use of the formatter is a point figure. The definition and
+        # the band are the two legitimate sites; anything else prints one number
+        # where the screen promised two.
+        definition = re.search(r"function money\(.*?\n\}", js, re.S)
+        assert definition, f"{screen} no longer defines its money formatter"
+        rest = js.replace(definition.group(0), " ").replace(band.group(0), " ")
+        stray = re.findall(r"\bmoney\(", rest)
+        assert not stray, (
+            f"{screen} prints {len(stray)} money figure(s) outside the band; "
+            "a client-owned magnitude is quoted as a range or not at all"
+        )

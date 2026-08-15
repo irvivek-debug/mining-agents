@@ -21,58 +21,24 @@ const G = DATA.graph;
 const GRAPHS = G.graphs;
 const ORDER = ["asset", "supply_chain", "safety"];
 
-/* What each kind of record is, in the words the site uses for it. Screen-local
-   rather than added to plain.js: these are the ontology's node labels, which
-   nothing outside this screen renders, and plain.js is a shared file whose
-   scope is the tool and table vocabulary the activity log also speaks. */
-const PLAIN_TYPE = {
-  Asset: "machines",
-  WorkOrder: "work orders",
-  SparePart: "spare parts",
-  Operator: "operators",
-  Vehicle: "vehicles",
-  Incident: "incidents",
-  FatigueLog: "crew fatigue readings",
-};
-
-/* And what each link between two records means, read in the direction it is
-   drawn. "REPLACED_PART" runs from a work order to the part it consumed. */
-const PLAIN_LINK = {
-  DEPENDS_ON: "depends on",
-  HAS_WORK_ORDER: "raised work order",
-  REPLACED_PART: "consumed part",
-  LOGGED_FOR: "logged against",
-  OPERATES: "was driving",
-  INVOLVED_IN: "involved in",
-};
-
-const plainType = (t) => PLAIN_TYPE[t] || t;
-const plainLink = (l) => PLAIN_LINK[l] || l;
-
-/* A record type or a link that stops having a plain name must break the build,
-   not quietly render its internal label at a reader who came here to avoid
-   internal labels. */
+/* The record types, the links and the three traces are named by
+   apps/shared/plain.js — NODE_TYPES, LINK_LABELS and TRAVERSALS — because one
+   estate gets one vocabulary and this screen is not entitled to a private one.
+   What stays here is the check: a record type or a link that stops having a
+   plain name must break the screen, not quietly render its internal label at a
+   reader who came here to avoid internal labels. */
 ORDER.forEach((name) => {
   const g = GRAPHS[name];
   Object.keys(g.node_types).forEach((t) => {
-    if (!PLAIN_TYPE[t]) throw new Error(`record type ${t} has no plain name on this screen`);
+    if (!NODE_TYPES[t]) throw new Error(`record type ${t} has no plain name in plain.js`);
   });
   Object.keys(g.edge_labels).forEach((l) => {
-    if (!PLAIN_LINK[l]) throw new Error(`link ${l} has no plain name on this screen`);
+    if (!LINK_LABELS[l]) throw new Error(`link ${l} has no plain name in plain.js`);
   });
   if (!plainTraversal(g.traversal) || plainTraversal(g.traversal) === g.traversal) {
     throw new Error(`connection trace ${g.traversal} has no plain phrase in plain.js`);
   }
 });
-
-/* The scope lines are written by the build, and one of them uses the build's
-   own word for a connection trace. Substituting it here, at the point of
-   display, is the same job plain.js does for tools and tables; the alternative
-   is a screen that speaks two vocabularies in adjacent paragraphs. */
-const plainScope = (text) =>
-  String(text || "").replace(/\btraversals?\b/gi, (m) =>
-    m[m.length - 1] === "s" ? "connection traces" : "connection trace"
-  );
 
 const css = getComputedStyle(document.documentElement);
 const T = (name) => css.getPropertyValue(name).trim();
@@ -387,6 +353,21 @@ const EMPTY_REASON = {
 function walks(g) {
   return Object.keys(g.node_types).map(plainType).join(", ");
 }
+
+/* The three questions, read out of the shared vocabulary rather than retyped
+   underneath the table that lists them. They were written out by hand here and
+   again in the tool note on the solution screen, which is three copies of one
+   sentence and two of them free to drift. */
+const ASKS = ORDER.map((name) => plainTraversal(GRAPHS[name].traversal));
+
+el("estate-lede").textContent =
+  "The traces below are the ones the agents actually hold: " +
+  ASKS.slice(0, -1).join(", ") +
+  ", and " +
+  ASKS[ASKS.length - 1] +
+  ". Each was built because somebody at this site has to answer that question " +
+  "under time pressure, and each is a walk across records that no single table " +
+  "holds together.";
 
 el("estate").innerHTML = ORDER.map((name) => {
   const g = GRAPHS[name];

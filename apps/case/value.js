@@ -554,7 +554,10 @@ el("mece-key").innerHTML =
 el("mece-sum").innerHTML =
   '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">' +
   '<span class="metric" id="running">0</span>' +
-  `<span class="metric-sub" style="margin:0">of ${esc(TOTAL)} entry points placed</span>` +
+  /* "entry points" was the last of the term on this screen, and the reader had
+     already been given a better word for the same thing two paragraphs above:
+     the lede, the process note and the cells themselves all count decisions. */
+  `<span class="metric-sub" style="margin:0">of ${esc(TOTAL)} decisions placed in a pool</span>` +
   "</div>" +
   '<div class="mono" style="font-size:12px;margin-top:10px;color:var(--fg-muted)">' +
   tree.branches
@@ -703,7 +706,7 @@ el("prov").innerHTML = technicalDrawer(
       DATA.signals.buckets
     )} points per series. Each card names its own file.</dd>` +
     "<dt>Correction</dt><dd>That document's branch table gives Branch 6 a count of 10 while " +
-    "listing 9 entry points, which absorbs S12 into a branch its own prose places above all " +
+    "naming only 9 agents under it, which absorbs S12 into a branch its own prose places above all " +
     "six. The catalog settles it: safety holds 9, S12 stands alone. The build refuses to emit " +
     "a tree whose branches do not reconcile to the catalog.</dd>"
 );
