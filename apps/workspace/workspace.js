@@ -8,7 +8,7 @@
  *   runState()   — whether the deployed agents are reachable at all
  *   agentCard()  — one entrypoint, at the level of detail a rail needs
  *   drawerMethod() — the formula, pattern or model behind a result
- *   inputs()     — the tables and columns, named, with their gaps
+ *   drawerTables() — the tables and columns, named, with their gaps
  *
  * The "drawer" prefix is not decoration. It says the function writes technical
  * drawer copy and nothing else, which is what lets tests/test_screen_copy.py
@@ -358,18 +358,26 @@ function drawerMethod(id) {
   return parts.join("");
 }
 
-/** The tables an agent reads, named to the column, with their gaps stated.
+/** The tables behind an answer, named to the column, with their gaps stated.
  *
  *  "The inputs panel names the table and the column, not 'inventory data'."
  *  Three statuses are kept apart on purpose: a table whose meaning is
  *  documented, one whose schema is known but whose business meaning is still
- *  being written, and one that BigQuery holds but this machine does not. */
-function inputs(id) {
-  const a = AGENTS[id];
-  if (!a.source_tables.length) {
-    return '<p class="dim">This agent reads no table; it computes.</p>';
+ *  being written, and one that BigQuery holds but this machine does not.
+ *
+ *  Drawer copy, and named so. This used to be inputs(), called from the body of
+ *  the handover sheet once per section, which put ten raw BigQuery schemas in
+ *  front of the shift supervisor and one technical drawer at the foot they no
+ *  longer needed. Qualified names and column types are what an auditor checks a
+ *  sheet against; the body says what each agent reads in the words the shared
+ *  vocabulary publishes. So this takes the list of tables rather than an agent,
+ *  because the two screens that file it are filing a team's tables, not one
+ *  member's, and it is only ever reached from inside the one drawer. */
+function drawerTables(qualified_names) {
+  if (!qualified_names.length) {
+    return '<p class="dim">No table is read here; the answer is computed.</p>';
   }
-  return a.source_tables
+  return qualified_names
     .map((qualified) => {
       const t = WS.tables.tables[qualified];
       if (!t) return `<div class="tbl"><div class="mono">${esc(qualified)}</div></div>`;

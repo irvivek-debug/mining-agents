@@ -98,9 +98,12 @@ function window_() {
    and the block that says so is the same one every other screen uses.
 
    What each one draws on is named in the words the shared vocabulary
-   publishes — work orders, shift production, safety incidents — rather than in
-   qualified table names. The table names are a row below, in the disclosure the
-   inputs component already carries, and again at the foot of the page. */
+   publishes — work orders, shift production, safety incidents — and nothing
+   more. Each section used to end in one collapsible per source table, carrying
+   the qualified BigQuery name, a column count and every column's type: ten of
+   them down the one screen a shift supervisor reads at 6am, in front of the
+   drawer at the foot that exists to hold exactly that. The schemas are in that
+   drawer now, which is where the instruction put them. */
 function section(id, index) {
   const a = AGENTS[id];
   return (
@@ -112,9 +115,7 @@ function section(id, index) {
       "This section is written in sentences, by the agent named above, from " +
         "what it read. It has not been written."
     ) +
-    '<div style="margin-top:14px">' +
-    inputs(id) +
-    "</div></div>"
+    "</div>"
   );
 }
 
@@ -309,11 +310,12 @@ el("brief").innerHTML =
    page and not something the reader has to know a keyboard shortcut for.
  *
  * A collapsed <details> prints as an empty box: its contents are not rendered,
- * so a reader on paper would get thirteen bordered rectangles where the tables
- * should be. Every disclosure is opened before the print dialog and restored
- * afterwards, so the screen the supervisor was reading is the screen they get
- * back. The hook is on the events rather than on the button because Ctrl-P is
- * how most people will actually print this. */
+ * so the technical detail at the foot — and every table filed inside it — would
+ * come out as bordered rectangles with nothing in them. Every disclosure is
+ * opened before the print dialog and restored afterwards, so the screen the
+ * supervisor was reading is the screen they get back. The hook is on the events
+ * rather than on the button because Ctrl-P is how most people will actually
+ * print this. */
 let reclose = [];
 
 addEventListener("beforeprint", () => {
@@ -356,6 +358,14 @@ function drawerBody() {
     )}</dd>` +
     `<dt>Sign-off required</dt><dd class="mono">${S12.hitl_required ? "yes" : "no"}</dd>` +
     "</dl>" +
+    "<h4>Every table this team reads</h4>" +
+    "<p>One row above names the tables each member is entitled to read. These " +
+    "are the same tables to the column: what BigQuery calls each one, how many " +
+    "rows it held when this build profiled it, and what every column means " +
+    "where that has been written down.</p>" +
+    drawerTables(
+      [...new Set(members.flatMap((id) => AGENTS[id].source_tables))].sort()
+    ) +
     connectionDetail()
   );
 }

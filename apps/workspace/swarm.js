@@ -190,13 +190,13 @@ function tracesPlainly() {
   return traces.slice(0, -1).join(", ") + " and " + traces[traces.length - 1];
 }
 
+/* Every table the team reads, as one list rather than one list per member: the
+   specialists overlap, and a reader checking the sheet wants the boundary, not
+   four copies of most of it. */
 function swarmInputs() {
-  const tables = [...new Set(members.flatMap((id) => AGENTS[id].source_tables))].sort();
-  /* inputs() is written against one agent, and a team reads the union. A
-     synthetic agent record is the smallest way to reuse it without giving the
-     component a second signature it would only ever be called with once. */
-  AGENTS.__swarm__ = { source_tables: tables };
-  return inputs("__swarm__");
+  return drawerTables(
+    [...new Set(members.flatMap((id) => AGENTS[id].source_tables))].sort()
+  );
 }
 
 if (coord.hitl_required) {
