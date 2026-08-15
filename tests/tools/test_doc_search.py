@@ -22,11 +22,23 @@ def test_the_sql_declares_the_model_as_well_as_the_table():
 
 
 @pytest.mark.integration
-def test_a_crusher_query_retrieves_the_crusher_manual():
+def test_the_crusher_manual_ranks_first_for_a_crusher_query():
+    """Rank, not mere presence.
+
+    The agent cites the passage it reads first, so "somewhere in the top five"
+    is not the property that matters. Asserting only presence would let
+    ORDER BY distance be dropped or reversed without any test noticing: the
+    corpus is 48 chunks, so almost anything appears in a top-5.
+    """
     said = doc_search("crusher gap size aperture torque limit", k=5)
     assert said["success"], said.get("error")
-    names = [p["file_name"] for p in said["data"]["passages"]]
-    assert any("crusher" in n for n in names), names
+    passages = said["data"]["passages"]
+    names = [p["file_name"] for p in passages]
+    assert "crusher" in names[0], names
+    # Ascending distance is what makes names[0] the nearest rather than an
+    # arbitrary row. This is the assertion that pins ORDER BY.
+    distances = [p["distance"] for p in passages]
+    assert distances == sorted(distances), distances
 
 
 @pytest.mark.integration
