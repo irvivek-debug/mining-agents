@@ -221,6 +221,14 @@ function loadPage(options) {
       [...dom.registry.values()].filter((n) => String(n.id).startsWith("nc-")),
     runtimeLine: () =>
       [...dom.registry.values()].filter((n) => String(n.id).startsWith("rt-")),
+    /* Everything on the page, in one string.
+     *
+     * Mount points do not nest — each id in the markup is written to once, and
+     * a node created inside another node's innerHTML gets its own entry only
+     * when something later writes into it. So the join is the document, and
+     * counting a summary in it counts the summaries a reader would see. */
+    rendered: () =>
+      [...dom.registry.values()].map((n) => n.innerHTML).join("\n"),
   };
 }
 
@@ -310,10 +318,50 @@ test("the cockpit asks once too, and its card agrees with its footer", async () 
   assert.ok(page.runtimeLine()[0].textContent.includes(`${DEPLOYED} of ${ENTRYPOINTS}`));
 });
 
+/* One page, one closed disclosure — however many blocks want to disclose.
+ *
+ * This sheet has a section per summariser and each one asks whether the agents
+ * are reachable, so a connection block that carries its own drawer put three
+ * identical "Technical detail" boxes down one page the moment the answer was
+ * no. Three identical disclosures is not disclosure, it is repetition, and it
+ * is exactly what the "technical detail at the end, collapsed" instruction was
+ * asking to be spared. The stage and the exception are facts about the page,
+ * so the page holds them once, at the foot, where everything else technical
+ * about this screen already lives.
+ */
+function disclosures(page) {
+  return (page.rendered().match(/<summary>Technical detail/g) || []).length;
+}
+
+for (const state of ["disconnected", "unknown", "connected"]) {
+  test(`the ${state} sheet offers one technical disclosure, not one per block`, async () => {
+    const page = loadPage({
+      runtime:
+        state === "connected"
+          ? CONNECTED
+          : state === "unknown"
+          ? "unreadable"
+          : {
+              connected: false,
+              stage: "cloud run services.list",
+              detail: "HTTP 403: caller lacks run.services.list",
+              expected: ENTRYPOINTS,
+            },
+    });
+    await settled();
+    assert.ok(page.blocks().length >= 3, "the sheet stopped asking in several places");
+    assert.equal(
+      disclosures(page),
+      1,
+      `${state}: the sheet renders ${disclosures(page)} technical disclosures`
+    );
+  });
+}
+
 /* The reader of this sheet is a Shift Supervisor. What they need in the body is
  * a sentence they can act on; the stage the check stopped at and the exception
- * it caught are for whoever repairs it, and belong in the closed drawer at the
- * foot of the block. The version this replaces printed
+ * it caught are for whoever repairs it, and belong in the one closed drawer at
+ * the foot of the page. The version this replaces printed
  * "RefreshError: Reauthentication is needed…" as the loudest text on the page. */
 test("a server that says no is explained in words, with the exception in the drawer", async () => {
   const page = loadPage({
@@ -344,14 +392,18 @@ test("a server that says no is explained in words, with the exception in the dra
         `the server's exception text is the reader-facing copy: ${line}`
       );
     }
-
-    const drawer = block.innerHTML.slice(block.innerHTML.indexOf('class="drawer-body"'));
-    assert.ok(drawer.includes("cloud run services.list"), "the stage is not recorded anywhere");
     assert.ok(
-      drawer.includes("HTTP 403: caller lacks run.services.list"),
-      "the detail an administrator needs was dropped rather than filed"
+      !block.innerHTML.includes("cloud run services.list"),
+      "the block repeated the stage that the page already files once"
     );
   }
+
+  const drawer = page.rendered().slice(page.rendered().indexOf('class="drawer-body"'));
+  assert.ok(drawer.includes("cloud run services.list"), "the stage is not recorded anywhere");
+  assert.ok(
+    drawer.includes("HTTP 403: caller lacks run.services.list"),
+    "the detail an administrator needs was dropped rather than filed"
+  );
   assert.match(page.runtimeLine()[0].textContent, /^Not connected/);
 });
 
@@ -371,9 +423,9 @@ test("an unreadable answer is reported as unknown, not as a no", async () => {
       block.innerHTML.includes("neither a yes nor a no"),
       `the unknown state was not stated as unknown: ${block.innerHTML}`
     );
-    const drawer = block.innerHTML.slice(block.innerHTML.indexOf('class="drawer-body"'));
-    assert.ok(drawer.includes("HTTP 500"), "the status the server answered with is lost");
   }
+  const drawer = page.rendered().slice(page.rendered().indexOf('class="drawer-body"'));
+  assert.ok(drawer.includes("HTTP 500"), "the status the server answered with is lost");
   assert.doesNotMatch(page.runtimeLine()[0].textContent, /^Not connected/);
 });
 
@@ -405,7 +457,11 @@ test("off disk, with no server to ask, the baked constant is the fallback", asyn
 test("the run control and the sheet are mounted on different elements", async () => {
   const page = loadPage({ runtime: CONNECTED });
   assert.ok(page.el("run-brief"), "the Run button is not on the page");
-  assert.match(page.el("brief").innerHTML, /OMISSION CRITIC/);
+  // The band the run handler rewrites is anchored on its id rather than on its
+  // heading, so renaming the heading cannot break this and losing the anchor
+  // the handler reaches for cannot pass it.
+  assert.match(page.el("brief").innerHTML, /id="omission-head"/);
+  assert.ok(!page.el("run").innerHTML.includes('id="omission-head"'));
   assert.ok(page.el("run").innerHTML.includes("Write this brief now"));
 });
 

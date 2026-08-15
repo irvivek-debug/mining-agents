@@ -63,8 +63,14 @@ const NAVS = {
   workspace: {
     items: WORK_NAV,
     brand: "Mining Agents · Site workspace",
+    /* The two figures are a distinction, not a pair. "52 entrypoints · 100
+       agents" reads as a hundred things to talk to and fifty-two of something
+       technical; the truth is the other way round, and it is the fact a reader
+       most needs before they start looking for the right agent. */
     pill: () => ({
-      text: `${DATA.catalog.counts.entrypoints} entrypoints · ${DATA.catalog.counts.agent_nodes} agents`,
+      text:
+        `${DATA.catalog.counts.entrypoints} agents you can talk to · ` +
+        `${DATA.catalog.counts.agent_nodes} in the teams behind them`,
       title: "Source of every figure on this page",
     }),
   },

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Swarm console — Mining Agents workspace</title>
+<title>Agent teams — Mining Agents workspace</title>
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="../shared/app.css">
 <link rel="stylesheet" href="workspace.css">
@@ -12,8 +12,8 @@
 <div class="wrap" id="wrap">
 
   <section class="hero">
-    <div class="eyebrow">SC-2 · Swarm console</div>
-    <h1 id="title">Swarm console</h1>
+    <div class="eyebrow">Agent teams</div>
+    <h1 id="title">Agent teams</h1>
     <p class="lede" id="lede"></p>
     <p class="scale-note" id="scale-note"></p>
   </section>
@@ -21,7 +21,7 @@
   <div class="pane">
     <div>
       <div class="rail">
-        <div class="rail-cap">Twelve swarms</div>
+        <div class="rail-cap" id="rail-cap"></div>
         <div id="rail"></div>
       </div>
     </div>
@@ -39,6 +39,7 @@
 
 <script src="../shared/data/bundle.js"></script>
 <script src="../shared/shell.js"></script>
+<script src="../shared/plain.js"></script>
 <script src="workspace.js"></script>
 <script src="hitl.js"></script>
 <script src="swarm.js"></script>

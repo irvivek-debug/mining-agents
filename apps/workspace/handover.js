@@ -1,4 +1,4 @@
-/* SC-5 — the shift handover brief. One agent, two buttons, and a document.
+/* The shift handover brief. One agent team, two buttons, and a document.
  *
  * Every other screen in this application is a place to ask something. This one
  * is a thing to read: the Shift Supervisor reads it at the change of shift,
@@ -8,15 +8,18 @@
  * controls it does carry are the two things the reader does with it: write it,
  * and print it.
  *
- * The brief has four parts because the swarm has four working nodes. Three
- * summarisers each own a domain — availability, production, safety — and the
- * fourth is the Omission Critic, whose entire job is to name what the other
- * three did not cover. That band renders on every load, including when it has
- * nothing to report, and the reason is in P8's own words further down the page:
- * a brief that was useless because it missed the crusher event is
- * indistinguishable, to its reader, from a brief that had nothing to miss. A
- * band that appears only when there is something to say cannot be trusted to be
- * silent for the right reason.
+ * The brief has four parts because four agents write it. Three each own a
+ * subject — availability, production, safety — and the fourth reads what they
+ * produced and names what they did not cover. That band renders on every load,
+ * including when it has nothing to report, and the reason is in the
+ * supervisor's own words further down the page: a brief that was useless
+ * because it missed the crusher event is indistinguishable, to its reader, from
+ * a brief that had nothing to miss. A band that appears only when there is
+ * something to say cannot be trusted to be silent for the right reason.
+ *
+ * The agent ids, the process code, the model tiers and the real table names are
+ * all in the technical detail at the foot. They are what an auditor checks the
+ * sheet against; they are not what the supervisor reads at 6am.
  */
 
 mountNav("workspace", "handover.html");
@@ -28,14 +31,23 @@ const supervisor = PERSONAS[S12.persona] || {};
 
 document.title = `${S12.display_name} — Mining Agents workspace`;
 el("title").textContent = "Shift handover brief";
-el("lede").innerHTML =
-  `<span class="mono">S12</span> ${esc(S12.display_name)}. ` +
-  `Three summarisers cover availability, production and safety across ` +
-  `${S12.source_tables.length} tables; a fourth node, the Omission Critic, ` +
-  "reports what they left out. " +
+
+/* The lede is the one place the reader is told what they are holding, so it is
+   said in the words they would use: how many agents write it, what each of them
+   covers, and whether anything on it commits the site to anything. The agent id
+   that used to open this sentence is in the drawer, where a reader who wants to
+   check the sheet can find it and a reader who wants to read it need not. */
+el("lede").textContent =
+  "What the last shift leaves the next one, written by an agent team of " +
+  members.length +
+  ". " +
+  swarm.specialists.length +
+  " of them cover availability, production and safety between them, one more " +
+  "reads what they wrote and reports what they left out, and the lead — the " +
+  "one you ask — puts the sheet together. " +
   (S12.hitl_required
-    ? "This brief requires approval before it is issued."
-    : "This brief commits nothing and requires no approval — it is read, not actioned.");
+    ? "It needs your sign-off before it is issued."
+    : "It commits nothing and needs no sign-off: it is read, not actioned.");
 
 /* The shift window is a site fact, not a repository fact. Nobody here knows
    whether this mine runs two twelves or three eights, and inventing 06:00–18:00
@@ -55,20 +67,25 @@ function window_() {
   );
 }
 
-/* One section per summariser. The section is the deliverable and the section is
-   real: which node writes it, and which tables it is entitled to draw on, are
-   both facts of the deployed catalog. Only the sentences are missing, and the
-   block that says so is the same one every other screen uses. */
+/* One section per agent. The section is the deliverable and the section is
+   real: which agent writes it, and what it is entitled to read while writing
+   it, are both facts of the deployed catalog. Only the sentences are missing,
+   and the block that says so is the same one every other screen uses.
+
+   What each one draws on is named in the words the shared vocabulary
+   publishes — work orders, shift production, safety incidents — rather than in
+   qualified table names. The table names are a row below, in the disclosure the
+   inputs component already carries, and again at the foot of the page. */
 function section(id, index) {
   const a = AGENTS[id];
   return (
     '<div class="card" style="margin-top:16px">' +
     `<div class="card-cap">${index} · ${esc(a.display_name)}</div>` +
-    `<div class="mono dim" style="font-size:11px;margin-bottom:12px">${esc(id)} · ` +
-    `reads ${a.source_tables.length} tables</div>` +
+    `<div class="dim" style="font-size:12.5px;margin-bottom:12px">Writes this ` +
+    `section from ${esc(whatItReads(a))}.</div>` +
     notConnected(
-      `The ${a.display_name.toLowerCase()} writes this section in prose, and the ` +
-        `${a.source_tables.length} tables below are what it is entitled to draw on.`
+      "This section is written in sentences, by the agent named above, from " +
+        "what it read. It has not been written."
     ) +
     '<div style="margin-top:14px">' +
     inputs(id) +
@@ -76,22 +93,35 @@ function section(id, index) {
   );
 }
 
+/* What one agent reads, as a phrase that fits inside a sentence. The
+   agent-teams screen has a function of the same shape, deliberately not the
+   same name: these are classic scripts sharing one global scope, and two
+   top-level declarations of one name is silently the later one. That one folds
+   together a whole team, this one takes a single agent. */
+function whatItReads(a) {
+  const names = a.source_tables.map(plainTable).sort();
+  if (!names.length) return "nothing stored — it computes";
+  if (names.length === 1) return names[0];
+  return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+}
+
 /* The sentence the band leads with before anyone has run anything. It is named
    because the run handler both replaces it and, when a run fails without
    writing a word, has to put it back exactly. */
 const UNCHECKED = "Coverage has not been checked for this window.";
 
-/* The Omission Critic, always drawn, never conditional.
+/* The agent that reports what the others missed, always drawn, never
+ * conditional.
  *
  * It gets the loudest treatment on the page — the same 2px critical border the
- * approval sheet uses — because on a handover the thing that hurts is not the
+ * sign-off sheet uses — because on a handover the thing that hurts is not the
  * item that was reported badly, it is the item that was not reported at all. */
 function omission() {
   const critic = AGENTS[swarm.critic];
   return (
     '<div class="unverified" style="margin-top:16px">' +
-    '<div class="unverified-cap"><span class="badge b-crit">⚠ OMISSION CRITIC</span>' +
-    `<span>${esc(critic.display_name)} · ${esc(swarm.critic)}</span></div>` +
+    '<div class="unverified-cap"><span class="badge b-crit">⚠ WHAT THIS BRIEF LEFT OUT</span>' +
+    `<span>${esc(critic.display_name)}</span></div>` +
     // The headline is a statement about right now, and the Run button below
     // changes right now. It is the one sentence on this sheet the reader can
     // falsify by clicking, so the run handler owns it and rewrites it.
@@ -99,22 +129,21 @@ function omission() {
     '<div class="dim">' +
     runtimeNote() +
     "</div>" +
-    '<div class="remedy">Write the brief above and the critic runs with the other ' +
-    "three; what it finds, or does not find, comes back in the same answer. " +
-    "This band is never empty and never hidden. When the " +
-    "critic runs and finds nothing, it says it found nothing — which is a " +
-    "different statement from saying nothing, and only one of the two can be " +
-    "relied on.</div></li>" +
-    `<li><strong>What it checks against</strong><div class="dim mono">${esc(
-      critic.source_tables.join(", ")
+    '<div class="remedy">Write the brief above and this agent runs with the ' +
+    "others; what it finds, or does not find, comes back in the same answer. " +
+    "This band is never empty and never hidden. When it runs and finds " +
+    "nothing, it says it found nothing — which is a different statement from " +
+    "saying nothing, and only one of the two can be relied on.</div></li>" +
+    `<li><strong>What it checks the brief against</strong><div class="dim">${esc(
+      whatItReads(critic)
     )}</div>` +
-    '<div class="remedy">The critic reads the source tables directly rather ' +
-    "than reading the three summaries, so an event none of the summarisers " +
-    "picked up is still visible to it.</div></li></ul></div>"
+    '<div class="remedy">It goes back to the records themselves rather than ' +
+    "reading the sections above, so something none of the other agents picked " +
+    "up is still there to be found.</div></li></ul></div>"
   );
 }
 
-/* Why this screen has an Omission Critic at all, in the supervisor's own
+/* Why a fourth agent reads the other three at all, in the supervisor's own
    recorded words. The quote is transcribed with its source line, which is what
    makes it quotable: it is evidence from the interview, not a justification
    written afterwards to fit the design. */
@@ -122,7 +151,8 @@ function why() {
   const quote = (supervisor.pain_points || []).find((q) => /missed|useless/i.test(q.quote));
   if (!quote) return "";
   return (
-    '<div class="card" style="margin-top:16px"><div class="card-cap">Why the fourth node exists</div>' +
+    '<div class="card" style="margin-top:16px">' +
+    '<div class="card-cap">Why a fourth agent checks the other three</div>' +
     '<blockquote class="verbatim">' +
     esc(quote.quote.trim()) +
     `<cite>${esc(supervisor.title || S12.persona)} · docs/personas-and-value-tree.md line ${esc(
@@ -135,9 +165,9 @@ function why() {
 /* One streamed call, to the one agent the catalogue permits.
  *
  * The sheet has four sections, and it is tempting to run four things. The
- * catalogue does not allow it: the swarm names a coordinator, three specialists
- * and a critic, and only the coordinator carries is_entrypoint. The other four
- * are the swarm's internal decomposition, not four things a reader may invoke.
+ * catalogue does not allow it: the team names a lead, three specialists and a
+ * reviewer, and only the lead can be addressed. The other four are how the team
+ * divides the work, not four things a reader may invoke.
  *
  * EventSource reconnects by itself whenever a connection closes, and this
  * question was measured at a little under two minutes of real model time. So
@@ -148,9 +178,10 @@ function mountRun() {
   el("run").innerHTML =
     '<div class="run-brief">' +
     '<button class="ask primary" id="run-brief" type="button">Write this brief now</button>' +
-    '<p class="pnote">One agent writes the whole sheet. It takes a minute or two, ' +
-    "and each step it takes appears below as it happens. Asking again starts over " +
-    "and stops the answer in progress.</p></div>" +
+    '<p class="pnote">You ask one agent and its team writes the whole sheet. It ' +
+    "takes a minute or two, and every step it takes appears below as it happens: " +
+    "what it looked up, what came back, and where it got to. Asking again starts " +
+    "over and stops the answer in progress.</p></div>" +
     '<div class="brief-out" id="brief-out" aria-live="polite"></div>';
 
   let live = null;
@@ -272,8 +303,41 @@ addEventListener("afterprint", () => {
 
 el("print").addEventListener("click", () => window.print());
 
-el("prov").innerHTML = provenance(
-  `<dt>Swarm</dt><dd class="mono">${esc(members.join(" · "))}</dd>` +
+/* Everything the sheet above stopped naming, in the catalogue's own terms: who
+   writes each section, the tier each of them runs on, the code the team is
+   filed under, and every table by its real qualified name. The brief is what
+   the supervisor reads; this is what an auditor checks it against, and it is
+   one disclosure at the foot rather than one beside every claim. */
+function drawerBody() {
+  const roles = members
+    .map((id) => {
+      const a = AGENTS[id];
+      return (
+        `<dt class="mono">${esc(id)}</dt>` +
+        `<dd>${esc(a.display_name)} — ${esc(a.swarm_role)}, ${esc(a.model_tier)}<br>` +
+        `<span class="mono">${esc(
+          a.source_tables.join(", ") || "no tables declared"
+        )}</span></dd>`
+      );
+    })
+    .join("");
+  return (
+    "<p>One row per member of the team that writes this brief: its id, the part " +
+    "it plays, the model tier it runs on, and every table it is entitled to " +
+    "read.</p>" +
+    `<dl>${roles}` +
+    `<dt>Filed under</dt><dd class="mono">${esc(S12.apqc_code)} · ${esc(
+      S12.apqc_names.join(" / ")
+    )}</dd>` +
+    `<dt>Sign-off required</dt><dd class="mono">${S12.hitl_required ? "yes" : "no"}</dd>` +
+    "</dl>" +
+    connectionDetail()
+  );
+}
+
+el("prov").innerHTML =
+  technicalDrawer(drawerBody(), "agent ids, model tiers, process code, tables") +
+  provenance(
     `<dt>Reader</dt><dd>${esc(supervisor.title || S12.persona)}</dd>` +
-    `<dt>Runtime</dt><dd>${runtimeNote()}</dd>`
-);
+      `<dt>Runtime</dt><dd>${runtimeNote()}</dd>`
+  );

@@ -135,6 +135,44 @@ function plainJargon(term) {
   return JARGON[key] || String(term || "");
 }
 
+/* Prose the screens print but did not write.
+ *
+ * A persona's accountable_for is a paragraph out of the catalogue, and three
+ * screens print it whole: the cockpit under each role, the role page as its
+ * lede, and the sign-off sheet under "Who is accountable". It was written by
+ * the people who built the estate, so it says "must approve or decline HITL
+ * prompts". Every sentence around it now says "needs your sign-off", and one
+ * paragraph in the reader's own screen still using the acronym undoes the
+ * lesson the rest of the page is teaching.
+ *
+ * The rule is a phrase substitution and not a word one, because "HITL" is never
+ * alone: it qualifies a noun, and which noun decides what reads well in its
+ * place. Longest first, so "HITL approval request" is not left as "sign-off
+ * request request". The list is deliberately short — every entry was checked
+ * against the actual occurrences in the catalogue rather than imagined.
+ *
+ * What this is NOT applied to is a quotation. A journey summary and a pain
+ * point are printed with a source line against them, and prose carrying a
+ * citation has to be the prose at that line. Where those still use the estate's
+ * words, the fix is to the document, not to a regex on the way to the screen.
+ */
+var PROSE = [
+  [/\bHITL approval (?:request|prompt|step)s?\b/gi, "sign-off request"],
+  [/\bHITL (?:approval )?prompts\b/gi, "sign-off requests"],
+  [/\bHITL (?:approval )?prompt\b/gi, "sign-off request"],
+  [/\bHITL approver\b/gi, "sign-off authority"],
+  [/\bHITL approvals?\b/gi, "sign-off"],
+  [/\bHITL\b/gi, "sign-off"],
+];
+
+function plainProse(text) {
+  var out = String(text || "");
+  for (var i = 0; i < PROSE.length; i++) {
+    out = out.replace(PROSE[i][0], PROSE[i][1]);
+  }
+  return out;
+}
+
 /* The observed bq_query argument is a literal SELECT naming its table in
  * backticks. Only the first qualified name is taken: a join names two, and the
  * first is the one the query is about. */
@@ -210,6 +248,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     TOOLS, TOOL_ABILITY, TRAVERSALS, TABLES, JARGON,
     bareTable, plainTable, plainTool, plainToolAbility, plainTraversal, plainJargon,
+    plainProse,
     articleFor, tableFromSql, callLine, failLine, unmapped,
   };
 }

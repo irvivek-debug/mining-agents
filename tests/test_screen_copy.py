@@ -42,9 +42,18 @@ SCREENS = {
     "apps/case/value.html": ["apps/case/value.js"],
     "apps/case/solution.html": ["apps/case/solution.js"],
     "apps/case/graph.html": ["apps/case/graph.js"],
+    # hitl.js is the sign-off sheet. It is raised from the agent-teams screen
+    # and is never navigated to, so its copy has no screen of its own to be
+    # checked on — and it was the one surface in this application still
+    # explaining itself in column names.
     "apps/workspace/index.html": ["apps/workspace/cockpit.js"],
-    "apps/workspace/swarm.html": ["apps/workspace/swarm.js"],
-    "apps/workspace/persona.html": ["apps/workspace/persona.js", "apps/workspace/persona-panel.js"],
+    "apps/workspace/swarm.html": ["apps/workspace/swarm.js", "apps/workspace/hitl.js"],
+    # chat.js writes most of what a reader of the role page actually reads.
+    "apps/workspace/persona.html": [
+        "apps/workspace/persona.js",
+        "apps/workspace/persona-panel.js",
+        "apps/workspace/chat.js",
+    ],
     "apps/workspace/handover.html": ["apps/workspace/handover.js"],
 }
 
@@ -69,6 +78,12 @@ PLAIN_INSTEAD = {
     "apps/case/value.html": ["apqc code", "value branch"],
     "apps/case/solution.html": ["swarm", "pattern a", "pattern b", "hitl"],
     "apps/case/graph.html": ["traversal", "blast radius", "node", "edge"],
+    "apps/workspace/index.html": ["entrypoint", "hitl", "apqc code", "value branch"],
+    # "swarm" is not on the banned list above, because swarm.html is a file
+    # name and by_swarm is a field of the catalogue. What can be demanded is
+    # that the screen calls the thing what the nav calls it.
+    "apps/workspace/swarm.html": ["swarm", "traversal", "hitl"],
+    "apps/workspace/handover.html": ["swarm"],
 }
 
 # What each drawer must still name. These are the expressions that put the fact
@@ -82,6 +97,10 @@ DRAWER_KEEPS = {
     "apps/case/value.html": ["b.apqc", "b.code", "info.agents"],
     "apps/case/solution.html": ["a.pattern", "a.model_tier", "a.agent_id", "s.specialists"],
     "apps/case/graph.html": ["g.sql", "g.traversal", "g.bigquery_graph"],
+    "apps/workspace/index.html": ["a.persona", "a.apqc_code", "a.model_tier", "WS.approval.table"],
+    "apps/workspace/swarm.html": ["coord.apqc_code", "a.model_tier", "method(current)", "swarmInputs()"],
+    "apps/workspace/handover.html": ["S12.apqc_code", "a.model_tier", "a.source_tables"],
+    "apps/workspace/persona.html": ["a.model_tier", "a.apqc_code", "branchesOf("],
 }
 
 # Counts belong to the catalogue, not to a heading. Spelling one out in an <h1>
@@ -309,6 +328,80 @@ def test_no_heading_counts_the_estate_for_itself():
             if re.search(r"\d", heading):
                 problems.append(f"{screen}: <h> carries a digit — {heading.strip()!r}")
     assert not problems, "counts typed into headings:\n" + "\n".join(problems)
+
+
+def nav_labels():
+    """The workspace nav, read out of apps/shared/shell.js rather than retyped.
+
+    Reading it is the point. If the nav is renamed and the screens are not, the
+    parse below moves with the nav and the screens fail, which is the failure
+    worth having.
+    """
+    source = shell_js()
+    block = re.search(r"const WORK_NAV = \[(.*?)\n\];", source, re.S)
+    assert block, "apps/shared/shell.js no longer declares WORK_NAV"
+    pairs = re.findall(r'href:\s*"([^"]+)".*?label:\s*"([^"]+)"', block.group(1))
+    assert len(pairs) >= 4, f"WORK_NAV parsed to {pairs}"
+    return dict(pairs)
+
+
+def shell_js():
+    return (APPS / "shared" / "shell.js").read_text()
+
+
+def test_a_screen_calls_itself_what_the_nav_calls_it():
+    """A nav that says one thing and a heading that says another.
+
+    The tab reads "Agent teams" and the screen it opens read "Swarm console",
+    which teaches a reader that the words on these screens are arbitrary — and
+    once that is learned, every other plain phrase on them is discounted too.
+    The nav label has to survive the click.
+    """
+    problems = []
+    for href, label in nav_labels().items():
+        screen = f"apps/workspace/{href}"
+        if screen not in SCREENS:
+            continue
+        text = visible_text([screen] + SCREENS[screen])
+        if label.lower() not in text.lower():
+            problems.append(f"{screen}: the nav calls this {label!r} and the screen does not")
+    assert not problems, "the nav and the screen disagree:\n" + "\n".join(problems)
+
+
+def test_the_corner_pill_names_the_two_counts_the_reader_needs():
+    """52 and 100 are a distinction, not a pair of numbers.
+
+    "52 entrypoints · 100 agents" invites the reading that there are a hundred
+    things to talk to. The distinction the reader needs is that fifty-two of
+    them take questions and the rest work behind those. Both figures still come
+    from the catalogue: a pill that spells either one out has stopped being a
+    reading of the estate and become a claim about it.
+    """
+    source = shell_js()
+    block = re.search(r"workspace:\s*\{(.*?)\n  \},", source, re.S)
+    assert block, "apps/shared/shell.js no longer declares the workspace nav"
+    pill = re.search(r"pill:\s*\(\)\s*=>\s*\((.*?)\}\),", block.group(1), re.S)
+    assert pill, "the workspace nav no longer builds a pill"
+    text = pill.group(1)
+
+    # The pill counts, so it says the published phrase in the plural. The
+    # pattern is built from apps/shared/plain.js rather than retyped, so a pill
+    # that invents its own wording still fails; only the plural 's' is forgiven.
+    words = plain_map()
+    head, rest = words["entrypoint"].split(" ", 1)
+    phrase = re.compile(re.escape(head) + "s? " + re.escape(rest))
+    said = phrase.search(text)
+    assert said, f"the pill does not say {words['entrypoint']!r}; it says {text!r}"
+    assert "in the teams behind them" in text, (
+        "the pill counts the other agents without saying what they are"
+    )
+    # Order matters as much as wording: the phrase belongs to the smaller
+    # figure, and swapping them says the estate has a hundred front doors.
+    first = text.index("counts.entrypoints")
+    second = text.index("counts.agent_nodes")
+    assert first < second, "the pill puts the whole estate behind the plain phrase"
+    assert first < said.start(), "the count and its phrase are the wrong way round"
+    assert not re.search(r"\b(52|100)\b", text), "the pill types a count it could read"
 
 
 def test_the_copy_stays_commodity_neutral():

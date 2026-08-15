@@ -249,7 +249,7 @@ table.audit td.t { white-space: nowrap; }
 }
 .chip:hover { border-color: var(--accent); color: var(--accent); }
 .chip:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.chip.hitl { border-left: 3px solid var(--warning); }
+.chip.signoff { border-left: 3px solid var(--warning); }
 
 /* ---------- the role page ---------- */
 

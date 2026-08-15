@@ -1,10 +1,10 @@
-/* SC-4 — the approval sheet. Raised from SC-2 and SC-3; never a destination.
+/* The sign-off sheet. Raised from the agent-teams screen and the role page;
+ * never a destination of its own.
  *
- * Fourteen of the fifty-two entrypoints carry hitl_required, which binds them
- * to request_approval, which writes one row to mining_data.agent_approvals with
- * decision = PENDING and can write nothing else. This sheet is the other half
- * of that write: the only path in the codebase by which PENDING becomes
- * anything else.
+ * The agents that carry hitl_required are bound to request_approval, which
+ * writes one row to mining_data.agent_approvals with decision = PENDING and can
+ * write nothing else. This sheet is the other half of that write: the only path
+ * in the codebase by which PENDING becomes anything else.
  *
  * Three decisions here are not stylistic, and each traces to a finding:
  *
@@ -36,6 +36,27 @@ const NOT_SUPPLIED =
   "supplied by the agent on the call — no call was made";
 
 let openSheet = null;
+
+/* What each recorded field is, in the words of the person signing.
+ *
+ * The sheet used to head this table "Column" and leave a supervisor reading
+ * approver_principal. The column names stay — they are what an auditor pulls
+ * the row back on — but they are no longer the first thing read. Keyed on the
+ * catalogue's own column list, and a column with no plain phrase falls back to
+ * its name rather than to a guess. */
+const MEANS = {
+  approval_id: "A reference for this decision",
+  agent_id: "Which agent asked",
+  action_type: "What it wants to do",
+  target_entity: "What it wants to do it to",
+  decision: "What you decided",
+  approver_principal: "Who decided it",
+  decided_at: "When you decided",
+  hold_duration_ms: "How long you held the control for",
+  agent_reasoning_snapshot: "The agent's own case, in its own words",
+  unverified_flags: "What this recommendation could not settle",
+  source_tables: "What the agent read to reach it",
+};
 
 function approvalRow(id) {
   const a = AGENTS[id];
@@ -72,13 +93,14 @@ function approvalRow(id) {
 
   return (
     '<table class="audit"><thead><tr>' +
-    "<th>Column</th><th>Type</th><th>Value</th><th>Written by</th>" +
+    "<th>What is recorded</th><th>Type</th><th>Value</th><th>Written by</th>" +
     "</tr></thead><tbody>" +
     WS.approval.fields
       .map((f) => {
         const [value, who] = values[f.column];
         return (
-          `<tr><td class="v">${esc(f.column)}</td>` +
+          `<tr><td>${esc(MEANS[f.column] || f.column)}` +
+          `<div class="v dim">${esc(f.column)}</div></td>` +
           `<td class="v t dim">${esc(f.type)}${f.mode === "REPEATED" ? "[]" : ""}</td>` +
           `<td>${esc(value)}</td>` +
           `<td class="v dim">${esc(who)}</td></tr>`
@@ -101,7 +123,7 @@ function openApproval(id) {
   back.innerHTML =
     '<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
     '<div class="sheet-head">' +
-    '<span class="badge b-warn">⚠ APPROVAL REQUIRED</span>' +
+    '<span class="badge b-warn">⚠ NEEDS YOUR SIGN-OFF</span>' +
     `<h2 id="sheet-title">${esc(a.display_name)}</h2>` +
     `<span class="dim mono" style="font-size:11px">${esc(id)}</span>` +
     "</div>" +
@@ -109,20 +131,21 @@ function openApproval(id) {
     unverified([id]) +
     '<div><div class="card-cap">Why this agent is asking</div>' +
     notConnected(
-      "The reasoning a person approves is the agent's own, passed to " +
-        "request_approval as a mandatory argument and stored verbatim in " +
-        "agent_reasoning_snapshot. Nothing is written in its place here."
+      "What you sign off is the agent's own case for it, in the agent's own " +
+        "words, recorded exactly as it wrote them. It has to supply that before " +
+        "it can ask at all, and nothing has been written here in its place."
     ) +
     "</div>" +
-    '<div><div class="card-cap">The row this decision writes</div>' +
-    `<p class="dim" style="font-size:12.5px;margin:0 0 10px">One row in ` +
-    `<span class="mono">${esc(WS.approval.table)}</span>. ${esc(WS.approval.rule)}</p>` +
+    '<div><div class="card-cap">What gets recorded when you sign off</div>' +
+    '<p style="font-size:13px;margin:0 0 10px">Your decision, your name against ' +
+    "it and the moment you made it are written once and are not written by " +
+    `anything else. ${esc(WS.approval.rule)}</p>` +
     approvalRow(id) +
     "</div>" +
     '<div><div class="card-cap">Who is accountable</div>' +
     `<p style="margin:0;font-size:13.5px">${esc(persona.title || a.persona)}` +
     (persona.accountable_for
-      ? ` — ${esc(persona.accountable_for.trim())}`
+      ? ` — ${esc(plainProse(persona.accountable_for.trim()))}`
       : "") +
     "</p></div>" +
     '<div id="sheet-result"></div>' +
@@ -203,14 +226,13 @@ function openApproval(id) {
        message. */
     result.innerHTML =
       '<div class="card-cap">What this hold did</div>' +
-      `<p style="margin:0 0 12px;font-size:13.5px">The hold completed after ` +
-      `<span class="mono">${ms}</span> ms, which is the value that would go to ` +
-      '<span class="mono">hold_duration_ms</span>. Nothing was written.</p>' +
+      `<p style="margin:0 0 12px;font-size:13.5px">You held it for ` +
+      `<span class="mono">${ms}</span> ms, and that is the figure that would be ` +
+      "recorded against your sign-off. Nothing was written.</p>" +
       notConnected(
-        "Committing this decision means updating one row in " +
-          WS.approval.table +
-          " — setting decision, approver_principal and decided_at. That row " +
-          "does not exist, because no agent raised a request."
+        "Signing off means recording your decision, your name and the moment " +
+          "you made it against the request the agent raised. There is no " +
+          "request — no agent asked for one — so there is nothing to record."
       );
     result.scrollIntoView({ block: "nearest" });
   }

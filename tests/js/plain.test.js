@@ -114,3 +114,48 @@ test("jargon substitutions are available to the copy rewrite", () => {
   assert.equal(P.plainJargon("blast radius"), "what else stops");
   assert.equal(P.plainJargon("not a jargon term"), "not a jargon term");
 });
+
+/* The screens do not write all of their own copy. Three of them print a
+ * persona's accountable_for straight out of the catalogue, and that prose was
+ * written by the people who built the estate, in their words: "must approve or
+ * decline HITL prompts from D37 and S11". A de-jargoning pass that rewrites
+ * every sentence a screen composes and prints that one untouched has not
+ * finished. */
+test("the prose the catalogue supplies is said in the reader's words too", () => {
+  const said = P.plainProse(
+    "The HSE Lead must approve or decline HITL prompts from D37 and S11."
+  );
+  assert.equal(
+    said,
+    "The HSE Lead must approve or decline sign-off requests from D37 and S11."
+  );
+  assert.equal(
+    P.plainProse("is also the HITL approver for crusher setpoint changes"),
+    "is also the sign-off authority for crusher setpoint changes"
+  );
+  assert.equal(P.plainProse(""), "");
+  assert.equal(P.plainProse(undefined), "");
+});
+
+test("rewriting the catalogue's prose substitutes, and never quietly drops", () => {
+  const data = loadData();
+  const personas = data.personas.personas || data.personas;
+  for (const [code, persona] of Object.entries(personas)) {
+    const before = String(persona.accountable_for || "");
+    const after = P.plainProse(before);
+    assert.ok(!/\bHITL\b/i.test(after), `${code} still says HITL: ${after}`);
+    // Substitution, not deletion: strike the jargon out of the original and the
+    // replacement out of the rewrite, and what is left has to be identical. A
+    // rewriter that dropped the clause would pass the check above and fail this
+    // one, which is the failure worth having.
+    const strip = (text) =>
+      text
+        .replace(/HITL prompts?/gi, "")
+        .replace(/HITL approver/gi, "")
+        .replace(/sign-off requests?/gi, "")
+        .replace(/sign-off authority/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    assert.equal(strip(after), strip(before), `${code} lost text in the rewrite`);
+  }
+});

@@ -12,15 +12,17 @@
  * without failing the check that enforces it.
  */
 
-/* esc/fig/num/places/rowPlaces come from shell.js and branchEvidenceFor/
- * gapRowsFor from persona-data.js. In the browser those are globals, because
- * classic script tags share one scope and persona.html loads both files first.
- * Node gives every module its own scope, so the same names are resolved through
- * require and published where the function bodies below already look for them.
- * Guarded on the absence of a window so the browser path is untouched. */
+/* esc/fig/num/places/rowPlaces come from shell.js, branchEvidenceFor/gapRowsFor
+ * from persona-data.js, and plainProse from plain.js. In the browser those are
+ * globals, because classic script tags share one scope and persona.html loads
+ * all three files first. Node gives every module its own scope, so the same
+ * names are resolved through require and published where the function bodies
+ * below already look for them. Guarded on the absence of a window so the
+ * browser path is untouched. */
 if (typeof require !== "undefined" && typeof window === "undefined") {
   Object.assign(globalThis, require("../shared/shell.js"));
   Object.assign(globalThis, require("./persona-data.js"));
+  Object.assign(globalThis, require("../shared/plain.js"));
 }
 
 function _sparkline(points) {
@@ -225,7 +227,7 @@ function renderPanel(code, DATA) {
   var persona = DATA.personas.personas[code];
   return (
     '<section class="pblock"><h2>What you\'re answerable for</h2>' +
-    '<p class="lede">' + esc(persona.accountable_for) + "</p></section>" +
+    '<p class="lede">' + esc(plainProse(persona.accountable_for)) + "</p></section>" +
     _blockBranch(code, DATA) +
     _blockGap(code, DATA) +
     _blockAssets(DATA) +

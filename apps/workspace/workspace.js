@@ -67,8 +67,41 @@ function paintConnection(node, what, state) {
   node.innerHTML =
     `<div class="badge ${copy.cls}">${copy.badge}</div>` +
     `<p class="nc-what">${esc(what)}</p>` +
-    copy.lines.map((line) => `<p class="nc-why">${esc(line)}</p>`).join("") +
-    (copy.detail ? technicalDrawer(copy.detail, "what the connection check reported") : "");
+    copy.lines.map((line) => `<p class="nc-why">${esc(line)}</p>`).join("");
+}
+
+/** What the connection check reported, for the one drawer at the foot.
+ *
+ *  The stage the check stopped at and the exception it caught used to hang off
+ *  each block that asked. The handover sheet asks in four places, so a refused
+ *  check put four identical "Technical detail" boxes down one page — which is
+ *  not disclosure, it is repetition, and it is the thing the reader asked to be
+ *  spared. There is one connection and one answer, so there is one place to
+ *  read it: the drawer every screen already ends with.
+ *
+ *  Written as a placeholder that fills itself, because the drawer is composed
+ *  before the wire has answered. */
+function connectionDetail() {
+  const id = `cd-${(_pendingBlocks += 1)}`;
+  const paint = (state) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    const copy = connectionCopy(state);
+    node.innerHTML =
+      copy.detail ||
+      "<dl><dt>Connection check</dt><dd class=\"mono\">/api/runtime answered; " +
+        "there was nothing to report</dd></dl>";
+  };
+  runtimeState()
+    .then(paint)
+    .catch((err) => {
+      console.error("the connection check could not be rendered:", err);
+      paint({ connected: false, unreadable: true, stage: "/api/runtime", detail: String(err) });
+    });
+  return (
+    `<div id="${id}"><dl><dt>Connection check</dt>` +
+    '<dd class="mono">waiting for /api/runtime</dd></dl></div>'
+  );
 }
 
 /** The block every screen shows where an agent's generated text would appear.
@@ -154,14 +187,13 @@ function runState(node) {
     '<div class="card"><div class="card-cap">Runtime</div>' +
     '<p class="dim mono" style="font-size:11px;margin:0">checking /api/runtime …</p></div>';
 
-  const banner = (badge, cls, headline, detail, drawer) => {
+  const banner = (badge, cls, headline, detail) => {
     node.innerHTML =
       '<div class="card"><div class="card-cap">Runtime</div>' +
       '<div class="run-state">' +
       `<span class="badge ${cls}">${badge}</span>` +
       `<div><div>${esc(headline)}</div>` +
       `<div class="dim" style="font-size:12.5px;margin-top:4px">${esc(detail)}</div>` +
-      (drawer || "") +
       "</div></div></div>";
   };
 
@@ -186,17 +218,13 @@ function runState(node) {
       return;
     }
     if (!r.connected) {
-      /* The written sentences, and the exception behind the drawer. The card
-         used to print r.detail as its body copy, which put a RefreshError
-         stack line where the explanation belongs. */
+      /* The written sentences only. The card used to print r.detail as its body
+         copy, which put a RefreshError stack line where the explanation
+         belongs; it then printed the same stack line a second time in a drawer
+         of its own, alongside the page's drawer at the foot. The exception is
+         now filed once, where the rest of this screen's machinery is. */
       const copy = connectionCopy(r);
-      banner(
-        copy.badge,
-        copy.cls,
-        copy.lines[0],
-        copy.lines[1] || "",
-        copy.detail ? technicalDrawer(copy.detail, "what the connection check reported") : ""
-      );
+      banner(copy.badge, copy.cls, copy.lines[0], copy.lines[1] || "");
       return;
     }
     const n = r.deployed.length;
@@ -232,13 +260,14 @@ function runState(node) {
  *  cannot reach. Nothing in this suite hides behind hover. */
 function agentRow(id, href, current) {
   const a = AGENTS[id];
-  const kind = a.pattern === "A" ? `swarm of ${swarmSize(a.swarm_id)}` : "deep agent";
+  const kind =
+    a.pattern === "A" ? `team of ${swarmSize(a.swarm_id)}` : "works on its own";
   return (
     `<a class="rail-row${id === current ? " on" : ""}" href="${href}">` +
     `<span class="rail-id mono">${esc(id)}</span>` +
     `<span class="rail-body"><span class="rail-name">${esc(a.display_name)}</span>` +
-    `<span class="rail-sub mono">${esc(kind)} · ${esc(a.apqc_code)}</span></span>` +
-    (a.hitl_required ? '<span class="badge b-warn">⚠ APPROVAL</span>' : "") +
+    `<span class="rail-sub">${esc(kind)} · ${esc(a.apqc_names.join(" / "))}</span></span>` +
+    (a.hitl_required ? '<span class="badge b-warn">⚠ SIGN-OFF</span>' : "") +
     "</a>"
   );
 }
@@ -348,10 +377,10 @@ function inputs(id) {
       return (
         '<details class="tbl">' +
         "<summary>" +
-        `<span class="mono">${esc(qualified)}</span>` +
-        `<span class="dim mono">${esc(t.columns.length)} cols · ${num(
-          t.rows_at_profile
-        )} rows at profile</span>` +
+        `<span>${esc(plainTable(qualified))}</span>` +
+        `<span class="dim mono">${esc(bareTable(qualified))} · ${esc(
+          t.columns.length
+        )} cols · ${num(t.rows_at_profile)} rows at profile</span>` +
         (t.local_parquet
           ? '<span class="badge b-ok">✓ LOCAL COPY</span>'
           : '<span class="badge b-idle">○ WAREHOUSE ONLY</span>') +
@@ -378,11 +407,13 @@ function flagsFor(ids) {
   const models = [...new Set(list.flatMap((id) => AGENTS[id].models))];
   const flags = [];
 
+  const plainList = (list) => list.map(plainTable).join(", ");
+
   const remote = tables.filter((t) => !(WS.tables.tables[t] || {}).local_parquet);
   if (remote.length) {
     flags.push({
-      what: `${remote.length} of ${tables.length} source tables are not on this machine`,
-      detail: remote.join(", "),
+      what: `${remote.length} of the ${tables.length} sources this reads are not held on this machine`,
+      detail: plainList(remote),
       remedy: "Re-run scripts/build_app_data.py with BigQuery credentials.",
     });
   }
@@ -390,8 +421,8 @@ function flagsFor(ids) {
   const undocumented = tables.filter((t) => !(WS.tables.tables[t] || {}).description);
   if (undocumented.length) {
     flags.push({
-      what: `${undocumented.length} source tables have no written column semantics`,
-      detail: undocumented.join(", "),
+      what: `${undocumented.length} of them have no written explanation of what their columns mean`,
+      detail: plainList(undocumented),
       remedy:
         `docs/column-semantics.yaml covers ${WS.tables.documented.length} of ` +
         `${WS.tables.documented.length + WS.tables.undocumented.length} tables; the rest are in progress.`,
@@ -400,8 +431,8 @@ function flagsFor(ids) {
 
   for (const m of models) {
     flags.push({
-      what: `BQML model ${m} was not verified by this build`,
-      detail: "Whether the model exists and what it was trained on is a warehouse fact.",
+      what: "A trained prediction model this relies on was not checked by this build",
+      detail: `Whether ${m} exists, and what it was trained on, is a fact about the warehouse.`,
       remedy: "Query INFORMATION_SCHEMA.MODELS with credentials.",
     });
   }
