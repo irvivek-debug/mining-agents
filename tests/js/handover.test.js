@@ -497,3 +497,129 @@ test("a late frame from an abandoned stream does not write into the new answer",
   first.emit("message", JSON.stringify({ content: { parts: [{ text: "stale" }] } }));
   assert.equal(page.el("brief-answer").textContent, "");
 });
+
+/* plainAnswer wiring — the same defect that chat.js fixed, applied to the
+ * handover sheet.
+ *
+ * The brief is read by a Shift Supervisor, so raw markdown and tool-failure
+ * passages must not reach the body copy. plainAnswer() is already in the
+ * page's script list; these tests pin the wiring. */
+
+test("the handover answer renders markdown rather than printing its punctuation", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  page.el("run-brief").click();
+  const source = page.sources[0];
+  source.emit(
+    "message",
+    JSON.stringify({ content: { parts: [{ text: "### Findings\n\n**Crusher 2** tripped." }] } })
+  );
+  const html = page.el("brief-answer").innerHTML;
+  assert.ok(html.includes("<h3>"), `heading not rendered: ${html}`);
+  assert.ok(html.includes("<strong>"), `bold not rendered: ${html}`);
+  assert.ok(!html.includes("###"), `literal ### reached the pane: ${html}`);
+  assert.ok(!html.includes("**"), `literal ** reached the pane: ${html}`);
+});
+
+test("machine vocabulary from a tool failure does not reach the handover body copy", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  page.el("run-brief").click();
+  const source = page.sources[0];
+  // Simulates the failure passage the live run emitted.
+  source.emit(
+    "message",
+    JSON.stringify({
+      content: {
+        parts: [
+          {
+            text:
+              "The call to `default_api:graph_traverse` failed.\n\n" +
+              "- **Error Code:** `INVALID_ARGUMENT`\n\n" +
+              "Because this tool failed, the blast radius cannot be assessed.\n\n" +
+              "Crusher 2 tripped at 03:10.",
+          },
+        ],
+      },
+    })
+  );
+  const html = page.el("brief-answer").innerHTML;
+  // The drawer is expected to hold the raw text. Extract the body copy — the
+  // part of the pane before the collapsible — so the assertions only check
+  // what a reader would see as body copy.
+  const drawerStart = html.indexOf("<details");
+  const bodyCopy = drawerStart >= 0 ? html.slice(0, drawerStart) : html;
+  // The failure passage is collapsed to a plain sentence in the body.
+  assert.ok(!bodyCopy.includes("default_api:"), `machine token in body: ${bodyCopy}`);
+  assert.ok(!bodyCopy.includes("INVALID_ARGUMENT"), `error code in body: ${bodyCopy}`);
+  // The mine fact that follows the failure is still on the page.
+  assert.ok(bodyCopy.includes("Crusher 2"), `mine fact was dropped: ${bodyCopy}`);
+});
+
+test("a tool failure in the handover answer is filed in a technical drawer", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  page.el("run-brief").click();
+  const source = page.sources[0];
+  source.emit(
+    "message",
+    JSON.stringify({
+      content: {
+        parts: [
+          {
+            text:
+              "The call to `default_api:graph_traverse` failed.\n\n" +
+              "- **Error Code:** `INVALID_ARGUMENT`\n\n" +
+              "Because this tool failed, the blast radius cannot be assessed.\n\n" +
+              "Crusher 2 tripped.",
+          },
+        ],
+      },
+    })
+  );
+  const html = page.el("brief-answer").innerHTML;
+  // The raw passage is preserved for whoever investigates.
+  assert.ok(html.includes("INVALID_ARGUMENT"), `failure text not in drawer: ${html}`);
+  // It is behind a details/summary element, not in the body.
+  assert.ok(html.includes("<details"), `no collapsible wrapping the failure: ${html}`);
+});
+
+test("a script tag in an agent handover answer renders inert", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  page.el("run-brief").click();
+  const source = page.sources[0];
+  source.emit(
+    "message",
+    JSON.stringify({
+      content: { parts: [{ text: "<script>alert(1)<\/script> Crusher 2 tripped." }] },
+    })
+  );
+  const html = page.el("brief-answer").innerHTML;
+  assert.ok(!html.includes("<script>"), `script element reached the pane: ${html}`);
+  assert.ok(html.includes("&lt;script&gt;") || html.includes("Crusher 2"), `content lost: ${html}`);
+});
+
+test("the handover pane re-renders from accumulated text so a token split across frames survives", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  page.el("run-brief").click();
+  const source = page.sources[0];
+  // Split "**bold**" across two frames — the old textContent append would leave "**b" then "old**".
+  source.emit(
+    "message",
+    JSON.stringify({ content: { parts: [{ text: "**b" }] } })
+  );
+  source.emit(
+    "message",
+    JSON.stringify({ content: { parts: [{ text: "old**" }] } })
+  );
+  const html = page.el("brief-answer").innerHTML;
+  assert.ok(html.includes("<strong>"), `bold span not rendered after split: ${html}`);
+  assert.ok(!html.includes("**"), `literal asterisks left in pane: ${html}`);
+});
+
+test("the handover empty-answer fallback still fires when the agent writes nothing", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  page.el("run-brief").click();
+  const source = page.sources[0];
+  // Fire onDone with no text frames — the pane should say something, not stay blank.
+  source.emit("proxy-done");
+  const text = page.el("brief-answer").textContent;
+  assert.ok(text.trim().length > 0, `pane is empty after an agent that wrote nothing: "${text}"`);
+});

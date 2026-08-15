@@ -256,6 +256,29 @@ function mountRun() {
 
     coverage("The brief is being written now, and the reviewer runs with it.");
 
+    /* The answer as the agent wrote it, kept whole.
+     *
+     * The pane used to append each frame to textContent, which is why a live
+     * run printed ### and ** at a shift supervisor: there was no step at which
+     * anything looked at the answer. It cannot be an append now either. A frame
+     * boundary falls wherever the model put it — mid-word, mid-`**bold**`, mid
+     * code span — so the only text it is safe to render is all of it, every
+     * time. An 8,239-character answer re-rendered per frame is nothing next to
+     * the hundred seconds the reader is already waiting. */
+    let rawText = "";
+
+    function render() {
+      const said = plainAnswer(rawText);
+      answer.innerHTML =
+        said.html +
+        (said.technical
+          ? technicalDrawer(
+              '<pre class="mono">' + esc(said.technical) + "</pre>",
+              "the agent's own words for the steps that failed"
+            )
+          : "");
+    }
+
     const mine = { abandoned: false, wrote: false, handle: null };
     live = mine; // assigned first: a stream can finish inside the call that
                  // starts it, and its onDone runs before streamAgent returns.
@@ -269,7 +292,8 @@ function mountRun() {
       onStep: (step) => {
         if (mine.abandoned) return;
         if (step.kind === "text") {
-          answer.textContent += step.text;
+          rawText += step.text;
+          render();
           if (!mine.wrote) {
             mine.wrote = true;
             coverage(
@@ -290,6 +314,10 @@ function mountRun() {
       },
       onDone: () => {
         if (live === mine) live = null;
+        // Only when the stream ran to its end with nothing to show.
+        if (!mine.wrote && !rawText.trim()) {
+          answer.textContent = "The agent finished without writing an answer.";
+        }
       },
     });
     if (mine.abandoned && mine.handle) mine.handle.close();

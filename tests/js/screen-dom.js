@@ -63,6 +63,11 @@ function makeDom(pageHtml) {
         );
         tags.forEach((tag) => (ensure(tag.id).className = tag.className));
         self._html = String(value);
+        // A browser reparses on assignment, so setting innerHTML changes what
+        // textContent reads back. Code that writes markup and then reads text
+        // must see the same fact both ways, or a stub would pass on behaviour
+        // a browser does not have.
+        self._text = String(value).replace(/<[^>]*>/g, "");
         self.children = [];
       },
       get textContent() {
