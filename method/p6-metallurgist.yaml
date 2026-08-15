@@ -1,0 +1,54 @@
+# The Metallurgist's driver tree. Skeleton only: no resolution prose lives
+# here. Resolution content is retrieved from the document corpus so that a
+# recommendation is the site's own standard rather than ours.
+metric: unit cost per tonne of contained metal
+root: contained metal lost to tailings
+
+drivers:
+  - id: liberation
+    question: Is the crusher closed-side setting costing recovery?
+    status: evidenced
+    controllable: true
+    compare: setting_band
+    sql: sql/p6/liberation.sql
+    params:
+      tight_max: 117
+      wide_min: 123
+    doc_query: crusher gap size aperture torque limit feed rate
+    guard: >-
+      Confirm throughput neutrality across bands and torque headroom under the
+      documented critical alarm before recommending any setting change.
+
+  - id: feed_variability
+    question: Does feed grade explain the recovery gap instead of the setting?
+    status: evidenced
+    controllable: false
+    compare: setting_band
+    sql: sql/p6/feed_variability.sql
+    params:
+      tight_max: 117
+      wide_min: 123
+    doc_query: feed grade blending stockpile variability
+    guard: >-
+      The setting effect must hold within every feed-grade stratum. If it does
+      not, the finding is a feed-grade artefact and must not be recommended.
+
+  - id: bypass
+    question: Are bypass events costing recovery?
+    status: unevidenced
+    controllable: true
+    sql: sql/p6/bypass.sql
+    doc_query: crusher bypass valve clog abnormal situation
+    guard: >-
+      Report the observed count. Too few events to support a conclusion is a
+      finding; silence is not.
+
+  - id: reagent_regime
+    question: Is the reagent regime costing recovery?
+    status: not_instrumented
+    controllable: false
+
+  - id: grind_size_p80
+    question: Is grind size costing liberation?
+    status: not_instrumented
+    controllable: true
