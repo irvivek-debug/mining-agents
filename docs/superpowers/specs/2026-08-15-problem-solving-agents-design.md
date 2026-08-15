@@ -28,11 +28,38 @@ is a value tree nobody executes.
 
 ## Scope
 
-One persona, end to end. Metallurgist (P6), governing metric **unit cost per
-tonne of contained metal**, whose dominant lever is recovery.
+All eight personas, **one at a time, each taken end to end** before the next
+begins. A persona is done when its method skeleton, its retrieval and its
+agent behaviour produce a complete diagnosis with a guarded recommendation.
 
-The other seven personas are untouched by this work. That is a deliberate
-choice with a known cost, recorded in *Risks* below.
+The architecture supports this natively: the skeleton is one file per persona
+(`method/p6-metallurgist.yaml`), so each persona is an increment rather than a
+rewrite. Tools and the instruction block are built once, with P6.
+
+**The order is not a preference — it is set by whether the data can carry a
+diagnosis at all.** Every persona below was checked against the live dataset
+during design.
+
+| # | Persona | Governing metric | Feasibility |
+|---|---|---|---|
+| 1 | **P6 Metallurgist** | Unit cost per tonne of contained metal | **Strong** — worked example below |
+| 2 | **P1 Reliability Engineer** | Availability; cost per tonne | **Strongest** — 500 work orders over the period carrying real `repair_cost`, 25,946 telemetry rows, `maintenance_logs` joins 152/152 to work-order dates |
+| 3 | **P2 Maintenance Planner** | Planned vs unplanned ratio; schedule compliance | **Good** — shares P1's data, so it is a cheap follow-on. `priority` × `status` gives the planned/unplanned split |
+| 4 | **P3 HSE Lead** | Incident and fatigue exposure | **Good** — 3,340 fatigue rows against 60 incidents with severity and root cause. 60 is thin for statistics and the method must say so |
+| 5 | **P5 Mine Geologist** | Grade reconciliation | **Moderate** — 295 assays and 1,000 block estimates are both present, but they share no key. Reconciliation needs a spatial join, which is real work |
+| 6 | **P8 Shift Supervisor** | Cross-cutting | **Derivative** — draws on the branches above, so it must come after them |
+| 7 | **P4 Supply Planner** | Inventory turns | **Blocked** — `inventory_levels` is a 105-row snapshot with no timestamp and no consumption history. **Turns is not computable.** Needs generator work first |
+| 8 | **P7 Mine Controller** | Cycle time; fleet utilisation | **Blocked** — `fleet_vehicles` is a snapshot and `haulage_routes` holds cycle time as a static attribute across 10 rows. **No time series exists.** Needs generator work first |
+
+**P1 carries real money.** Its work orders hold `repair_cost`, so its prize can
+be stated in currency directly from the data rather than waiting on a
+`[CLIENT INPUT REQUIRED]` price. That makes P1 the most valuable persona to
+demonstrate, and it is the reason it follows P6 immediately.
+
+**Two personas cannot be done as specified.** P4 and P7 require data
+generation before the method has anything to work with. They are sequenced
+last so that discovery does not stall the personas that are ready, and the
+generator work is scoped as its own effort rather than smuggled into this one.
 
 ## The shape of an answer
 
@@ -234,7 +261,10 @@ distinction under questioning.
 
 ## Out of scope
 
-- The other seven personas.
+- **Generating the data P4 and P7 need.** Inventory consumption history and a
+  fleet cycle-time series are both absent. That is generator work, scoped
+  separately, and until it lands those two personas cannot be built as
+  specified.
 - The three known agent tool defects in `docs/agent-tool-defects.md`.
 - The top-navigation confusion between the wordmark and the tabs.
 - The column-vocabulary decision for identifiers in body copy.
@@ -257,15 +287,27 @@ recorded alongside the three tool defects.
 
 ## Risks
 
-**The persona was chosen because its data is good.** `metallurgical_recovery`
-is close to a purpose-built metallurgical accounting table. The other
-candidate, Supply Planner, cannot support its own governing metric:
-`inventory_levels` has no timestamp and no consumption history, so inventory
-turns is not computable from it. Proving the pattern on P6 may prove only that
-it works where the data happens to be rich.
+**The first persona was chosen because its data is good.**
+`metallurgical_recovery` is close to a purpose-built metallurgical accounting
+table. P6 therefore proves the method works where the data is rich; it does
+not prove the method survives thin data. **P1 is the real test** — it is the
+first persona the method meets that was not chosen for its convenience, and if
+the pattern is going to break, it breaks there rather than on P6.
 
-**Seven personas will still behave the old way**, so the contrast is visible
-in any demonstration that ranges beyond P6.
+**Personas not yet reached still behave the old way**, so the contrast is
+visible in any demonstration that ranges beyond the completed set. This is
+transient by design, but it is at its worst early, when seven of eight are
+untouched.
+
+**Two personas will look complete in the catalogue and are not.** P4 and P7
+have 18 and 10 agents respectively — more than P6 — and every one of them will
+keep retrieving rather than diagnosing until the underlying data exists. Agent
+count is not capability, and nothing in the workspace currently says so.
+
+**The order front-loads the wins.** P6, P1 and P2 share the strongest data and
+come first, which flatters early progress and defers every hard case. The
+schedule should be read as three easy personas, two moderate, one derivative,
+and two blocked — not as eight comparable increments.
 
 **The corpus is thin, and thinner than it looks.** 40 documents totalling
 30,755 characters, of which 24 documents are field progress reports and only 4
