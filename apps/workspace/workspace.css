@@ -46,19 +46,35 @@
 .run-state { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
 .run-state > div { flex: 1; min-width: 240px; font-size: 13.5px; }
 
-/* ---------- the not-connected block ---------- */
+/* ---------- the connection block ---------- */
+
+/* One block, four frames, and the frame is set by the answer rather than by
+   the shape the block started in. The bug this replaces rendered a green
+   ✓ READY inside the amber dashed absence box on a connected instance, and the
+   CHECKING… placeholder in the same box before any answer existed at all — so
+   the two states the reader most needs told apart were framed identically, and
+   both were framed as the pessimistic one. */
+.nc-block { padding: 14px; border: 1px solid var(--border); background: var(--surface); }
+.nc-block .nc-what { font-size: 14px; margin: 10px 0 8px; color: var(--fg); }
+.nc-block .nc-why { font-size: 13px; margin: 0 0 6px; color: var(--fg-muted); max-width: 76ch; }
+.nc-block .drawer { margin-top: 12px; }
+
+/* Not yet asked, and not established. Neutral is the whole point: an unknown
+   drawn in warning amber has stated the answer before there is one. */
+.nc-checking, .nc-unknown { border-style: dashed; border-color: var(--border); }
+
+/* Connected. A plain card and a badge, not a green panel — the agents being
+   reachable is the ordinary condition of this system, and a screen that
+   celebrates the ordinary teaches its reader to stop reading the frame. */
+.nc-ready { border-color: var(--border); }
 
 /* Dashed, like the telemetry console, and never filled with a status colour:
    this is an absence, and an absence that looks like a result is the thing
    this whole application is built not to do. */
-.not-connected {
+.nc-not-connected {
   border: 1px dashed var(--warning);
   background: rgba(217,119,6,0.06);
-  padding: 14px;
 }
-.not-connected .nc-what { font-size: 14px; margin: 10px 0 8px; color: var(--fg); }
-.not-connected .nc-why { font-size: 13px; margin: 0 0 6px; color: var(--fg-muted); max-width: 76ch; }
-.not-connected .nc-route { font-size: 11px; color: var(--fg-dim); margin: 8px 0 0; }
 
 /* ---------- method blocks ---------- */
 
@@ -326,8 +342,12 @@ table.audit td.t { white-space: nowrap; }
    look deliberate. */
 .runtime-state { font-size: 12px; padding: 8px 10px; margin-bottom: 12px;
   border: 1px solid var(--border); color: var(--fg-muted); }
-.runtime-state.ok { border-color: var(--success); color: var(--fg); }
-.runtime-state.warn { border-color: var(--warning); }
+/* The three class names are connectionCopy()'s three keys, so the state this
+   line describes and the state it is coloured for cannot come apart. Unknown
+   keeps the default border: it is the state of having been told nothing. */
+.runtime-state.ready { border-color: var(--success); color: var(--fg); }
+.runtime-state.not-connected { border-color: var(--warning); }
+.runtime-state.unknown { border-style: dashed; }
 
 /* ---------- the chat sidecar ---------- */
 
@@ -413,7 +433,7 @@ table.audit td.t { white-space: nowrap; }
   body { background: #fff; color: #111; font-size: 11pt; }
   .card, .group, .rail, .tbl { background: #fff; border-color: #999; }
   .unverified { border-color: #111; background: #fff; }
-  .console, .not-connected { background: #fff; border-color: #999; color: #111; }
+  .console, .nc-block { background: #fff; border-color: #999; color: #111; }
   .badge { border-color: #111 !important; color: #111 !important; background: #fff !important; }
   a { color: #111; text-decoration: none; }
   .wrap { max-width: none; padding: 0; }
@@ -424,7 +444,7 @@ table.audit td.t { white-space: nowrap; }
      one weight, because the hierarchy is doing work here too. */
   .dim, .rail-sub, .node-tools, .method-sub, .method-cap, .col-meaning,
   .tbl-desc, .cite, .metric-sub, .group-sub, .card-cap, .kv dt, .eyebrow,
-  .scale-note, .hold-hint, .nc-why, .nc-route, .trace .t, .remedy,
+  .scale-note, .hold-hint, .nc-why, .trace .t, .remedy,
   .stage-cap, blockquote.verbatim cite { color: #444 !important; }
 
   /* Primary text that carries its own colour on the dark surface: the lede sits
@@ -436,7 +456,7 @@ table.audit td.t { white-space: nowrap; }
   /* .tbl > summary print rules moved to apps/shared/app.css — they belong with
      the component, not the application that first needed them on paper. */
 
-  .card, .tbl, .unverified, .not-connected { page-break-inside: avoid; }
+  .card, .tbl, .unverified, .nc-block { page-break-inside: avoid; }
 
   /* The button and the step-by-step log are how the brief got here; the brief
      is what goes on paper. The beforeprint hook already opens every <details>,
@@ -444,4 +464,11 @@ table.audit td.t { white-space: nowrap; }
   .run-brief { display: none; }
   .brief-out .log { display: none; }
   .brief-out .answer { white-space: pre-wrap; color: #111; }
+
+  /* One drawer that must not. beforeprint opens every collapsed <details> so
+     the tables print in full, and that would carry the connection check's
+     exception onto the supervisor's paper once per section. The written
+     sentences above it print; the exception is for whoever is repairing the
+     connection, at a screen. */
+  .nc-block .drawer { display: none; }
 }

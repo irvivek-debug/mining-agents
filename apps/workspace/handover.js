@@ -76,6 +76,11 @@ function section(id, index) {
   );
 }
 
+/* The sentence the band leads with before anyone has run anything. It is named
+   because the run handler both replaces it and, when a run fails without
+   writing a word, has to put it back exactly. */
+const UNCHECKED = "Coverage has not been checked for this window.";
+
 /* The Omission Critic, always drawn, never conditional.
  *
  * It gets the loudest treatment on the page — the same 2px critical border the
@@ -87,7 +92,10 @@ function omission() {
     '<div class="unverified" style="margin-top:16px">' +
     '<div class="unverified-cap"><span class="badge b-crit">⚠ OMISSION CRITIC</span>' +
     `<span>${esc(critic.display_name)} · ${esc(swarm.critic)}</span></div>` +
-    "<ul><li><strong>Coverage has not been checked for this window.</strong>" +
+    // The headline is a statement about right now, and the Run button below
+    // changes right now. It is the one sentence on this sheet the reader can
+    // falsify by clicking, so the run handler owns it and rewrites it.
+    `<ul><li><strong id="omission-head">${esc(UNCHECKED)}</strong>` +
     '<div class="dim">' +
     runtimeNote() +
     "</div>" +
@@ -159,6 +167,18 @@ function mountRun() {
   // the stream costing anything.
   addEventListener("pagehide", stop);
 
+  /* The omission band states, at the top of the sheet, that coverage has not
+     been checked for this window. That is true of a sheet nobody has run and
+     false a minute after they have, and the band is drawn once, before the
+     button is ever pressed — so the run rewrites it rather than leaving a
+     sentence on the page the page itself has just disproved. The band is in
+     #brief, which is written after this function returns, so the node is
+     looked up at click time and not held. */
+  function coverage(text) {
+    const head = document.getElementById("omission-head");
+    if (head) head.textContent = text;
+  }
+
   el("run-brief").addEventListener("click", () => {
     stop();
     el("brief-out").innerHTML =
@@ -174,7 +194,9 @@ function mountRun() {
       log.appendChild(line);
     }
 
-    const mine = { abandoned: false, handle: null };
+    coverage("The brief is being written now, and the critic runs with it.");
+
+    const mine = { abandoned: false, wrote: false, handle: null };
     live = mine; // assigned first: a stream can finish inside the call that
                  // starts it, and its onDone runs before streamAgent returns.
     mine.handle = streamAgent({
@@ -188,6 +210,13 @@ function mountRun() {
         if (mine.abandoned) return;
         if (step.kind === "text") {
           answer.textContent += step.text;
+          if (!mine.wrote) {
+            mine.wrote = true;
+            coverage(
+              "The brief above has been written, and whatever the critic " +
+                "reported about coverage is part of that answer."
+            );
+          }
           return;
         }
         say(step.text, step.kind === "step-failed" ? "step failed" : "step");
@@ -195,6 +224,9 @@ function mountRun() {
       onError: (detail) => {
         if (mine.abandoned) return;
         say(detail, "step failed");
+        // Nothing was written, so the sheet goes back to the sentence that is
+        // true of a window nobody has covered.
+        if (!mine.wrote) coverage(UNCHECKED);
       },
       onDone: () => {
         if (live === mine) live = null;

@@ -48,16 +48,35 @@ def media_print_block(css: str) -> str:
 
 
 def test_the_runtime_constant_is_only_ever_a_fallback():
-    """Reading it is allowed. Reading it without asking the wire first is not."""
+    """Reading it is allowed. Reading it without asking the wire first is not.
+
+    Both searches run over stripped source, and the second one is for the call
+    rather than for the path. Against raw text a file could render the baked
+    constant as its answer and still pass on the strength of a comment naming
+    the endpoint — demonstrated by replacing the one real fetch with a throw and
+    leaving the comments in place. Stripping comments is not enough on its own
+    either: the path also appears as drawer copy, so a bare `"/api/runtime" in
+    text` survives the same mutation. What has to be there is the call.
+
+    The detection half runs over stripped source for the mirror reason: a
+    commented-out mention of the constant must not drag a file that no longer
+    reads it into the check.
+
+    It walks every application, not just this one, because the shared shell is
+    where the fetch now lives and a gate that cannot see the file it is about
+    is not a gate.
+    """
     checked = 0
-    for source in sorted(WORKSPACE.glob("*.js")):
-        text = source.read_text()
+    for source in sorted((REPO / "apps").rglob("*.js")):
+        if source.name == "bundle.js":  # the data itself, not a screen
+            continue
+        text = strip_comments(source.read_text())
         if "workspace.runtime" not in text and "WS.runtime" not in text:
             continue
         checked += 1
-        assert "/api/runtime" in text, (
-            f"{source.name} reads the build-time runtime constant but never asks "
-            "/api/runtime, so it will claim NOT CONNECTED in production"
+        assert re.search(r"""fetch\(\s*["']/api/runtime["']""", text), (
+            f"{source.name} reads the build-time runtime constant but never calls "
+            "fetch('/api/runtime'), so it will claim NOT CONNECTED in production"
         )
     assert checked, "no file reads the constant at all; this gate has stopped gating"
 

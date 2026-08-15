@@ -34,12 +34,27 @@ const DATA = (() => {
 
 const ENTRYPOINTS = DATA.catalog.counts.entrypoints;
 
-/* Every id the real markup carries. Reading them from the file rather than
- * listing them here is what makes a missing mount point a failure: el() throws
- * on an id the page does not hold, and a harness that invented ids would not
- * notice one had gone. */
+/* Every id the real markup carries, and the class it was written with. Reading
+ * them from the file rather than listing them here is what makes a missing
+ * mount point a failure: el() throws on an id the page does not hold, and a
+ * harness that invented ids would not notice one had gone.
+ *
+ * The class comes along because on this page it is load-bearing. The block that
+ * says whether the agents are reachable is read as much from its frame as from
+ * its badge, and a harness that dropped the class on the floor would let a
+ * ✓ READY render inside the amber absence box and call it passing. */
+function tagsIn(html) {
+  return [...String(html).matchAll(/<[a-zA-Z][^>]*>/g)]
+    .map((match) => {
+      const id = /\bid="([^"]+)"/.exec(match[0]);
+      const cls = /\bclass="([^"]*)"/.exec(match[0]);
+      return id ? { id: id[1], className: cls ? cls[1] : "" } : null;
+    })
+    .filter(Boolean);
+}
+
 function idsIn(html) {
-  return [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+  return tagsIn(html).map((tag) => tag.id);
 }
 
 function makeDom(pageHtml) {
@@ -63,9 +78,12 @@ function makeDom(pageHtml) {
         // real DOM does this; a harness that did not would let two mounts share
         // one element and call it working.
         (owned.get(self) || []).forEach((id_) => registry.delete(id_));
-        const ids = idsIn(String(value));
-        owned.set(self, ids);
-        ids.forEach(ensure);
+        const tags = tagsIn(value);
+        owned.set(
+          self,
+          tags.map((tag) => tag.id)
+        );
+        tags.forEach((tag) => (ensure(tag.id).className = tag.className));
         self._html = String(value);
         self.children = [];
       },
@@ -100,7 +118,7 @@ function makeDom(pageHtml) {
     return registry.get(id);
   }
 
-  idsIn(pageHtml).forEach(ensure);
+  tagsIn(pageHtml).forEach((tag) => (ensure(tag.id).className = tag.className));
 
   const body = node("body");
   const document = {
@@ -169,6 +187,15 @@ function loadPage(options) {
       if (opts.runtime === "offline") {
         return Promise.reject(new TypeError("Failed to fetch"));
       }
+      // Deviation 3: the server is there and answering, but what it answers is
+      // not an answer. A FastAPI 500, or a proxy's HTML error page where JSON
+      // was expected. Neither is a not-connected estate.
+      if (opts.runtime === "unreadable") {
+        return Promise.resolve({
+          status: 500,
+          json: () => Promise.reject(new SyntaxError("Unexpected token < in JSON at position 0")),
+        });
+      }
       return Promise.resolve({
         status: 200,
         json: () => Promise.resolve(opts.runtime),
@@ -197,11 +224,16 @@ function loadPage(options) {
   };
 }
 
+/* Deployed and expected are deliberately different numbers. When both were
+ * ENTRYPOINTS, "52 of 52" passed whether the screen counted the list the wire
+ * sent or printed `expected` twice, and printing `expected` twice is a screen
+ * that reports a full estate however many services are actually there. */
+const DEPLOYED = ENTRYPOINTS - 2;
 const CONNECTED = {
   connected: true,
   expected: ENTRYPOINTS,
-  deployed: Array.from({ length: ENTRYPOINTS }, (_, i) => `A${i}`),
-  missing: [],
+  deployed: Array.from({ length: DEPLOYED }, (_, i) => `A${i}`),
+  missing: ["A50", "A51"],
 };
 
 // A microtask drain: runtimeState() resolves through two chained thens.
@@ -218,6 +250,17 @@ test("nothing on the page states the connection before the wire answers", () => 
   assert.ok(!sheet.includes(DATA.workspace.runtime.reason.slice(0, 40)));
 });
 
+/* The frame is the first thing read and the last thing checked. A block whose
+ * text says one state and whose border says another has told the reader the
+ * border's answer, because that is the one they got from across the room. */
+test("the block that has not heard back is not framed as a warning", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  for (const block of page.blocks()) {
+    assert.match(block.className, /\bnc-checking\b/);
+    assert.doesNotMatch(block.className, /\bnc-not-connected\b/);
+  }
+});
+
 test("a connected runtime turns every block over to READY, counting from the wire", async () => {
   const page = loadPage({ runtime: CONNECTED });
   await settled();
@@ -226,8 +269,13 @@ test("a connected runtime turns every block over to READY, counting from the wir
   for (const block of blocks) {
     assert.match(block.innerHTML, /READY/);
     assert.doesNotMatch(block.innerHTML, /NOT CONNECTED/);
+    // The class moves with the content. Left behind, ✓ READY renders inside
+    // the amber dashed absence box — a working system framed as a broken one.
+    assert.match(block.className, /\bnc-ready\b/);
+    assert.doesNotMatch(block.className, /\bnc-not-connected\b/);
+    assert.doesNotMatch(block.className, /\bnc-checking\b/);
     assert.ok(
-      block.innerHTML.includes(`${ENTRYPOINTS} of ${ENTRYPOINTS}`),
+      block.innerHTML.includes(`${DEPLOYED} of ${ENTRYPOINTS}`),
       `the block did not report the wire's count: ${block.innerHTML}`
     );
   }
@@ -235,7 +283,7 @@ test("a connected runtime turns every block over to READY, counting from the wir
   assert.ok(lines.length >= 2, "the sheet lost a runtime line it used to carry");
   for (const line of lines) {
     assert.ok(
-      line.textContent.includes(`${ENTRYPOINTS} of ${ENTRYPOINTS}`),
+      line.textContent.includes(`${DEPLOYED} of ${ENTRYPOINTS}`),
       `a runtime line ignored the wire: ${line.textContent}`
     );
     assert.ok(!line.textContent.includes(DATA.workspace.runtime.reason.slice(0, 40)));
@@ -256,13 +304,18 @@ test("the cockpit asks once too, and its card agrees with its footer", async () 
   const page = loadPage({ page: "index.html", runtime: CONNECTED });
   await settled();
   assert.deepEqual(page.fetches, ["/api/runtime"]);
-  assert.match(page.el("runtime").innerHTML, /DEPLOYED/);
+  assert.match(page.el("runtime").innerHTML, new RegExp(`${DEPLOYED} / ${ENTRYPOINTS} DEPLOYED`));
   assert.doesNotMatch(page.el("runtime").innerHTML, /NOT CONNECTED/);
   assert.equal(page.runtimeLine().length, 1);
-  assert.ok(page.runtimeLine()[0].textContent.includes(`${ENTRYPOINTS} of ${ENTRYPOINTS}`));
+  assert.ok(page.runtimeLine()[0].textContent.includes(`${DEPLOYED} of ${ENTRYPOINTS}`));
 });
 
-test("a server that says no is reported as no, in the server's own words", async () => {
+/* The reader of this sheet is a Shift Supervisor. What they need in the body is
+ * a sentence they can act on; the stage the check stopped at and the exception
+ * it caught are for whoever repairs it, and belong in the closed drawer at the
+ * foot of the block. The version this replaces printed
+ * "RefreshError: Reauthentication is needed…" as the loudest text on the page. */
+test("a server that says no is explained in words, with the exception in the drawer", async () => {
   const page = loadPage({
     runtime: {
       connected: false,
@@ -274,10 +327,68 @@ test("a server that says no is reported as no, in the server's own words", async
   await settled();
   for (const block of page.blocks()) {
     assert.match(block.innerHTML, /NOT CONNECTED/);
-    assert.ok(block.innerHTML.includes("run.services.list"));
+    assert.match(block.className, /\bnc-not-connected\b/);
     assert.doesNotMatch(block.innerHTML, /READY/);
+
+    const why = [...block.innerHTML.matchAll(/<p class="nc-why">([^<]*)<\/p>/g)].map(
+      (m) => m[1]
+    );
+    assert.ok(why.length >= 2, `the block explained nothing: ${block.innerHTML}`);
+    assert.ok(
+      why[0].startsWith("This workspace could not reach the deployed agents"),
+      `the body copy is not a written sentence: ${why[0]}`
+    );
+    for (const line of why) {
+      assert.ok(
+        !line.includes("run.services.list") && !line.includes("HTTP 403"),
+        `the server's exception text is the reader-facing copy: ${line}`
+      );
+    }
+
+    const drawer = block.innerHTML.slice(block.innerHTML.indexOf('class="drawer-body"'));
+    assert.ok(drawer.includes("cloud run services.list"), "the stage is not recorded anywhere");
+    assert.ok(
+      drawer.includes("HTTP 403: caller lacks run.services.list"),
+      "the detail an administrator needs was dropped rather than filed"
+    );
   }
   assert.match(page.runtimeLine()[0].textContent, /^Not connected/);
+});
+
+/* Deviation 3. The server answered, and what it answered is not an answer.
+ * Reported as a no it sends a reader looking for a fault in the estate; the
+ * fault is in the endpoint, and the honest state is that nothing is known. */
+test("an unreadable answer is reported as unknown, not as a no", async () => {
+  const page = loadPage({ runtime: "unreadable" });
+  await settled();
+  for (const block of page.blocks()) {
+    assert.match(block.innerHTML, /CONNECTION UNKNOWN/);
+    assert.doesNotMatch(block.innerHTML, /NOT CONNECTED/);
+    assert.doesNotMatch(block.innerHTML, /READY/);
+    assert.match(block.className, /\bnc-unknown\b/);
+    assert.doesNotMatch(block.className, /\bnc-not-connected\b/);
+    assert.ok(
+      block.innerHTML.includes("neither a yes nor a no"),
+      `the unknown state was not stated as unknown: ${block.innerHTML}`
+    );
+    const drawer = block.innerHTML.slice(block.innerHTML.indexOf('class="drawer-body"'));
+    assert.ok(drawer.includes("HTTP 500"), "the status the server answered with is lost");
+  }
+  assert.doesNotMatch(page.runtimeLine()[0].textContent, /^Not connected/);
+});
+
+/* A connected reply with no deployed list cannot support the count every screen
+ * prints from it. The count used to throw on it, which left every block reading
+ * CHECKING… for good behind an unhandled rejection. It fails to unknown now,
+ * which is the direction a connection check is allowed to fail in. */
+test("a connected reply with nothing to count is unknown, not a silent 0 of 52", async () => {
+  const page = loadPage({ runtime: { connected: true, expected: ENTRYPOINTS } });
+  await settled();
+  for (const block of page.blocks()) {
+    assert.match(block.innerHTML, /CONNECTION UNKNOWN/);
+    assert.doesNotMatch(block.innerHTML, /CHECKING/);
+    assert.ok(!block.innerHTML.includes(`0 of ${ENTRYPOINTS}`));
+  }
 });
 
 test("off disk, with no server to ask, the baked constant is the fallback", async () => {
@@ -357,6 +468,57 @@ test("the stream closes when the reader leaves the page", () => {
   page.el("run-brief").click();
   page.fire("pagehide");
   assert.equal(page.sources[0].closed, true);
+});
+
+/* The two sentences the Run button can falsify.
+ *
+ * A screen whose purpose is to tell the truth about the connection cannot ship
+ * a claim that its own new feature makes false the moment it is used. Both were
+ * written before the button existed, and both are checked here in the state
+ * that used to break them: after an answer has arrived. */
+test("the omission band stops claiming coverage is unchecked once the brief is written", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  const head = page.el("omission-head");
+  // The harness keeps ids and classes out of markup but not text, so the
+  // sentence the sheet renders with is read from the sheet.
+  assert.match(page.el("brief").innerHTML, /id="omission-head">Coverage has not been checked/);
+
+  page.el("run-brief").click();
+  assert.doesNotMatch(head.textContent, /has not been checked/);
+  assert.match(head.textContent, /being written now/);
+
+  page.sources[0].emit(
+    "message",
+    JSON.stringify({ content: { parts: [{ text: "Crusher 2 tripped at 03:10." }] } })
+  );
+  // Three states, not two: a sentence that stops at "being written now" is
+  // still wrong once the brief is sitting above it and the stream has ended.
+  assert.doesNotMatch(head.textContent, /has not been checked/);
+  assert.doesNotMatch(head.textContent, /being written now/);
+  assert.match(head.textContent, /has been written/);
+  assert.match(head.textContent, /critic/);
+});
+
+test("a run that fails before writing anything leaves the band saying so", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  page.el("run-brief").click();
+  page.sources[0].emit("error");
+  assert.match(page.el("omission-head").textContent, /Coverage has not been checked/);
+});
+
+test("the unverified band's prose flag is true after the brief has been written", () => {
+  const page = loadPage({ runtime: CONNECTED });
+  const sheet = page.el("brief").innerHTML;
+  page.el("run-brief").click();
+  page.sources[0].emit(
+    "message",
+    JSON.stringify({ content: { parts: [{ text: "Crusher 2 tripped at 03:10." }] } })
+  );
+  assert.ok(page.el("brief-answer").textContent.length > 0, "no agent prose arrived");
+  // The band renders once, before the run, and is never redrawn — so the claim
+  // it makes has to hold in both states rather than only in the first.
+  assert.doesNotMatch(sheet, /No sentence on this page was written by an agent/);
+  assert.match(sheet, /Nothing the agents themselves would say is recorded in this build/);
 });
 
 test("a late frame from an abandoned stream does not write into the new answer", () => {

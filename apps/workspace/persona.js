@@ -47,7 +47,18 @@ function drawerBody(code) {
   );
 }
 
-/* The honest answer to "can this page reach the agents", asked of the wire. */
+/* The honest answer to "can this page reach the agents", asked of the wire.
+ *
+ * This page used to run a fetch of its own, guarded on reply.ok while the
+ * workspace screens guarded on the shape of the body — so a 500 carrying a JSON
+ * body was a not-connected runtime here and an unreadable reply there, which is
+ * two answers to one question. Both now come from runtimeState() in
+ * apps/shared/shell.js, and the words come from connectionCopy(), so this
+ * screen cannot drift from the other five.
+ *
+ * The state and the exception behind it go to the console, not to the box: the
+ * reader of this page picked a role from a dropdown, and a Google auth stack
+ * line is not something they can act on. */
 async function showRuntime() {
   const box = document.createElement("div");
   box.className = "runtime-state";
@@ -55,33 +66,11 @@ async function showRuntime() {
   // #runtime, not #sidecar: the sidecar's other child is written by chat.js with
   // innerHTML, which would erase anything sharing that node.
   el("runtime").appendChild(box);
-  try {
-    const reply = await fetch("/api/runtime");
-    // A FastAPI 500 answers {"detail": "Internal Server Error"} — valid JSON,
-    // with no `connected` field. Read without this guard it renders as though
-    // the server had reported a real not-connected state, and the page reports
-    // a fault in the runtime that is actually a fault in the endpoint.
-    if (!reply.ok) throw new Error(`/api/runtime answered ${reply.status}`);
-    const state = await reply.json();
-    if (state.connected) {
-      box.className = "runtime-state ok";
-      box.textContent =
-        `Connected. ${state.deployed.length} of ${state.expected} agents are deployed ` +
-        "and can be asked a question.";
-    } else {
-      box.className = "runtime-state warn";
-      box.textContent = `Not connected: ${state.detail}`;
-    }
-  } catch (err) {
-    // The one case where the build-time constant is the true answer: the page
-    // is open off disk or behind a static file server, and there is no API.
-    // The reader gets that sentence; whoever is debugging gets the cause,
-    // because a network failure and a 500 are the same sentence on screen and
-    // very different problems behind it.
-    console.warn("/api/runtime could not be read:", err);
-    box.className = "runtime-state warn";
-    box.textContent = DATA.workspace.runtime.reason;
-  }
+  const state = await runtimeState();
+  const copy = connectionCopy(state);
+  box.className = `runtime-state ${copy.key}`;
+  box.textContent = copy.lines.join(" ");
+  if (state.detail) console.warn("/api/runtime:", state.stage || "", state.detail);
 }
 
 const CODE = currentCode();
@@ -110,7 +99,7 @@ if (CODE === "P7") {
 el("panel").innerHTML = renderPanel(CODE, DATA);
 el("foot").innerHTML = technicalDrawer(drawerBody(CODE), "agent ids, tables, model tiers") +
   provenance();
-showRuntime();
+showRuntime().catch((err) => console.error("the connection check failed to render:", err));
 
 const CHAT = mountChat(el("chat"), CODE, DATA);
 

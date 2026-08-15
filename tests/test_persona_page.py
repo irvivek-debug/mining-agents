@@ -120,12 +120,27 @@ def test_the_mine_controller_keeps_the_overhead_type_scale():
     )
 
 
-def test_the_runtime_check_does_not_swallow_a_failed_request():
-    """A 500 answers valid JSON with no `connected` field, and reads as a state."""
-    page = (WORKSPACE / "persona.js").read_text()
-    assert "reply.ok" in page, "the runtime fetch never checks its status"
+def test_the_runtime_check_is_the_one_the_other_screens_use():
+    """One implementation of "is this reply an answer", not one per page.
+
+    This page ran a fetch of its own, guarded on reply.ok, while the workspace
+    screens guarded on the shape of the body — so a 500 carrying a JSON body was
+    a not-connected runtime on this screen and an unreadable reply on the other
+    five. Two answers to one question.
+
+    Comments are stripped first: the sentence above is in persona.js too, and a
+    raw substring search for `fetch(` would be satisfied by prose describing the
+    fetch that was removed.
+    """
+    page = re.sub(r"/\*.*?\*/", "", (WORKSPACE / "persona.js").read_text(), flags=re.S)
+    page = re.sub(r"(?m)^\s*//.*$", "", page)
+    assert "runtimeState()" in page, "the role page no longer asks about the connection"
+    assert "fetch(" not in page, (
+        "the role page has its own runtime fetch again; there is one shared "
+        "check in apps/shared/shell.js and this is how the two drift apart"
+    )
     assert "console.warn" in page, (
-        "the catch discards the error, so a network failure and a malformed "
+        "the raw cause is discarded, so a network failure and a malformed "
         "payload are the same event to whoever is debugging"
     )
 
