@@ -178,7 +178,11 @@ function _blockGap(code, DATA) {
 
 function _blockAssets(DATA) {
   return (
-    '<section class="pblock"><h2>The five machines this site instruments</h2>' +
+    // The count is in the table underneath, which is read from the signals
+    // build. Spelled out in the heading it was a hardcoded figure sitting on
+    // top of a derived one, free to go stale the day the site instruments a
+    // sixth machine and nothing to notice when it did.
+    '<section class="pblock"><h2>The machines this site instruments</h2>' +
     '<table class="tbl-plain"><thead><tr><th>Machine</th><th>What is measured</th>' +
     "<th>Unit</th></tr></thead><tbody>" +
     DATA.signals.assets.map(function (a) {

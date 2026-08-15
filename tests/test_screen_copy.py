@@ -78,8 +78,6 @@ SCREENS = {
     ],
 }
 
-CASE_SCREENS = [s for s in SCREENS if not s.startswith("apps/workspace/")]
-
 # Words a functional reader should not have to meet in body copy. Each is
 # allowed inside the technical drawer, which is what the drawer is for.
 JARGON = [
@@ -609,10 +607,17 @@ def test_no_heading_counts_the_estate_for_itself():
     "Two patterns, a hundred agents, fifty-two doors" was three of them in one
     line, and none came from the catalogue. Spelled out, they read as prose and
     survive a rebuild that moves the count underneath them.
+
+    Every screen, and every heading each one renders. This ran over the case
+    screens' markup alone, which exempted the four workspace screens from a rule
+    the other six were held to and missed every heading written by a script —
+    which on those four is most of them. "The five machines this site
+    instruments" was one, sitting directly on top of a table read from the
+    signals build.
     """
     problems = []
-    for screen in CASE_SCREENS:
-        html = visible_html((REPO / screen).read_text())
+    for screen in SCREENS:
+        html = visible_html(rendered(screen))
         for heading in re.findall(r"<h[12][^>]*>(.*?)</h[12]>", html, re.S):
             words = re.findall(r"[a-z]+", heading.lower())
             for word in words:
