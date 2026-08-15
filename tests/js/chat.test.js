@@ -117,12 +117,21 @@ function stubElement(tag) {
     tagName: tag,
     className: "",
     type: "",
-    innerHTML: "",
     children: [],
     listeners: {},
     _text: "",
+    _html: "",
     get textContent() { return this._text; },
     set textContent(value) { this._text = String(value); },
+    /* A browser reparses on assignment, so setting innerHTML changes what
+     * textContent reads back. The answer pane is now written as markup and the
+     * end-of-stream check reads text, so a stub that let the two disagree would
+     * pass on behaviour a browser does not have. */
+    get innerHTML() { return this._html; },
+    set innerHTML(value) {
+      this._html = String(value);
+      this._text = String(value).replace(/<[^>]*>/g, "");
+    },
     appendChild(child) { this.children.push(child); return child; },
     addEventListener(name, fn) {
       (this.listeners[name] = this.listeners[name] || []).push(fn);
@@ -366,4 +375,70 @@ test("a failed step is marked as failed, and answer text is not logged as a step
 
   const answer = transcript.children.filter((c) => c.className === "answer")[0];
   assert.equal(answer.textContent, "Three assets are at risk.");
+});
+
+/* ---------- the answer pane ---------- */
+
+const LIVE = fs.readFileSync(
+  path.join(__dirname, "fixtures", "s01-live-answer.txt"),
+  "utf8"
+);
+
+function answerAfter(frames) {
+  const rec = recorder();
+  const { chat, transcript } = mount("P1", rec);
+  chat.ask("which assets are most at risk?");
+  frames.forEach((text) => rec.opened[0].options.onStep({ kind: "text", text }));
+  return transcript.children.filter((c) => c.className === "answer")[0];
+}
+
+test("the answer pane renders what the agent wrote instead of printing its punctuation", () => {
+  const answer = answerAfter([LIVE]);
+  assert.ok(answer.innerHTML.includes("<h3>"), "a heading printed as hashes");
+  assert.ok(answer.innerHTML.includes("<strong>"), "bold printed as asterisks");
+  assert.ok(answer.innerHTML.includes("<li>"), "a list printed as dashes");
+  assert.ok(!answer.textContent.includes("###"), answer.textContent.slice(0, 200));
+});
+
+test("the machine vocabulary a live agent emitted does not reach the body copy", () => {
+  const answer = answerAfter([LIVE]);
+  // Only the body. The drawer is where every one of these is allowed to be.
+  const body = answer.innerHTML.split("<details")[0];
+  assert.ok(body.includes("<p>"), "there is no body copy for this test to check");
+  for (const token of ["INVALID_ARGUMENT", "QUERY_FAILED", "SQL_INTERPOLATION",
+    "Job ID", "bigquery.googleapis.com", "ML.PREDICT", "@parameter",
+    "rows_scanned", "default_api:"]) {
+    assert.ok(!body.includes(token), `the reader still meets ${token}`);
+  }
+});
+
+test("the raw failure text is filed in the technical drawer, not deleted", () => {
+  const answer = answerAfter([LIVE]);
+  assert.ok(answer.innerHTML.includes('<details class="tbl drawer">'),
+    "the removed text has nowhere a reader can reach it");
+  const drawer = answer.innerHTML.slice(answer.innerHTML.indexOf("<details"));
+  for (const token of ["INVALID_ARGUMENT", "QUERY_FAILED", "Job ID"]) {
+    assert.ok(drawer.includes(token), `${token} was discarded rather than filed`);
+  }
+});
+
+test("a script tag streamed by an agent never reaches the pane as markup", () => {
+  const answer = answerAfter(["Risk: <script>alert(1)</script>"]);
+  assert.ok(!/<script/i.test(answer.innerHTML), answer.innerHTML);
+  assert.ok(answer.innerHTML.includes("&lt;script&gt;"), answer.innerHTML);
+});
+
+test("the pane re-renders the whole answer, so a token split across frames survives", () => {
+  // Text arrives in frames the model chose, not in ones this renderer would
+  // like. Appending rendered fragments would leave "**bo" on the page forever.
+  const answer = answerAfter(["The reading is **bo", "ld** now."]);
+  assert.ok(answer.innerHTML.includes("<strong>bold</strong>"), answer.innerHTML);
+  assert.ok(!answer.textContent.includes("**"), answer.textContent);
+});
+
+test("an answer with nothing to hide carries no drawer", () => {
+  const answer = answerAfter(["### Findings\n\nAll five machines are inside their limits."]);
+  assert.ok(answer.innerHTML.includes("<h3>Findings</h3>"), answer.innerHTML);
+  assert.ok(!answer.innerHTML.includes("<details"),
+    "an empty drawer is a control that opens on nothing");
 });

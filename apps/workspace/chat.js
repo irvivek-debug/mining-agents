@@ -21,6 +21,13 @@ var CHAT_STREAM = typeof require !== "undefined" ? require("./agent-stream.js") 
  * it does not own. */
 var CHAT_SHELL = typeof require !== "undefined" ? require("../shared/shell.js") : window;
 
+/* plainAnswer comes from plain.js, which every page loads after shell.js and
+ * before this file. The transformation lives there, not here, because it is the
+ * one file the activity log and the six screens already share: an answer that
+ * named the machinery differently from the log two lines above it would be
+ * worse than either wording alone. */
+var CHAT_PLAIN = typeof require !== "undefined" ? require("../shared/plain.js") : window;
+
 /* One agent lookup per bundle, not one per name. alternatives() asks for a name
  * per runner-up and the catalogue holds every agent in the estate, so building
  * the map inside _name made a 52-entry object three times to print one line. */
@@ -176,6 +183,30 @@ function mountChat(node, personaCode, DATA, deps) {
     var log = block("", "log");
     var answer = block("", "answer");
 
+    /* The answer as the agent wrote it, kept whole.
+     *
+     * The pane used to append each frame to textContent, which is why a live
+     * run printed ### and ** at a shift supervisor: there was no step at which
+     * anything looked at the answer. It cannot be an append now either. A frame
+     * boundary falls wherever the model put it — mid-word, mid-`**bold**`, mid
+     * code span — so the only text it is safe to render is all of it, every
+     * time. An 8,239-character answer re-rendered per frame is nothing next to
+     * the hundred seconds the reader is already waiting. */
+    var wrote = "";
+
+    function say() {
+      var said = CHAT_PLAIN.plainAnswer(wrote);
+      answer.innerHTML =
+        said.html +
+        (said.technical
+          ? CHAT_SHELL.technicalDrawer(
+              '<pre class="mono">' + CHAT_SHELL.esc(said.technical) + "</pre>",
+              "the agent's own words for the steps that failed"
+            )
+          : "");
+      pin();
+    }
+
     var mine = {
       abandoned: false,
       failed: false,
@@ -192,8 +223,8 @@ function mountChat(node, personaCode, DATA, deps) {
       onStep: function (step) {
         if (mine.abandoned) return;
         if (step.kind === "text") {
-          answer.textContent += step.text;
-          pin();
+          wrote += step.text;
+          say();
           return;
         }
         line(log, step.text, step.kind === "step-failed" ? "step failed" : "step");
@@ -209,7 +240,10 @@ function mountChat(node, personaCode, DATA, deps) {
         // Only when the stream ran to its end with nothing to show. A stream
         // that broke did not finish, and saying it did next to the error that
         // says otherwise is the page contradicting itself.
-        if (!mine.failed && !answer.textContent.trim()) {
+        // Asked of the text the agent sent, not of the pane it was rendered
+        // into. Those are the same fact, and reading it at the source is what
+        // keeps this check honest if the rendering ever drops a passage.
+        if (!mine.failed && !wrote.trim()) {
           answer.textContent = "The agent finished without writing an answer.";
         }
       },
