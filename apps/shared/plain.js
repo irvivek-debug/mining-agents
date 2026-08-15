@@ -132,8 +132,22 @@ function bareTable(id) {
   return String(id).replace(/`/g, "").replace(/^mining_data\./, "");
 }
 
+/* The warehouse's own catalogue of what tables and columns exist.
+ *
+ * Matched as a family rather than listed in TABLES, because it is several
+ * tables — COLUMNS, TABLES, COLUMN_FIELD_PATHS, TABLE_OPTIONS — and an agent
+ * picks whichever answers its question. To the reader they are one thing, so
+ * they get one phrase; naming them separately would tell a supervisor about a
+ * distinction that exists only inside the query engine.
+ *
+ * Anchored to the start of a path segment so it keys on the catalogue itself.
+ * A real table called `schema_change_log` merely contains the word and must
+ * come through untouched. */
+var CATALOGUE = /(^|\.)INFORMATION_SCHEMA(\.|$)/;
+
 function plainTable(id) {
   var bare = bareTable(id);
+  if (CATALOGUE.test(bare)) return "list of tables and columns";
   return TABLES[bare] || bare;
 }
 

@@ -51,6 +51,41 @@ test("an unknown id renders its raw value rather than a guess", () => {
   assert.equal(P.callLine("no_such_tool", {}), "no_such_tool");
 });
 
+/* Caught on a live run, not reasoned about in advance.
+ *
+ * A specialist asked the warehouse what columns exist before it queried
+ * anything, which it does several times per run, and every one of those steps
+ * printed "Reading the INFORMATION_SCHEMA" into the reader's activity log — six
+ * occurrences, the most repeated string on the screen. bareTable strips the
+ * dataset prefix and plainTable then finds no entry, so the identifier passed
+ * straight through the one function whose job is to stop exactly that.
+ *
+ * It is a family of names rather than one, because the catalogue is several
+ * tables and the agent picks whichever answers its question. To a reader they
+ * are one thing: the list of what tables and columns exist. */
+test("the warehouse catalogue is named in the reader's words, not BigQuery's", () => {
+  const said = "list of tables and columns";
+  assert.equal(P.plainTable("mining_data.INFORMATION_SCHEMA.COLUMNS"), said);
+  assert.equal(P.plainTable("INFORMATION_SCHEMA.TABLES"), said);
+  assert.equal(P.plainTable("`mining_data.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS`"), said);
+});
+
+test("a catalogue lookup reads as a sentence in the activity log", () => {
+  assert.equal(
+    P.callLine("bq_query", { table: "mining_data.INFORMATION_SCHEMA.COLUMNS" }),
+    "Reading the list of tables and columns"
+  );
+  assert.equal(
+    P.failLine("bq_query", { table: "mining_data.INFORMATION_SCHEMA.COLUMNS" }),
+    "Couldn't read the list of tables and columns — that lookup failed."
+  );
+});
+
+test("a real table whose name merely contains a schema word is untouched", () => {
+  // The rule must key on the catalogue, not on the word "schema" appearing.
+  assert.equal(P.plainTable("schema_change_log"), "schema_change_log");
+});
+
 test("a failed response names what failed", () => {
   assert.equal(
     P.failLine("graph_traverse", { traversal: "blast_radius" }),
