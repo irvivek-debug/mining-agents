@@ -481,6 +481,139 @@ def test_no_jargon_survives_outside_the_drawer():
     assert not problems, "jargon left in body copy:\n" + "\n".join(problems)
 
 
+# --------------------------------------------------- the machine vocabulary
+#
+# JARGON above is fourteen hand-curated *concepts*. It cannot express, and no
+# amount of adding to it will express, the class of thing that kept reaching
+# these screens: the names the machinery calls itself. A shell instruction
+# ("Re-run scripts/build_app_data.py with BigQuery credentials"), a dataset
+# identifier ("a three-row sample of fleet_vehicles"), a product ("BigQuery
+# settles it") — each one shipped with the suite green, because a curated word
+# list only ever knows the words somebody already noticed.
+#
+# So this half of the gate is a shape, not a list:
+#
+#   path        anything with a slash and a file extension
+#   identifier  anything carrying an underscore — snake_case is not English,
+#               and a dotted tail comes with it so a qualified name
+#               (mining_agents.catalog.definitions) is one token, not three
+#   product     a short, explicit list; a brand has no shape to match on
+#
+# and it runs over the *rendered* screen rather than over source. That matters
+# twice. It is how a token that arrives through a data field — facts.json's
+# `why`, graph.json's `source`, the runtime reply's `note` — is seen at all, by
+# the same channel that hid "HITL" in accountable_for. And it is what makes the
+# false positives the finding warned about impossible by construction: a
+# <script src>, a class name and an id are attributes, and attributes are gone
+# with the tags; an HTML comment is gone with visible_html.
+MACHINE = [
+    ("path", re.compile(r"[\w*.-]+(?:/[\w*.-]+)+\.[a-z]{2,8}\b")),
+    ("identifier", re.compile(r"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+(?:\.[A-Za-z][A-Za-z0-9_]*)*\b")),
+    ("product", re.compile(
+        r"\b(?:BigQuery ML|BigQuery|BQML|Vertex AI|Cloud Run|Cloud Storage|"
+        r"Firestore|Dataform|Looker|Parquet|FastAPI|Cytoscape)\b"
+    )),
+]
+
+
+def machine_tokens(run):
+    """Every machine token in one run of text, and what is left around them.
+
+    Blanked in place rather than removed, so what comes back is the sentence the
+    token was sitting in with a hole where it was. That remainder is the whole
+    test: a screen is allowed to *name* a file, and is not allowed to talk in
+    file names.
+    """
+    found = []
+    rest = run
+    for kind, pattern in MACHINE:
+        for match in pattern.finditer(rest):
+            found.append((kind, match.group(0)))
+        rest = pattern.sub(lambda m: " " * len(m.group(0)), rest)
+    return found, rest
+
+
+# A word left beside a token once the token is blanked. Two letters or fewer is
+# a separator or an article, not a sentence — "of", "in", "at". Three is a
+# sentence starting.
+LEFTOVER_WORD = re.compile(r"[A-Za-z]{3,}")
+
+TEXT_RUN = re.compile(r"<[^>]*>")
+
+
+def body_runs(html):
+    """The rendered screen as the runs of text a reader actually reads.
+
+    Split on tags, which throws away every attribute — so a class name, an id
+    and a <script src> are not body copy here, because they are not body copy on
+    the page either. Entities are decoded first: `&amp;` is an ampersand to a
+    reader and would otherwise read as a word.
+    """
+    import html as html_module
+
+    return [
+        run for run in TEXT_RUN.split(html_module.unescape(html)) if run.strip()
+    ]
+
+
+def test_no_machine_vocabulary_survives_outside_the_drawer():
+    """A screen may name a file. It may not speak in file names.
+
+    The rule is on the shape of the sentence, not on a list of words. A run of
+    text that *is* a machine token — the provenance footer's `<dd>`, the source
+    line under a chart — is a citation, and a citation is how this repository
+    lets a sceptic go and look. A run that puts a machine token inside a
+    sentence has handed a shift supervisor a developer's shell history, and the
+    fix is always the same one: keep the fact in the reader's words, move the
+    path into the drawer, where all of this is allowed.
+    """
+    problems = []
+    for screen in SCREENS:
+        for run in body_runs(visible_html(rendered(screen))):
+            found, rest = machine_tokens(run)
+            if not found or not LEFTOVER_WORD.search(rest):
+                continue
+            said = ", ".join(sorted({f"{text} ({kind})" for kind, text in found}))
+            problems.append(
+                f"{screen}: {said}\n      in body copy: {run.strip()[:160]!r}"
+            )
+    assert not problems, (
+        "the machinery's own vocabulary in body copy:\n" + "\n".join(problems)
+    )
+
+
+def test_the_machine_vocabulary_rule_is_about_sentences_not_words():
+    """What the rule above does and does not fire on, pinned so it stays honest.
+
+    Written because a gate this broad is only useful if its edges are known. A
+    bare citation passes; the same token in a sentence fails; the drawer is
+    exempt whatever it holds; and an attribute is not body copy.
+    """
+    citation = '<dd class="mono">data/generated/telemetry_stream.parquet</dd>'
+    sentence = "<p>Re-run scripts/build_app_data.py with BigQuery credentials.</p>"
+    drawer = (
+        '<details class="tbl drawer"><summary>Technical detail</summary>'
+        '<div class="drawer-body"><p>Re-run scripts/build_app_data.py with '
+        "BigQuery credentials.</p></div></details>"
+    )
+    attribute = '<link rel="stylesheet" href="shared/app.css"><p>Nothing here.</p>'
+
+    def fires(markup):
+        for run in body_runs(visible_html(markup)):
+            found, rest = machine_tokens(run)
+            if found and LEFTOVER_WORD.search(rest):
+                return True
+        return False
+
+    assert not fires(citation), "a bare citation is not a sentence"
+    assert fires(sentence), "the rule stopped seeing a path inside a sentence"
+    assert not fires(drawer), "the drawer stopped being exempt"
+    assert not fires(attribute), "the rule fired on a <script src>-style attribute"
+    assert fires("<p>Only 5 of the fleet_vehicles are known.</p>"), (
+        "the rule stopped seeing a bare snake_case identifier in a sentence"
+    )
+
+
 def test_the_plain_words_are_the_shared_ones():
     """Deleting an idea also removes its jargon. This is what stops that.
 
