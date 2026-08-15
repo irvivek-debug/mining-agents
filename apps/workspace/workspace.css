@@ -268,10 +268,24 @@ table.audit td.t { white-space: nowrap; }
 }
 .head { padding: 8px 0 22px; }
 .head h1 { margin-bottom: 6px; }
-.role-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; }
+/* max-width and min-width are the whole of this rule's mobile behaviour, and
+   they are here rather than behind a breakpoint because the widest role title
+   is data, not a constant: a longer one added to the catalogue moves the point
+   at which this overflows, and a media query would have to be re-measured.
+
+   An inline-flex box is sized by its content, and this one's content is a
+   <select> sized to its longest option at `font: inherit` — 21px under
+   .scale-lg, the overhead type scale P7 reads from across a control room. At
+   390px that made the picker 398px wide and pushed the document 36px past the
+   viewport, so every screen of the page scrolled sideways. Capping the box and
+   letting the select shrink inside it costs the tail of the longest title,
+   which the select still shows in full when opened, and costs no type size:
+   shrinking the text is what this must not do. */
+.role-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+  max-width: 100%; }
 .role-pick > span { font-family: var(--mono); font-size: 10.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-muted); }
-.role-pick select { min-height: 44px; padding: 0 10px; font: inherit;
+.role-pick select { min-height: 44px; padding: 0 10px; font: inherit; min-width: 0;
   background: var(--bg); color: var(--fg); border: 1px solid var(--border); }
 .role-pick select:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--accent); }
 
