@@ -28,6 +28,7 @@ jargon. So two further checks run alongside: the plain phrases must be the ones
 apps/shared/plain.js publishes, and the drawer must still name what the body
 gave up.
 """
+import functools
 import pathlib
 import re
 
@@ -323,11 +324,72 @@ def test_the_screen_list_holds_every_script_a_screen_loads():
     assert not problems, "screens loading unchecked copy:\n" + "\n".join(problems)
 
 
+@functools.lru_cache(maxsize=None)
+def rendered(screen):
+    """What the screen actually draws, by running it.
+
+    Counting the string ``technicalDrawer(`` in source text, as this file used
+    to, cannot fail on the thing it exists to prevent: fourteen extra
+    collapsibles pass it untouched because none of them is written by calling
+    that function, and one ``'<details>'`` written inside a loop is one
+    occurrence in a file and ten on the page. There is no build step here, so
+    the screen is run — its own script tags, in its own order — and the markup
+    it composed is what gets counted.
+    """
+    import subprocess
+
+    result = subprocess.run(
+        ["node", str(REPO / "tests" / "js" / "screen-render.js"), screen],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, (
+        f"{screen} did not render:\n{result.stderr[-2000:]}"
+    )
+    return result.stdout
+
+
+def disclosures(html):
+    """Every collapsible a reader meets, with its summary, outermost only.
+
+    Depth matters. A screen's one technical drawer is allowed to hold whatever
+    it likes, including further collapsibles — the agent-teams screen files
+    every table the team reads inside it, which is exactly where the client
+    asked for that material. What the instruction forbids is a second thing to
+    open *beside* the drawer, so what is counted is the ones at the top.
+    """
+    found = []
+    depth = 0
+    for match in re.finditer(r"<details\b[^>]*>|</details>", html):
+        if match.group(0).startswith("</"):
+            depth = max(0, depth - 1)
+            continue
+        if depth == 0:
+            summary = re.search(
+                r"<summary[^>]*>(.*?)</summary>", html[match.start() :], re.S
+            )
+            label = re.sub(r"<[^>]*>", " ", summary.group(1)) if summary else ""
+            found.append((match.group(0), re.sub(r"\s+", " ", label).strip()))
+        depth += 1
+    return found
+
+
 def test_every_screen_ends_with_exactly_one_technical_drawer():
-    for screen, scripts in SCREENS.items():
-        sources = "\n".join((REPO / p).read_text() for p in [screen] + scripts)
-        count = sources.count("technicalDrawer(")
-        assert count == 1, f"{screen} has {count} technical drawers; it must have exactly one"
+    problems = []
+    for screen in SCREENS:
+        found = disclosures(rendered(screen))
+        if len(found) != 1:
+            listed = "\n".join(f"      {tag} — {label!r}" for tag, label in found)
+            problems.append(
+                f"{screen} renders {len(found)} collapsibles; it must render one:\n{listed}"
+            )
+            continue
+        tag, label = found[0]
+        if "drawer" not in tag or not label.startswith("Technical detail"):
+            problems.append(
+                f"{screen}: its one collapsible is not the technical drawer: {tag} — {label!r}"
+            )
+    assert not problems, "collapsibles a reader has to open:\n" + "\n".join(problems)
 
 
 def test_the_drawer_is_the_last_thing_on_the_screen():

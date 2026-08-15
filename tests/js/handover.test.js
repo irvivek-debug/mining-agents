@@ -34,103 +34,10 @@ const DATA = (() => {
 
 const ENTRYPOINTS = DATA.catalog.counts.entrypoints;
 
-/* Every id the real markup carries, and the class it was written with. Reading
- * them from the file rather than listing them here is what makes a missing
- * mount point a failure: el() throws on an id the page does not hold, and a
- * harness that invented ids would not notice one had gone.
- *
- * The class comes along because on this page it is load-bearing. The block that
- * says whether the agents are reachable is read as much from its frame as from
- * its badge, and a harness that dropped the class on the floor would let a
- * ✓ READY render inside the amber absence box and call it passing. */
-function tagsIn(html) {
-  return [...String(html).matchAll(/<[a-zA-Z][^>]*>/g)]
-    .map((match) => {
-      const id = /\bid="([^"]+)"/.exec(match[0]);
-      const cls = /\bclass="([^"]*)"/.exec(match[0]);
-      return id ? { id: id[1], className: cls ? cls[1] : "" } : null;
-    })
-    .filter(Boolean);
-}
-
-function idsIn(html) {
-  return tagsIn(html).map((tag) => tag.id);
-}
-
-function makeDom(pageHtml) {
-  const registry = new Map();
-  const owned = new Map();
-
-  function node(id) {
-    const self = {
-      id,
-      className: "",
-      tagName: "DIV",
-      _html: "",
-      _text: "",
-      children: [],
-      handlers: {},
-      get innerHTML() {
-        return self._html;
-      },
-      set innerHTML(value) {
-        // Replacing a node's contents destroys whatever ids were in them. A
-        // real DOM does this; a harness that did not would let two mounts share
-        // one element and call it working.
-        (owned.get(self) || []).forEach((id_) => registry.delete(id_));
-        const tags = tagsIn(value);
-        owned.set(
-          self,
-          tags.map((tag) => tag.id)
-        );
-        tags.forEach((tag) => (ensure(tag.id).className = tag.className));
-        self._html = String(value);
-        self.children = [];
-      },
-      get textContent() {
-        return self._text;
-      },
-      set textContent(value) {
-        self._text = String(value);
-      },
-      appendChild(child) {
-        self.children.push(child);
-        return child;
-      },
-      prepend(child) {
-        self.children.unshift(child);
-        return child;
-      },
-      addEventListener(type, fn) {
-        (self.handlers[type] = self.handlers[type] || []).push(fn);
-      },
-      click() {
-        (self.handlers.click || []).forEach((fn) => fn({}));
-      },
-      querySelector: () => null,
-      querySelectorAll: () => [],
-    };
-    return self;
-  }
-
-  function ensure(id) {
-    if (!registry.has(id)) registry.set(id, node(id));
-    return registry.get(id);
-  }
-
-  tagsIn(pageHtml).forEach((tag) => (ensure(tag.id).className = tag.className));
-
-  const body = node("body");
-  const document = {
-    title: "",
-    body,
-    getElementById: (id) => registry.get(id) || null,
-    createElement: () => node(null),
-    querySelectorAll: () => [],
-    addEventListener: () => {},
-  };
-  return { document, registry };
-}
+/* The document the page is run against lives in tests/js/screen-dom.js, because
+ * tests/js/screen-render.js needs the same one: a screen that renders under one
+ * harness and not the other proves nothing about the screen. */
+const { makeDom } = require("./screen-dom.js");
 
 /* The script tags a page carries, read off the page rather than listed here, so
  * a file added to the markup is a file the harness loads. */
