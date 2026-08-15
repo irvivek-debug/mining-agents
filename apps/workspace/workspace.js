@@ -56,7 +56,7 @@ function agentName(id) {
   return AGENTS[id] ? AGENTS[id].display_name : id;
 }
 
-/* runtimeState() and connectionCopy() live in apps/shared/shell.js: the role
+/* runtimeState() and connectionCopy() live in apps/shared/runtime.js: the role
    page asks the same question and there has to be one answer to it. The three
    renderers below are this application's three shapes for that answer. */
 

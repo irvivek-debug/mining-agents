@@ -137,7 +137,7 @@ def test_the_runtime_check_is_the_one_the_other_screens_use():
     assert "runtimeState()" in page, "the role page no longer asks about the connection"
     assert "fetch(" not in page, (
         "the role page has its own runtime fetch again; there is one shared "
-        "check in apps/shared/shell.js and this is how the two drift apart"
+        "check in apps/shared/runtime.js and this is how the two drift apart"
     )
     assert "console.warn" in page, (
         "the raw cause is discarded, so a network failure and a malformed "

@@ -53,7 +53,7 @@ function drawerBody(code) {
  * workspace screens guarded on the shape of the body — so a 500 carrying a JSON
  * body was a not-connected runtime here and an unreadable reply there, which is
  * two answers to one question. Both now come from runtimeState() in
- * apps/shared/shell.js, and the words come from connectionCopy(), so this
+ * apps/shared/runtime.js, and the words come from connectionCopy(), so this
  * screen cannot drift from the other five.
  *
  * The state and the exception behind it go to the console, not to the box: the
