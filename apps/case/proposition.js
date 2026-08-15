@@ -57,9 +57,6 @@ el("condition").innerHTML = CONDITION.map((id) => {
     `<span class="cite">${esc(b.title)}</span>` +
     "</div>" +
     `<p style="color:var(--fg-dim);font-size:12.5px;margin-bottom:0">${esc(b.scope)}</p>` +
-    `<div class="mono" style="font-size:10px;color:var(--fg-dim);margin-top:10px;overflow-wrap:anywhere">${esc(
-      b.url
-    )}</div>` +
     "</div>"
   );
 }).join("");
@@ -110,15 +107,50 @@ el("today").innerHTML = picked
     (p) =>
       '<blockquote class="verbatim">' +
       esc(p.quote.quote) +
-      `<cite>${esc(p.persona.code)} · ${esc(p.persona.title)}` +
-      (p.quote.source_line
-        ? ` · personas-and-value-tree.md:${esc(p.quote.source_line)}`
-        : "") +
-      "</cite></blockquote>"
+      `<cite>${esc(p.persona.title)}</cite></blockquote>`
   )
   .join("");
 
-el("prov").innerHTML = provenance(
+/* ---------- the machinery, at the end and closed ---------- */
+
+/* Two things came off the cards above and one came off the quotes: the web
+   address behind each study, and the line of the persona document each
+   sentence was lifted from. Both exist so a sceptic can go and look, and
+   neither is something a reader meets a claim with. */
+function drawerBody() {
+  const cited = CONDITION.map((id) => {
+    const b = BENCH.by_id[id];
+    return (
+      `<dt class="mono">${esc(b.id)}</dt>` +
+      `<dd>${esc(b.title)} — ${esc(b.publisher)}, ${esc(b.year)}<br>` +
+      `<span class="mono">${esc(b.url)}</span></dd>`
+    );
+  }).join("");
+
+  const quoted = picked
+    .map(
+      (p) =>
+        `<dt class="mono">${esc(p.persona.code)}</dt>` +
+        `<dd>${esc(p.persona.title)} — ` +
+        (p.quote.source_line
+          ? `<span class="mono">personas-and-value-tree.md:${esc(p.quote.source_line)}</span>`
+          : "line not recorded") +
+        "</dd>"
+    )
+    .join("");
+
+  return (
+    "<p>Where the four published findings above were read, and where each " +
+    "quoted sentence sits in the persona document.</p>" +
+    `<dl>${cited}${quoted}</dl>` +
+    `<p class="mono">${esc(BENCH.source)} · ${esc(DATA.personas.source)}</p>`
+  );
+}
+
+el("prov").innerHTML = technicalDrawer(
+  drawerBody(),
+  "study addresses, persona codes, line numbers"
+) + provenance(
   `<dt>Benchmarks</dt><dd>${esc(BENCH.source)}</dd>` +
     `<dt>Site figures</dt><dd class="mono">${esc(facts.generated_at)}</dd>`
 );

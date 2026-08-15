@@ -1,4 +1,4 @@
-/* Screen 1.5 — the graph, traversed.
+/* Screen 1.5 — following the connections.
  *
  * The claim this screen makes is narrow and checkable: the pattern it walks in
  * the browser is the pattern the deployed agent sends to BigQuery. So the SQL
@@ -7,6 +7,12 @@
  * direction of travel, one function per MATCH clause. Where the exported
  * subgraph is smaller than the warehouse table, the scope line says so rather
  * than the screen quietly implying it walked everything.
+ *
+ * What the reader sees is the walk in words: a starting point, a step, a count
+ * of what the step reached. The query text, the graph names, the traversal ids
+ * and the raw tool call are all still here, in the drawer at the foot, because
+ * the argument this screen makes is that they agree with each other — and that
+ * is not checkable if one half of the pair is missing.
  */
 
 mountNav("case", "graph.html");
@@ -14,6 +20,59 @@ mountNav("case", "graph.html");
 const G = DATA.graph;
 const GRAPHS = G.graphs;
 const ORDER = ["asset", "supply_chain", "safety"];
+
+/* What each kind of record is, in the words the site uses for it. Screen-local
+   rather than added to plain.js: these are the ontology's node labels, which
+   nothing outside this screen renders, and plain.js is a shared file whose
+   scope is the tool and table vocabulary the activity log also speaks. */
+const PLAIN_TYPE = {
+  Asset: "machines",
+  WorkOrder: "work orders",
+  SparePart: "spare parts",
+  Operator: "operators",
+  Vehicle: "vehicles",
+  Incident: "incidents",
+  FatigueLog: "crew fatigue readings",
+};
+
+/* And what each link between two records means, read in the direction it is
+   drawn. "REPLACED_PART" runs from a work order to the part it consumed. */
+const PLAIN_LINK = {
+  DEPENDS_ON: "depends on",
+  HAS_WORK_ORDER: "raised work order",
+  REPLACED_PART: "consumed part",
+  LOGGED_FOR: "logged against",
+  OPERATES: "was driving",
+  INVOLVED_IN: "involved in",
+};
+
+const plainType = (t) => PLAIN_TYPE[t] || t;
+const plainLink = (l) => PLAIN_LINK[l] || l;
+
+/* A record type or a link that stops having a plain name must break the build,
+   not quietly render its internal label at a reader who came here to avoid
+   internal labels. */
+ORDER.forEach((name) => {
+  const g = GRAPHS[name];
+  Object.keys(g.node_types).forEach((t) => {
+    if (!PLAIN_TYPE[t]) throw new Error(`record type ${t} has no plain name on this screen`);
+  });
+  Object.keys(g.edge_labels).forEach((l) => {
+    if (!PLAIN_LINK[l]) throw new Error(`link ${l} has no plain name on this screen`);
+  });
+  if (!plainTraversal(g.traversal) || plainTraversal(g.traversal) === g.traversal) {
+    throw new Error(`connection trace ${g.traversal} has no plain phrase in plain.js`);
+  }
+});
+
+/* The scope lines are written by the build, and one of them uses the build's
+   own word for a connection trace. Substituting it here, at the point of
+   display, is the same job plain.js does for tools and tables; the alternative
+   is a screen that speaks two vocabularies in adjacent paragraphs. */
+const plainScope = (text) =>
+  String(text || "").replace(/\btraversals?\b/gi, (m) =>
+    m[m.length - 1] === "s" ? "connection traces" : "connection trace"
+  );
 
 const css = getComputedStyle(document.documentElement);
 const T = (name) => css.getPropertyValue(name).trim();
@@ -174,7 +233,7 @@ function blastRadius(ix, params) {
     }
     if (!next.length) break;
     steps.push({
-      label: `Hop ${hop}`,
+      label: `${["", "One", "Two", "Three"][hop]} step${hop === 1 ? "" : "s"} out`,
       fragment: `-[:DEPENDS_ON]->{${hop}} (impacted:assets)`,
       nodes: next.map((p) => p[p.length - 1]),
       edges: next.map((p) =>
@@ -226,7 +285,7 @@ function stockoutExposure(ix, params) {
         edges: matched.map((m) => edgeKey(m.re)),
       },
       {
-        label: only ? `Assets, filtered to ${only}` : "Assets those orders sit on",
+        label: only ? `Machines, narrowed to ${only}` : "Machines those orders sit on",
         fragment: "<-[:HAS_WORK_ORDER]- (a:Asset)",
         nodes: matched.map((m) => m.asset.id),
         edges: matched.map((m) => edgeKey(m.hw)),
@@ -264,7 +323,7 @@ function fatigueToIncident(ix, params) {
         edges: matched.map((m) => edgeKey(m.le)),
       },
       {
-        label: "The vehicle they were assigned",
+        label: "The vehicle they were driving",
         fragment: "-[:OPERATES]-> (v:Vehicle)",
         nodes: matched.map((m) => m.vehicle.id),
         edges: matched.map((m) => edgeKey(m.oe)),
@@ -295,67 +354,131 @@ const RUNNERS = {
   fatigue_to_incident: fatigueToIncident,
 };
 
-/* An empty result is a fact about the data, not a broken screen, so each
-   traversal says in its own terms why nothing came back. */
+/* How many operators are actually behind a wheel in this data. Counted, not
+   typed: the sentence below quotes both figures out loud, and a hardcoded pair
+   would be the one claim on this screen a rebuild could quietly falsify. */
+const SAFETY_IX = indexGraph("safety");
+const OPERATORS = SAFETY_IX.all("Operator");
+const DRIVERS = OPERATORS.filter((o) => SAFETY_IX.out(o.id, "OPERATES").length);
+
+/* An empty result is a fact about the data, not a broken screen, so each trace
+   says in its own terms why nothing came back. */
 const EMPTY_REASON = {
   blast_radius: (p) =>
-    `${p.asset_id} has no outgoing DEPENDS_ON edge, so nothing sits behind it. ` +
-    "Zero rows is the correct answer, not a failure.",
+    `Nothing in the records depends on ${p.asset_id}, so nothing stops behind ` +
+    "it. No rows is the correct answer here, not a failure.",
   stockout_exposure: () =>
-    "No work order in the exported subset consumed the selected part under the " +
-    "asset filter in force. Widen the filter or select another part.",
+    "No work order in this extract consumed the selected part, once the machine " +
+    "you narrowed to is taken into account. Widen it, or pick another part.",
   fatigue_to_incident: (p) =>
-    `${p.operator_id} holds no OPERATES edge, so the pattern breaks at the ` +
-    "second hop and returns nothing. Only 5 of the 20 operators carry a " +
-    "vehicle assignment in this data; the other 15 return zero rows exactly " +
-    "like this one.",
+    `${p.operator_id} is not assigned to a vehicle, so the trail stops at the ` +
+    `second step. ${DRIVERS.length} of the ${OPERATORS.length} operators in ` +
+    `this data hold an assignment; the other ${OPERATORS.length - DRIVERS.length} ` +
+    "come back empty, exactly like this one.",
 };
 
 /* ------------------------------------------------------------------ *
  * The estate table and the standing notes.
  * ------------------------------------------------------------------ */
 
+/* What a trace walks, in the order the record types were counted. The internal
+   graph name and the trace id are in the drawer; what a reader needs from this
+   row is the question, the kinds of record it crosses, and how big it is. */
+function walks(g) {
+  return Object.keys(g.node_types).map(plainType).join(", ");
+}
+
 el("estate").innerHTML = ORDER.map((name) => {
   const g = GRAPHS[name];
   return (
     "<tr>" +
-    `<td class="mono">${esc(g.bigquery_graph)}</td>` +
-    `<td class="mono">${esc(g.traversal)}</td>` +
     `<td>${esc(g.question)}</td>` +
+    `<td style="color:var(--fg-muted)">${esc(walks(g))}</td>` +
     `<td class="num">${num(g.nodes)}</td>` +
     `<td class="num">${num(g.edges)}</td>` +
-    `<td class="mono" style="font-size:11px;color:var(--fg-muted)">${esc(
-      g.entrypoints.join(" ")
-    )}</td>` +
+    `<td class="num">${num(g.entrypoints.length)}</td>` +
     "</tr>"
   );
 }).join("");
 
-const traverseHolders = new Set(ORDER.flatMap((n) => GRAPHS[n].entrypoints));
+const traceHolders = new Set(ORDER.flatMap((n) => GRAPHS[n].entrypoints));
 el("estate-note").innerHTML =
-  '<div class="note"><strong>The fourth graph is not on this screen</strong><br>' +
-  "<span class=\"mono\">MiningOntologyGraph</span> and its " +
-  "<span class=\"mono\">ontology_related</span> traversal exist in the tool " +
-  "code and are granted to zero agents. Drawing it would be scenery. " +
-  `Across the three that are traversed, ${esc(traverseHolders.size)} of the ` +
-  `${esc(DATA.catalog.counts.entrypoints)} entry points hold ` +
-  "<span class=\"mono\">graph_traverse</span> at all — the rest read the " +
-  "warehouse with SQL, which is the right tool for the questions they answer." +
+  '<div class="note"><strong>Most agents do not need this</strong><br>' +
+  `${esc(traceHolders.size)} of the ${esc(DATA.catalog.counts.entrypoints)} ` +
+  "agents you can talk to are allowed to follow connections at all. The rest " +
+  "read records, which is the right way to answer the questions they are asked. " +
+  "A fourth set of connections exists in the code and is granted to no agent; " +
+  "drawing it here would be scenery, so it is named in the drawer at the foot " +
+  "of this screen and left out of the table above." +
   "</div>";
 
-el("sql-note").innerHTML =
-  '<div class="note info"><strong>What runs where</strong><br>' +
-  "BigQuery runs this against the full tables. The canvas above walks the same " +
-  "labels, in the same direction, over the exported subgraph — which is smaller, " +
-  "by exactly the amount the scope line states. Nothing on this screen is a " +
-  "recording: change the parameters and the rows change with them." +
+el("run-note").innerHTML =
+  '<div class="note info"><strong>Nothing here is a recording</strong><br>' +
+  "Change the setting and the answer changes with it. The agent runs the same " +
+  "walk against the full records; the drawing above walks the same links in the " +
+  "same direction over the smaller extract described at the top of this section, " +
+  "and the drawer at the foot holds the exact query both of them come from." +
   "</div>";
 
-el("prov").innerHTML = provenance(
+/* ---------- the machinery, at the end and closed ---------- */
+
+/* Everything this screen took off the page, kept together: the name each set of
+   connections has in BigQuery, the id the tool is called with, the query text
+   itself, the tables behind it, the internal record and link labels the plain
+   words above stand for, and the agents that hold the tool. The live call log
+   is here too — it is the one artefact that proves the walk on screen and the
+   query in the deployed container are the same walk, and it is of no use to a
+   reader who is not checking that. */
+function drawerBody() {
+  const blocks = ORDER.map((name) => {
+    const g = GRAPHS[name];
+    const types = Object.entries(g.node_types)
+      .map(([t, n]) => `${t} ${n}`)
+      .join(" · ");
+    const links = Object.entries(g.edge_labels)
+      .map(([l, n]) => `${l} ${n}`)
+      .join(" · ");
+    return (
+      `<dt class="mono">${esc(g.bigquery_graph)} · ${esc(g.traversal)}</dt>` +
+      `<dd><span class="mono">${esc(types)}</span><br>` +
+      `<span class="mono">${esc(links)}</span><br>` +
+      `<span class="mono">${esc(g.tables_read.join(" "))}</span><br>` +
+      `<span class="mono">${esc(g.agents.join(" "))}</span> — of which ` +
+      `<span class="mono">${esc(g.entrypoints.join(" "))}</span> are callable` +
+      `<div class="console" style="margin-top:8px">${esc(g.sql)}</div></dd>`
+    );
+  }).join("");
+
+  return (
+    "<p>The query text below is lifted out of " +
+    '<span class="mono">mining_agents/tools/graph_traverse.py</span> at build ' +
+    "time rather than transcribed, so it cannot drift from the text in the " +
+    "deployed container. The column names under the canvas are parsed from the " +
+    "same string.</p>" +
+    `<dl>${blocks}` +
+    '<dt class="mono">MiningOntologyGraph · ontology_related</dt>' +
+    "<dd>Exists in the tool code, granted to no agent, and therefore not drawn " +
+    "on this screen.</dd></dl>" +
+    "<p>And the exact tool call the button above makes, as it makes it. The " +
+    "skeleton is written here rather than by the code that runs it, so the " +
+    "vocabulary of this box belongs to the drawer and not to the screen:</p>" +
+    '<div class="console"><span class="dim">graph_traverse(</span>\n' +
+    '  traversal=<span class="ok" id="call-trace">—</span>,\n' +
+    '  params=<span id="call-params">—</span>\n' +
+    '<span class="dim">)</span>' +
+    '<span id="call-log"></span></div>' +
+    `<p class="mono">${esc(G.source)} · generated ${esc(G.generated_at)}</p>`
+  );
+}
+
+el("prov").innerHTML = technicalDrawer(
+  drawerBody(),
+  "graph names, query text, tables, agent ids"
+) + provenance(
   `<dt>Graph data</dt><dd>${esc(G.source)}</dd>` +
-    "<dt>Traversal SQL</dt><dd>Read out of " +
+    "<dt>The query</dt><dd>Read out of " +
     "<span class=\"mono\">mining_agents/tools/graph_traverse.py</span> by the " +
-    "build, not transcribed. The COLUMNS aliases below the canvas are parsed " +
+    "build, not transcribed. The column names under the canvas are parsed " +
     "from the same string, so a renamed column renames the table header.</dd>"
 );
 
@@ -373,7 +496,7 @@ function tabs() {
     (name) =>
       `<button role="tab" data-graph="${esc(name)}" aria-selected="${
         name === current
-      }">${esc(GRAPHS[name].traversal)}</button>`
+      }">${esc(plainTraversal(GRAPHS[name].traversal))}</button>`
   ).join("");
   el("tabs")
     .querySelectorAll("button")
@@ -404,7 +527,7 @@ function controls() {
   if (current === "asset") {
     const assets = ix.all("Asset");
     el("controls").innerHTML = field(
-      "@asset_id — the asset that fails",
+      "The machine that fails",
       `<select id="p-asset_id" ${selectStyle}>` +
         assets
           .map((a, i) => opt(a.id, `${a.id} · ${a.detail.name}`, i === 0))
@@ -416,7 +539,7 @@ function controls() {
     const assets = ix.all("Asset");
     el("controls").innerHTML =
       field(
-        "@below_rop_parts — the parts an agent passes in",
+        "The parts running low, which is what the agent passes in",
         '<div style="display:grid;gap:6px">' +
           parts
             .map(
@@ -436,9 +559,9 @@ function controls() {
           "</div>"
       ) +
       field(
-        "@asset_id — the WHERE clause, optional",
+        "Narrow it to one machine, if you want to",
         `<select id="p-asset_id" ${selectStyle}>` +
-          opt("", "NULL — every asset", true) +
+          opt("", "Every machine", true) +
           assets.map((a) => opt(a.id, a.id, false)).join("") +
           "</select>"
       );
@@ -460,7 +583,7 @@ function controls() {
       null
     );
     el("controls").innerHTML = field(
-      "@operator_id — whose fatigue record to walk",
+      "Whose fatigue record to follow",
       `<select id="p-operator_id" ${selectStyle}>` +
         ops
           .map((o) => {
@@ -501,11 +624,11 @@ function legend() {
       .map(
         (t) =>
           `<span><span class="swatch" style="background:${TYPE_COLOR[t]}"></span>${esc(
-            t
+            plainType(t)
           )}</span>`
       )
       .join("") +
-    labels.map((l) => `<span>→ ${esc(l)}</span>`).join("");
+    labels.map((l) => `<span>→ ${esc(plainLink(l))}</span>`).join("");
 }
 
 function mount() {
@@ -515,15 +638,14 @@ function mount() {
   const g = GRAPHS[current];
 
   el("scope").innerHTML =
-    '<div class="note info" style="margin:0"><strong>Scope of what is drawn</strong><br>' +
-    esc(g.scope) +
-    ` Held by ${esc(g.agents.join(", "))} — ${esc(
-      g.entrypoints.length
-    )} of those are entry points a person can call.</div>`;
+    '<div class="note info" style="margin:0"><strong>What is drawn, and what is not</strong><br>' +
+    esc(plainScope(g.scope)) +
+    ` ${esc(g.entrypoints.length)} agent${g.entrypoints.length === 1 ? "" : "s"} ` +
+    "you can talk to can run this one.</div>";
 
-  el("sql").textContent = g.sql;
   el("inspect").innerHTML =
-    '<div style="color:var(--fg-muted);font-size:13px">Click any node.</div>';
+    '<div style="color:var(--fg-muted);font-size:13px">Click anything on the ' +
+    "drawing to see what that record holds.</div>";
 
   const elements = [
     ...nodesOf(current).map((n) => ({
@@ -641,7 +763,7 @@ function inspect(node) {
       node.id()
     )}</div>` +
     `<div class="metric-sub" style="margin-top:2px">${esc(
-      node.data("type")
+      plainType(node.data("type"))
     )}</div>` +
     (keys.length
       ? '<dl class="kv" style="margin-top:10px">' +
@@ -659,15 +781,45 @@ function inspect(node) {
           .join("") +
         "</dl>"
       : '<div style="color:var(--fg-dim);font-size:13px;margin-top:8px">' +
-        "No properties for this node are held in the local files.</div>");
+        "Nothing about this record is held in the local files.</div>");
+}
+
+/* The walk in words, beside the drawing, one line per step. The reader gets a
+   sentence and a count; the raw call that produced them is in the drawer, and
+   both are written by the same run so neither can describe a walk the other
+   did not take. */
+const STEP_LINES = [];
+
+function renderTrace() {
+  el("trace").innerHTML = STEP_LINES.length
+    ? '<div style="font-size:13px;line-height:1.65;color:var(--fg-muted)">' +
+      STEP_LINES.join("") +
+      "</div>"
+    : '<div style="color:var(--fg-muted);font-size:13px">Set it up, then run ' +
+      "the trace.</div>";
+}
+
+function traceLine(text, count) {
+  STEP_LINES.push(
+    "<div>" +
+      esc(text) +
+      (count === undefined
+        ? ""
+        : ` — <b style="color:var(--fg)">${esc(num(count))}</b>`) +
+      "</div>"
+  );
+  renderTrace();
 }
 
 function reset() {
   timers.forEach(clearTimeout);
   timers = [];
   cy.elements().removeClass("faded hit seed");
-  el("console").innerHTML =
-    '<span class="dim">Bind the parameters, then run.</span>';
+  STEP_LINES.length = 0;
+  renderTrace();
+  el("call-trace").textContent = "—";
+  el("call-params").textContent = "—";
+  el("call-log").innerHTML = "";
   renderRows(null, []);
 }
 
@@ -679,10 +831,17 @@ function run() {
   const g = GRAPHS[current];
   const params = readParams();
   if (current === "supply_chain" && !params.below_rop_parts.length) {
-    el("console").innerHTML =
-      '<span class="warn">INVALID_ARGUMENT</span>\n' +
-      '<span class="dim">@below_rop_parts is empty. The tool refuses the ' +
-      "call rather than returning every part.</span>";
+    STEP_LINES.length = 0;
+    traceLine(
+      "No part is selected, so there is nothing to trace. The tool refuses the " +
+        "call rather than quietly answering for every part in the store."
+    );
+    el("call-trace").textContent = `"${g.traversal}"`;
+    el("call-params").textContent = paramLiteral(params);
+    el("call-log").innerHTML =
+      '\n<span class="warn">INVALID_ARGUMENT</span> ' +
+      '<span class="dim">— the tool refuses the call rather than ' +
+      "returning every part.</span>";
     renderRows(g, []);
     return;
   }
@@ -703,13 +862,13 @@ function run() {
   };
   light(result.seed, "seed");
 
-  let log =
-    `<span class="dim">graph_traverse(</span>\n` +
-    `  traversal=<span class="ok">"${esc(g.traversal)}"</span>,\n` +
-    `  params=${esc(paramLiteral(params))}\n` +
-    `<span class="dim">)</span>\n` +
-    `<span class="dim">→ ${esc(g.bigquery_graph)}</span>`;
-  el("console").innerHTML = log;
+  STEP_LINES.length = 0;
+  traceLine(`Starting from ${result.seed.join(", ")}`);
+
+  el("call-trace").textContent = `"${g.traversal}"`;
+  el("call-params").textContent = paramLiteral(params);
+  let log = `\n<span class="dim">→ ${esc(g.bigquery_graph)}</span>`;
+  el("call-log").innerHTML = log;
 
   result.steps.forEach((step, i) => {
     timers.push(
@@ -717,12 +876,13 @@ function run() {
         light([...new Set(step.nodes)], "hit");
         light([...new Set(step.edges)], "hit");
         const n = new Set(step.nodes).size;
+        traceLine(step.label, n);
         log +=
           `\n  <span class="dim">${esc(step.fragment)}</span>\n` +
-          `  ${esc(step.label)} · <span class="ok">${n}</span> node${
+          `  ${esc(step.label)} · <span class="ok">${n}</span> record${
             n === 1 ? "" : "s"
           }`;
-        el("console").innerHTML = log;
+        el("call-log").innerHTML = log;
       }, 420 * (i + 1))
     );
   });
@@ -730,6 +890,7 @@ function run() {
   timers.push(
     setTimeout(() => {
       const n = result.rows.length;
+      traceLine("Rows handed back to the agent", n);
       log +=
         `\n<span class="dim">←</span> {"graph": "${esc(
           g.bigquery_graph
@@ -738,7 +899,7 @@ function run() {
           ? `<span class="ok">${n}</span>`
           : `<span class="warn">0</span>`) +
         "]}";
-      el("console").innerHTML = log;
+      el("call-log").innerHTML = log;
       renderRows(g, result.rows, params);
     }, 420 * (result.steps.length + 1))
   );
@@ -748,25 +909,32 @@ function renderRows(g, rows, params) {
   if (!g) {
     el("rows-head-row").innerHTML = "";
     el("rows").innerHTML =
-      '<tr><td style="color:var(--fg-muted)">No traversal has been run yet.</td></tr>';
+      '<tr><td style="color:var(--fg-muted)">Nothing has been run yet.</td></tr>';
     el("rows-lede").textContent =
-      "These are the COLUMNS the traversal selects — not a summary written for " +
-      "this screen, and not a row more than the pattern matched.";
+      "These are the columns the agent asks for, in the order it asks for them " +
+      "— not a summary written for this screen, and not a row more than the " +
+      "walk actually reached.";
     return;
   }
   el("rows-head-row").innerHTML = g.columns
     .map((c) => `<th class="mono">${esc(c)}</th>`)
     .join("");
   el("rows-lede").textContent =
-    `${g.traversal} selects ${g.columns.length} columns. ` +
+    `This trace asks for ${g.columns.length} columns. ` +
     (rows.length
-      ? `This call matched ${rows.length} row${rows.length === 1 ? "" : "s"}.`
-      : "This call matched nothing.");
+      ? `This run reached ${rows.length} row${rows.length === 1 ? "" : "s"}.`
+      : "This run reached nothing.");
 
   if (!rows.length) {
     el("rows").innerHTML =
       `<tr><td colspan="${g.columns.length}" style="color:var(--fg-muted)">` +
-      esc(params ? EMPTY_REASON[g.traversal](params) : "No traversal has been run yet.") +
+      // The only call that reaches here without parameters is one the tool
+      // refused, so this is not the "nothing yet" case and must not read as it.
+      esc(
+        params
+          ? EMPTY_REASON[g.traversal](params)
+          : "The call was refused before it ran, so there is nothing to show."
+      ) +
       "</td></tr>";
     return;
   }

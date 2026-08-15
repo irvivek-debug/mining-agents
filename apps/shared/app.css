@@ -415,7 +415,11 @@ blockquote.verbatim cite {
 .drawer > summary { font-weight: 600; }
 .drawer-body { padding: 0 12px 12px; font-size: 12.5px; }
 .drawer-body dt { font-weight: 600; margin-top: 8px; }
-.drawer-body dd { margin: 2px 0 0; color: var(--fg-muted); }
+/* overflow-wrap because the drawer is where the unbroken tokens ended up once
+   the screens above it started speaking plainly: a study's web address, a
+   fully-qualified warehouse table, a line of SQL. Each is one token wider than
+   a phone, and a citation clipped at the right edge is not a citation. */
+.drawer-body dd { margin: 2px 0 0; color: var(--fg-muted); overflow-wrap: anywhere; }
 
 /* handover.js opens every disclosure before the dialog appears, so the
    summary is a heading on paper and not a control: the table name and its row

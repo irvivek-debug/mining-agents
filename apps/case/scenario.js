@@ -58,9 +58,9 @@ el("hero-lede").innerHTML =
 el("ladder-lede").innerHTML =
   "The days are sorted, not dated. A calendar view of the same numbers shows " +
   "weather and invites an argument about which week was unusual; sorted, the " +
-  "ordinary day falls at the halfway mark and the good day at the " +
-  "nine-tenths mark because that is what those two words mean here. The " +
-  "coloured span between them is the gap.";
+  "ordinary day falls at the halfway mark and the best day at the nine-tenths " +
+  "mark, because that is what those two words mean here. The coloured span " +
+  "between them is the gap.";
 
 /* One ladder.
  *
@@ -135,9 +135,8 @@ function ladder(row) {
     "<span>Highest day recorded</span></div>" +
     `<div class="ladder-scale">${esc(n)} days, drawn from ${esc(
       fig(lo, unit, dp)
-    )} at the foot of the bars to ${esc(fig(hi, unit, dp))} at the top — not from zero.<br>` +
-    `${esc(row.source)}</div>` +
-    "</div></div>"
+    )} at the foot of the bars to ${esc(fig(hi, unit, dp))} at the top — not from zero.` +
+    "</div></div></div>"
   );
 }
 
@@ -198,7 +197,6 @@ el("site").innerHTML = facts.site
       `<td>${esc(row.label)}</td>` +
       `<td class="num">${num(row.value)}</td>` +
       `<td style="color:var(--fg-muted)">${esc(row.unit)}</td>` +
-      `<td class="mono" style="color:var(--fg-dim);font-size:11px">${esc(row.source)}</td>` +
       "</tr>"
   )
   .join("");
@@ -232,25 +230,64 @@ el("pain").innerHTML = personas
     (p) =>
       '<div class="card c6">' +
       '<div class="card-cap">' +
-      `${esc(p.code)} · ${esc(p.title)}` +
+      `${esc(p.title)}` +
       `<span style="float:right;color:var(--fg-dim)">${esc(p.agent_count)} agent${
         p.agent_count === 1 ? "" : "s"
       }</span>` +
       "</div>" +
       p.pain_points
-        .map(
-          (q) =>
-            '<blockquote class="verbatim">' +
-            esc(q.quote) +
-            `<cite>personas-and-value-tree.md:${esc(q.source_line)}</cite>` +
-            "</blockquote>"
-        )
+        .map((q) => `<blockquote class="verbatim">${esc(q.quote)}</blockquote>`)
         .join("") +
       "</div>"
   )
   .join("");
 
-el("prov").innerHTML = provenance(
+/* ---------- the machinery, at the end and closed ---------- */
+
+/* Three things came off the page above. The warehouse file behind each ladder
+   and each counted figure, which is what makes the gap checkable; and the
+   short code each role is filed under, which is what the rest of this estate
+   refers to it by. A supervisor reading the quotes does not need to know that
+   they are P7; whoever goes looking for P7's agents does. */
+function drawerBody() {
+  const measured = GAP.rows
+    .map(
+      (r) =>
+        `<dt class="mono">${esc(r.id)} · ${esc(r.column)}</dt>` +
+        `<dd class="mono">${esc(r.source)}</dd>`
+    )
+    .join("");
+
+  const counted = facts.site
+    .map(
+      (r) =>
+        `<dt>${esc(r.label)}</dt>` +
+        `<dd class="mono">${esc(r.source)}</dd>`
+    )
+    .join("");
+
+  const roles = personas
+    .map(
+      (p) =>
+        `<dt class="mono">${esc(p.code)}</dt>` +
+        `<dd>${esc(p.title)} — ${esc(p.agent_count)} agent${
+          p.agent_count === 1 ? "" : "s"
+        }, quoted from <span class="mono">personas-and-value-tree.md</span></dd>`
+    )
+    .join("");
+
+  return (
+    "<p>Where each measurement was taken, where each count was taken, and the " +
+    "code this estate files each role under.</p>" +
+    `<dl>${measured}${counted}${roles}</dl>` +
+    `<p class="mono">${esc(GAP.method)}</p>`
+  );
+}
+
+el("prov").innerHTML = technicalDrawer(
+  drawerBody(),
+  "warehouse files, role codes"
+) + provenance(
   `<dt>Benchmarks</dt><dd>${esc(BENCH.source)}</dd>` +
     `<dt>Personas</dt><dd>${esc(DATA.personas.source)}</dd>` +
     `<dt>Site figures</dt><dd class="mono">${esc(facts.generated_at)}</dd>`

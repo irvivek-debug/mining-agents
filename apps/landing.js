@@ -41,10 +41,12 @@ el("thesis").textContent =
 
 el("gap-lede").textContent =
   "Each figure below is a daily mean drawn from this site's own records. The " +
-  "best day is the 90th-percentile day, not the single best one, because one " +
-  "unusual shift is an anecdote and should not set a target. Beside each is " +
-  "what the published research says is available to a mine that closes gaps " +
-  "of this kind — independently arrived at, and in the same range.";
+  "ordinary day is the middle of that run. The best day is not the single " +
+  "finest shift — one unusual shift is an anecdote and should not set a " +
+  "target — but the level the plant reached or beat on one day in ten. " +
+  "Beside each is what the published research says is available to a mine " +
+  "that closes gaps of this kind, arrived at independently and landing in " +
+  "the same range.";
 
 /* External figures are rendered in a visibly different register from measured
    ones: muted, mono, and set behind a rule. A benchmark is a third party's
@@ -137,7 +139,9 @@ function stamp(i) {
 }
 
 el("strip-lede").textContent =
-  "The numbers above were taken from these machines. The window runs " +
+  "The numbers above were taken from these " +
+  SIG.assets.length +
+  " machines. The window runs " +
   stamp(0) +
   " to " +
   stamp(STEPS - 1) +
@@ -329,10 +333,44 @@ el("apps").innerHTML = APPS.map(
     "</div>"
 ).join("");
 
+/* ---------- the machinery, at the end and closed ---------- */
+
+/* What the page above deliberately does not say in its own voice: the two
+   percentiles by name, the warehouse column each row was measured from, and
+   the identifier and address of every study quoted beside it. A reader who
+   wants to check the gap has to be able to find the file it came out of; a
+   reader who wants to know what the gap is worth does not, and should not have
+   to step over it on the way down. */
+function drawerBody() {
+  const rows = GAP.rows
+    .map((r) => {
+      const b = r.benchmark ? BENCH.by_id[r.benchmark] : null;
+      return (
+        `<dt class="mono">${esc(r.id)} · ${esc(r.column)}</dt>` +
+        `<dd class="mono">${esc(r.source)}<br>` +
+        (b ? `${esc(b.id)} · ${esc(b.url)}` : "no verified benchmark held") +
+        "</dd>"
+      );
+    })
+    .join("");
+  return (
+    "<p>The ordinary day is the median of the daily means; the best day is the " +
+    "90th percentile of the same series. Both are computed over the window " +
+    "below, and each row names the column and the file it was measured from.</p>" +
+    `<dl>${rows}</dl>` +
+    `<p class="mono">${esc(SIG.source)} · ${esc(SIG.window.from)} to ${esc(
+      SIG.window.to
+    )} · reduced to ${esc(SIG.buckets)} points per series</p>`
+  );
+}
+
 /* Both kinds of number are sourced, and the two kinds are listed separately.
    A reader has to be able to tell at a glance which figures this warehouse
    measured and which ones somebody else published. */
-el("prov").innerHTML = provenance(
+el("prov").innerHTML = technicalDrawer(
+  drawerBody(),
+  "percentiles, warehouse columns, study addresses"
+) + provenance(
   "<dt>Applications</dt><dd>Both read one bundle; neither holds a figure of its own.</dd>" +
     `<dt>Signals</dt><dd>${esc(SIG.source)}, reduced at build time to ${esc(
       SIG.buckets

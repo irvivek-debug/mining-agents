@@ -487,12 +487,13 @@ el("detail").innerHTML = tree.branches
       measuredBlock(b.code) +
       benchBlock(b.code) +
       evidenceBlock(b.code, hue) +
-      // The pool's place in the estate, kept to a footnote. A reader deciding
-      // whether the mechanism is real is not helped by an entrypoint count.
+      // The pool's place in the estate, kept to a footnote, and kept to the
+      // part of it a reader can use. Whose pool it is, and how many decisions
+      // sit in it. The pool's code and its process area are in the drawer.
       `<div class="mono" style="font-size:10.5px;color:var(--fg-dim);margin-top:12px;` +
-      `text-transform:uppercase;letter-spacing:.06em">${esc(b.code)} · APQC ${esc(
-        b.apqc
-      )} · ${esc(b.count)} entry points<br>${who}</div>` +
+      `text-transform:uppercase;letter-spacing:.06em">${esc(
+        b.count
+      )} agents you can talk to<br>${who}</div>` +
       "</div>"
     );
   })
@@ -500,16 +501,19 @@ el("detail").innerHTML = tree.branches
 
 /* ---------- the partition, demoted ---------- */
 
+const ABOVE =
+  CONV.length === 1
+    ? "One more sits above all of them and belongs to no pool"
+    : CONV.length + " more sit above all of them and belong to no pool";
+
 el("mece-lede").textContent =
-  "The six pools above hold " +
+  "The pools above hold " +
   tree.branches.map((b) => b.count).join(", ") +
-  " of the estate's entry points. " +
-  CONV.join(", ") +
-  ", the convergence agent, holds the remaining " +
-  CONV.length +
-  ". That is " +
+  " of the decisions this estate takes on. " +
+  ABOVE +
+  ", which makes " +
   TOTAL +
-  " with no overlap and no remainder — the build will not emit a value tree " +
+  " with no overlap and no remainder. The build refuses to emit a value tree " +
   "whose branches fail to reconcile against the catalog that deploys them, so " +
   "the claim is enforced upstream rather than asserted by this copy.";
 
@@ -535,16 +539,16 @@ el("partition").innerHTML = CELLS.map(
 el("mece-key").innerHTML =
   tree.branches
     .map(
-      (b) =>
+      (b, i) =>
         '<div class="row">' +
         `<span class="chip" style="--hue:${HUE[b.code]}"></span>` +
-        `<span><b>${esc(b.code)}</b> ${esc(b.title)}</span>` +
+        `<span><b>Pool ${esc(i + 1)}</b> ${esc(b.title)}</span>` +
         `<span class="n">${esc(b.count)}</span></div>`
     )
     .join("") +
   '<div class="row">' +
   `<span class="chip" style="--hue:${CONV_HUE}"></span>` +
-  `<span><b>${esc(CONV.join(", "))}</b> Convergence — above the six</span>` +
+  "<span><b>Above them all</b> The one decision that belongs to no pool</span>" +
   `<span class="n">${esc(CONV.length)}</span></div>`;
 
 el("mece-sum").innerHTML =
@@ -582,10 +586,10 @@ if (reduced) {
 }
 
 el("convergence").innerHTML =
-  '<div class="note info"><strong>The convergence layer</strong><br>' +
+  '<div class="note info"><strong>The layer above the pools</strong><br>' +
   esc(tree.convergence.note) +
-  ` Held by ${esc(CONV.join(", "))}. It is the entry point that stands alone, ` +
-  "and the one cell above that is not a pool colour.</div>";
+  " It is the one decision that stands alone, and the one cell above that is " +
+  "not a pool colour.</div>";
 
 /* ---------- the process view, which deliberately does not partition ---------- */
 
@@ -594,45 +598,38 @@ const apqcTotal = Object.values(catalog.by_apqc_code).reduce(
   0
 );
 
-el("apqc-lede").textContent =
+el("process-lede").textContent =
   "The same " +
   TOTAL +
-  " entry points, grouped by the process framework a mining client already runs " +
-  "their operating model against. This cut is not a partition and is not meant " +
-  "to be: " +
+  " decisions, grouped by the standard process areas a mining client already " +
+  "runs their operating model against. This cut is not a partition and is not " +
+  "meant to be: " +
   catalog.compound_apqc_codes.length +
-  " entry points carry a compound code because the work genuinely spans two " +
-  "domains, and each is counted under both. The column below therefore sums to " +
+  " of them belong to two process areas at once, because the work genuinely " +
+  "spans both, and each is counted under each. The column below therefore " +
+  "adds up to " +
   apqcTotal +
-  ", not " +
+  " rather than " +
   TOTAL +
-  ". A framework a client already owns is worth mapping onto even when it " +
+  ". A framework a client already owns is worth mapping onto even where it " +
   "overlaps; what is not worth doing is hiding that it does.";
 
-el("apqc").innerHTML = Object.entries(catalog.by_apqc_code)
+el("process").innerHTML = Object.entries(catalog.by_apqc_code)
   .map(
     ([code, info]) =>
       "<tr>" +
-      `<td class="mono">${esc(code)}</td>` +
       `<td>${esc(catalog.apqc_names[code] || "Unnamed in this catalog")}</td>` +
       `<td class="num">${esc(info.count)}</td>` +
-      `<td class="mono" style="font-size:11px;color:var(--fg-muted)">${esc(
-        info.agents.join(" ")
-      )}</td>` +
       "</tr>"
   )
   .join("");
 
-el("apqc-note").innerHTML =
-  '<div class="note"><strong>Compound codes</strong><br>' +
-  `${esc(catalog.compound_apqc_codes.length)} entry points carry a code spanning two ` +
-  "processes and are counted under both, so the column above sums to " +
-  `${esc(apqcTotal)} against ${esc(TOTAL)} entry points. The catalog also spells ` +
-  "some pairs in either order — " +
-  catalog.compound_apqc_codes
-    .map((c) => `<span class="mono">${esc(c)}</span>`)
-    .join(", ") +
-  " — which is a catalog tidy-up, not a modelling difference." +
+el("process-note").innerHTML =
+  '<div class="note"><strong>Why the column adds up to more than the total</strong><br>' +
+  `${esc(catalog.compound_apqc_codes.length)} of the ${esc(TOTAL)} decisions ` +
+  "span two process areas and are counted under each, so the column above " +
+  `reaches ${esc(apqcTotal)}. Nothing is duplicated in the pools on the way ` +
+  "up this screen; it is this cut, and only this cut, that overlaps." +
   "</div>";
 
 const citedBench = Object.values(POOL_BENCH)
@@ -644,7 +641,52 @@ const citedBench = Object.values(POOL_BENCH)
   })
   .join("; ");
 
-el("prov").innerHTML = provenance(
+/* ---------- the machinery, at the end and closed ---------- */
+
+/* Four things came off the page above. The code each pool is filed under and
+   the process code it maps to, which is how the rest of this estate refers to
+   it; the agent ids inside each process area, which is what a reader who wants
+   to check the overlap has to be able to count for themselves; and the seven
+   compound codes spelled out, since "counted under each" is a claim that ought
+   to be checkable rather than taken on trust. */
+function drawerBody() {
+  const pools = tree.branches
+    .map(
+      (b, i) =>
+        `<dt class="mono">${esc(b.code)} · ${esc(b.apqc)}</dt>` +
+        `<dd>Pool ${esc(i + 1)}, ${esc(b.title)} — ${esc(b.count)} entry points, ` +
+        `value-tree branches <span class="mono">${esc(b.branches.join(", "))}</span></dd>`
+    )
+    .join("") +
+    `<dt class="mono">${esc(CONV.join(", "))}</dt>` +
+    "<dd>Above the pools, in no branch</dd>";
+
+  const areas = Object.entries(catalog.by_apqc_code)
+    .map(
+      ([code, info]) =>
+        `<dt class="mono">${esc(code)}</dt>` +
+        `<dd>${esc(catalog.apqc_names[code] || "unnamed in this catalog")} — ` +
+        `<span class="mono">${esc(info.agents.join(", "))}</span></dd>`
+    )
+    .join("");
+
+  const compound =
+    "<dt>Counted twice</dt>" +
+    `<dd class="mono">${esc(catalog.compound_apqc_codes.join(" · "))}</dd>`;
+
+  return (
+    "<p>The code each pool is filed under, the APQC process code it maps to, " +
+    "and the agent ids in each process area — so the overlap the note above " +
+    "describes can be counted rather than believed.</p>" +
+    `<dl>${pools}${areas}${compound}</dl>` +
+    `<p class="mono">${esc(tree.root_source)} · ${esc(catalog.source)}</p>`
+  );
+}
+
+el("prov").innerHTML = technicalDrawer(
+  drawerBody(),
+  "pool codes, process codes, agent ids"
+) + provenance(
   `<dt>Value tree</dt><dd>${esc(tree.root_source)}, rooted on ${esc(tree.root)}.</dd>` +
     `<dt>The calculation</dt><dd>Feed grade is the median of ${esc(
       ROI.feed_grade_days
