@@ -223,10 +223,46 @@ def visible_js(text):
     )
 
 
+DRAWER_OPEN = re.compile(r"<details\b[^>]*\bclass=\"[^\"]*\bdrawer\b[^\"]*\"[^>]*>")
+DETAILS_TOKEN = re.compile(r"<details\b[^>]*>|</details>")
+
+
+def _strip_drawer_markup(text):
+    """Take out the technical drawer, and only the technical drawer.
+
+    The exemption exists so the drawer may hold the jargon the body gave up. It
+    used to be written as ``class="…tbl…"``, which is the class every
+    collapsible in this codebase carries, so any collapsible anyone added became
+    a jargon-free zone by virtue of being a collapsible. The drawer is the one
+    that carries ``drawer``, which is technicalDrawer()'s own signature.
+
+    Nested, because the drawer holds collapsibles of its own — the table schemas
+    the agent-teams and handover screens file inside it — and a non-greedy match
+    would stop at the first ``</details>`` and leave the rest of the drawer
+    being read as body copy.
+    """
+    out = []
+    at = 0
+    while True:
+        start = DRAWER_OPEN.search(text, at)
+        if not start:
+            out.append(text[at:])
+            return "".join(out)
+        out.append(text[at : start.start()])
+        depth = 0
+        for token in DETAILS_TOKEN.finditer(text, start.start()):
+            depth += -1 if token.group(0).startswith("</") else 1
+            if depth == 0:
+                at = token.end()
+                break
+        else:
+            return "".join(out)
+
+
 def visible_html(text):
     text = re.sub(r"<!--.*?-->", " ", text, flags=re.S)
     text = re.sub(r"<script\b.*?</script>", " ", text, flags=re.S)
-    return re.sub(r"<details[^>]*class=\"[^\"]*tbl[^\"]*\".*?</details>", " ", text, flags=re.S)
+    return _strip_drawer_markup(text)
 
 
 def visible_text(paths):
@@ -405,6 +441,36 @@ def test_the_drawer_is_the_last_thing_on_the_screen():
         assert re.search(r"technicalDrawer\([^;]*provenance\(", sources, re.S), (
             f"{screen} does not render its drawer immediately before the footer"
         )
+
+
+def test_only_the_technical_drawer_is_exempt_from_the_rules_below():
+    """A collapsible is not a licence; the drawer is.
+
+    The exemption was written as the class every collapsible in this codebase
+    carries, so anything anyone hid behind a <details> stopped being read at
+    all — which is the opposite of the instruction it was serving. It is the
+    drawer, and its contents including any collapsible of its own, that the
+    body-copy rules do not apply to.
+    """
+    body = "<p>p90 at the entry point</p>"
+    drawer = (
+        '<details class="tbl drawer"><summary>Technical detail</summary>'
+        '<div class="drawer-body"><p>p90 at the entry point</p>'
+        '<details class="tbl"><summary>a table</summary><p>traversal</p></details>'
+        "</div></details>"
+    )
+    other = (
+        '<details class="tbl pblock-jobs"><summary>What you are trying to get done</summary>'
+        "<p>p90 at the entry point</p></details>"
+    )
+    assert "p90" not in visible_html(drawer), "the drawer stopped being exempt"
+    assert "traversal" not in visible_html(drawer), (
+        "a collapsible inside the drawer is still the drawer"
+    )
+    assert "p90" in visible_html(body + drawer), "the body around a drawer went missing"
+    assert "p90" in visible_html(other), (
+        "a collapsible that is not the drawer is exempt from the jargon rules"
+    )
 
 
 def test_no_jargon_survives_outside_the_drawer():
