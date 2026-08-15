@@ -46,6 +46,11 @@ class Pack:
 
 
 def _driver(raw: dict, index: int) -> Driver:
+    if not isinstance(raw, dict):
+        raise PackError(
+            f"driver #{index} is {type(raw).__name__}, not a mapping; "
+            "each list entry under 'drivers' is a block of keys"
+        )
     where = raw.get("id") or f"driver #{index}"
     for required in ("id", "question", "controllable"):
         if required not in raw:
@@ -64,6 +69,14 @@ def _driver(raw: dict, index: int) -> Driver:
                 f"{where}: compare must be one of {sorted(COMPARISONS)}; "
                 "outcome-percentile comparison overstates the prize"
             )
+    elif raw.get("compare") is not None:
+        # A comparison on a driver with no diagnostic behind it is a claim the
+        # pack cannot honour. Left to load, it tells an author a comparison is
+        # happening when nothing computes one.
+        raise PackError(
+            f"{where}: compare is set but status is {raw['status']!r}; "
+            "only an evidenced driver compares anything"
+        )
     return Driver(
         id=raw["id"],
         question=raw["question"],
@@ -79,9 +92,19 @@ def _driver(raw: dict, index: int) -> Driver:
 
 def load_pack(path: str | Path) -> Pack:
     raw = yaml.safe_load(Path(path).read_text()) or {}
+    if not isinstance(raw, dict):
+        raise PackError(
+            f"pack is a {type(raw).__name__}, not a mapping; a pack is a block "
+            "with 'metric', 'root' and 'drivers' at the top level"
+        )
     for required in ("metric", "root", "drivers"):
         if required not in raw:
             raise PackError(f"pack is missing {required!r}")
+    if not isinstance(raw["drivers"], list):
+        raise PackError(
+            f"'drivers' is a {type(raw['drivers']).__name__}, not a list; "
+            "a pack with one driver still writes it as a list of one"
+        )
     if not raw["drivers"]:
         raise PackError("pack declares no driver; a tree with no branch is not a method")
     drivers = [_driver(d, i) for i, d in enumerate(raw["drivers"])]
