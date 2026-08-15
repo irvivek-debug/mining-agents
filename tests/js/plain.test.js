@@ -137,6 +137,53 @@ test("the prose the catalogue supplies is said in the reader's words too", () =>
   assert.equal(P.plainProse(undefined), "");
 });
 
+/* accountable_for was one field written by the people who built the estate and
+ * printed whole. It was not the only one. facts.json's `why` and graph.json's
+ * `source` reach the scenario and graph screens by the same route, and they
+ * carry the other half of the estate's vocabulary: a file path, a dataset, a
+ * table identifier and a product name, in one sentence, at a shift supervisor.
+ *
+ * Run over the generated data itself rather than over a transcription of it, so
+ * this fails when the build starts writing something new — which is the moment
+ * it would actually happen. */
+test("the machinery's own names are said in the reader's words too", () => {
+  const read = (name) =>
+    JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, "..", "..", "apps", "shared", "data", name),
+        "utf8"
+      )
+    );
+
+  const machinery = /[\w*.-]+(?:\/[\w*.-]+)+\.[a-z]{2,8}|\b[a-z][a-z0-9]*_[a-z0-9_]+\b|\bBigQuery\b/;
+  const lines = read("facts.json")
+    .not_locally_derivable.map((u) => u.why)
+    .concat(read("graph.json").source);
+
+  assert.ok(lines.length >= 2, "the generated data no longer carries these fields");
+  for (const before of lines) {
+    assert.ok(machinery.test(before), `nothing to rewrite in ${before}`);
+    const after = P.plainProse(before);
+    assert.ok(!machinery.test(after), `still says the machinery's name: ${after}`);
+    // Substitution, not deletion, as with the HITL prose above: the sentence
+    // has to survive at roughly the length it arrived, or the fact went with
+    // the vocabulary.
+    assert.ok(
+      after.length > before.length * 0.7,
+      `the rewrite dropped most of the sentence: ${after}`
+    );
+  }
+
+  // A replacement landing at the head of a sentence takes the capital that was
+  // there; one landing mid-string does not invent one, because these fields are
+  // also printed after an em dash.
+  assert.match(P.plainProse("BigQuery settles it."), /^The warehouse settles it\.$/);
+  assert.match(
+    P.plainProse("is settled by BigQuery"),
+    /^is settled by the warehouse$/
+  );
+});
+
 /* The graph screen prints three lines the build wrote — "All 5 assets and all 3
  * dependency edges. Nothing filtered." — on the one screen whose whole subject
  * is edges and nodes. The rewriter that was supposed to fix them knew the word

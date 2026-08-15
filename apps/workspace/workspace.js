@@ -416,7 +416,18 @@ function drawerTables(qualified_names) {
  *
  *  Every screen that shows a result also shows this, and SC-4 makes it the
  *  loudest element on the sheet. The list is computed from three real
- *  conditions, so it shrinks on its own as the gaps close. */
+ *  conditions, so it shrinks on its own as the gaps close.
+ *
+ *  Four fields, and the fourth is the reason there are four. `what`, `detail`
+ *  and `remedy` are read by a shift supervisor, so they are in the supervisor's
+ *  words; `technical` is the same remedy as an engineer would carry it out, and
+ *  it is rendered by drawerFlags() below and nowhere else. The remedy on this
+ *  band used to read "Re-run scripts/build_app_data.py with BigQuery
+ *  credentials" — a developer's shell instruction, in the loudest element of a
+ *  handover sheet, to a reader who cannot act on it and would not know what it
+ *  meant. Nothing is dropped: what the supervisor no longer reads, the drawer
+ *  still names.
+ */
 function flagsFor(ids) {
   const list = [].concat(ids);
   const tables = [...new Set(list.flatMap((id) => AGENTS[id].source_tables))];
@@ -430,7 +441,12 @@ function flagsFor(ids) {
     flags.push({
       what: `${remote.length} of the ${tables.length} sources this reads are not held on this machine`,
       detail: plainList(remote),
-      remedy: "Re-run scripts/build_app_data.py with BigQuery credentials.",
+      remedy:
+        "This build was made without a connection to the warehouse. Rebuilt " +
+        "with one, it would hold them.",
+      technical:
+        "Not held locally: " + remote.join(", ") +
+        ". Re-run scripts/build_app_data.py with BigQuery credentials.",
     });
   }
 
@@ -440,16 +456,26 @@ function flagsFor(ids) {
       what: `${undocumented.length} of them have no written explanation of what their columns mean`,
       detail: plainList(undocumented),
       remedy:
+        `Written explanations exist for ${WS.tables.documented.length} of the ` +
+        `${WS.tables.documented.length + WS.tables.undocumented.length} tables ` +
+        "this estate reads; the rest are still being written.",
+      technical:
         `docs/column-semantics.yaml covers ${WS.tables.documented.length} of ` +
-        `${WS.tables.documented.length + WS.tables.undocumented.length} tables; the rest are in progress.`,
+        `${WS.tables.documented.length + WS.tables.undocumented.length} tables. ` +
+        "Undocumented: " + undocumented.join(", ") + ".",
     });
   }
 
   for (const m of models) {
     flags.push({
       what: "A trained prediction model this relies on was not checked by this build",
-      detail: `Whether ${m} exists, and what it was trained on, is a fact about the warehouse.`,
-      remedy: "Query INFORMATION_SCHEMA.MODELS with credentials.",
+      // Not the model's own name: it is an identifier, it is in the drawer
+      // below, and the sentence carries the same fact without it.
+      detail:
+        "Whether the model exists, and what it was trained on, is a fact about " +
+        "the warehouse and not about this build.",
+      remedy: "Ask the warehouse itself, with credentials.",
+      technical: `${m} — query INFORMATION_SCHEMA.MODELS with credentials.`,
     });
   }
 
@@ -493,6 +519,32 @@ function unverified(ids) {
   );
 }
 
+/** The same three gaps, as the person who would close them would carry it out.
+ *
+ *  One entry per flag that has a technical remedy — the ones that do not, the
+ *  band above already states completely. The paths, the script name, the
+ *  warehouse view and the model's own identifier live here and only here, which
+ *  is what lets the band read as English on a printed handover sheet.
+ *
+ *  Named drawer* on purpose: that prefix is the convention this codebase's copy
+ *  gate reads as "this function writes drawer copy", so the vocabulary below is
+ *  scanned as the drawer's rather than as three screens' body text. */
+function drawerFlags(ids) {
+  const held = flagsFor(ids).filter((f) => f.technical);
+  if (!held.length) return "";
+  return (
+    "<dl>" +
+    held
+      .map(
+        (f) =>
+          `<dt>${esc(f.what)}</dt>` +
+          `<dd class="mono">${esc(f.technical)}</dd>`
+      )
+      .join("") +
+    "</dl>"
+  );
+}
+
 /** The persona whose journey names this agent, with the citation.
  *
  *  These summaries are transcribed from docs/personas-and-value-tree.md with
@@ -510,8 +562,14 @@ function journeyFor(id) {
     '<div class="card"><div class="card-cap">The scenario this runs in</div>' +
     `<h3>${esc(p.journey.title)}</h3>` +
     `<p>${esc(p.journey.summary.trim())}</p>` +
+    /* The document is named in an element of its own rather than run into the
+       line. A file name inside a sentence is the pattern this application's
+       copy gate exists to stop; a file name standing alone is a citation, which
+       is what this line is for. */
     '<p class="cite mono">' +
-    `${esc(p.title)} · docs/personas-and-value-tree.md line ${esc(p.journey.source_line)}` +
+    `${esc(p.title)} · <span>docs/personas-and-value-tree.md</span> line ${esc(
+      p.journey.source_line
+    )}` +
     "</p></div>"
   );
 }

@@ -89,14 +89,22 @@ for (const [code, wanted] of ORIENTATION_PAIN) {
 }
 
 /* A quote that no longer exists in the source must not silently vanish: the
-   screen would just look thinner and no one would know why. */
+   screen would just look thinner and no one would know why.
+
+   The placeholder is written in the same words as everything around it. It
+   named a document and a build script, which is what a developer would want to
+   read here — but this branch only ever fires in front of an audience, at which
+   point the reader is whoever is in the room, and the fact they need is that a
+   quotation has gone missing and this screen will not invent one. Where to go
+   and look is the drawer's business, and the drawer at the foot of this screen
+   already names the persona document by its path. */
 if (picked.length !== ORIENTATION_PAIN.length) {
   picked.push({
     persona: { code: "—", title: "Missing quote" },
     quote: {
       quote:
-        "A quote this screen names is no longer in docs/persona-profiles.yaml. " +
-        "Re-run scripts/build_app_data.py and reconcile.",
+        "A quotation this screen names is no longer in the persona document " +
+        "it was lifted from, so nothing is shown in its place.",
       source_line: 0,
     },
   });

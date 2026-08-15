@@ -371,22 +371,27 @@ el("prov").innerHTML = technicalDrawer(
   drawerBody(),
   "percentiles, warehouse columns, study addresses"
 ) + provenance(
+  /* Each file is named in an element of its own rather than run into the
+     sentence beside it. A citation is a citation; a file name inside a sentence
+     is the machinery talking, and the footer is on the reader's side of the
+     drawer. */
   "<dt>Applications</dt><dd>Both read one bundle; neither holds a figure of its own.</dd>" +
-    `<dt>Signals</dt><dd>${esc(SIG.source)}, reduced at build time to ${esc(
+    `<dt>Signals</dt><dd>Reduced at build time to ${esc(
       SIG.buckets
-    )} points per series.</dd>` +
-    `<dt>The gap</dt><dd>${esc(GAP.method)} ${esc(
+    )} points per series. <span class="mono">${esc(SIG.source)}</span></dd>` +
+    `<dt>The gap</dt><dd>${esc(GAP.method)} <span class="mono">${esc(
       GAP.rows.map((r) => r.source).filter((s, i, a) => a.indexOf(s) === i).join(", ")
-    )}.</dd>` +
+    )}</span></dd>` +
     "<dt>Benchmarks</dt><dd>" +
     BENCH.order
       .map((id) => BENCH.by_id[id])
       .filter((b, i, a) => a.findIndex((o) => o.title === b.title) === i)
       .map((b) => `${esc(b.title)} (${esc(b.publisher)}, ${esc(b.year)})`)
       .join("; ") +
-    `. Held in ${esc(BENCH.source)}; ${esc(BENCH.excluded.length)} further ` +
-    "figures were found and excluded there because they could not be traced to " +
-    "a primary source.</dd>"
+    `. Held in <span class="mono">${esc(BENCH.source)}</span>; ${esc(
+      BENCH.excluded.length
+    )} further figures were found and excluded there because they could not be ` +
+    "traced to a primary source.</dd>"
 );
 
 reveal();

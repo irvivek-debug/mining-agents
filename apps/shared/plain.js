@@ -224,12 +224,78 @@ var PROSE = [
   [/\bHITL\b/gi, "sign-off"],
 ];
 
+/* The machinery's own names, arriving by the same channel and fixed the same
+ * way.
+ *
+ * accountable_for was one field. It is not the only one. The build writes
+ * facts.json's `why` and graph.json's `source` in the build's own words —
+ * "data/profile/stats.json keeps a three-row sample of fleet_vehicles, not the
+ * table… BigQuery settles it" — and the scenario and graph screens print them
+ * whole, at a shift supervisor. No gate reading source could see either, for
+ * the same reason none could see HITL in accountable_for: nobody typed them
+ * onto a screen.
+ *
+ * Table identifiers are deliberately absent from this list. They are read from
+ * TABLES above, so renaming a table moves this rewrite with it instead of
+ * leaving a stale entry behind. What is listed is what has no other home: the
+ * product, the dataset it lives in, and the two file locations the build
+ * actually names. Every entry was checked against the generated data rather
+ * than imagined, and the longest path is matched first so a rewrite of the
+ * directory cannot strand the file name.
+ *
+ * None of this deletes the fact. The unrewritten string is still on each of
+ * these screens — inside the technical drawer, which is where a path, a script
+ * name and a product name are allowed to be.
+ */
+var MACHINE_PROSE = [
+  [/\bdata\/profile\/stats\.json\b/g, "a profile taken before this build"],
+  [/\bdata\/generated\/\*\.parquet\b/g, "the files this build generated"],
+  [/\bmining_data\b/g, "the warehouse's own dataset"],
+  [/\bBigQuery\b/g, "the warehouse"],
+];
+
+/* A table identifier loose in a sentence, said the way the rest of the estate
+ * says it. Only ids TABLES knows are touched: an unmapped one is left alone
+ * rather than mangled, and unmapped() is what reports it. */
+function _tablesInProse(text) {
+  return text.replace(/\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g, function (id) {
+    var said = TABLES[id];
+    return said ? articleFor(said) + said : id;
+  });
+}
+
+/* A replacement that lands at the start of a sentence arrives lowercase — "…
+ * known locally. the warehouse settles it."
+ *
+ * The head of the string is a separate question and is only touched when the
+ * head is itself what changed. These fields are not all whole sentences: a
+ * persona's accountable_for is printed after an em dash as "— is also the
+ * sign-off authority for…", and capitalising every rewritten string would put
+ * a capital in the middle of that line. So "data/profile/stats.json keeps…"
+ * becomes "A profile taken before this build keeps…" because position zero was
+ * rewritten, and "is also the…" is left alone because it was not.
+ */
+function _sentenceCase(before, after) {
+  var out = after.replace(/([.!?]\s+)([a-z])/g, function (hit, lead, letter) {
+    return lead + letter.toUpperCase();
+  });
+  if (out.charAt(0) !== before.charAt(0)) {
+    out = out.charAt(0).toUpperCase() + out.slice(1);
+  }
+  return out;
+}
+
 function plainProse(text) {
   var out = String(text || "");
+  var before = out;
   for (var i = 0; i < PROSE.length; i++) {
     out = out.replace(PROSE[i][0], PROSE[i][1]);
   }
-  return out;
+  for (i = 0; i < MACHINE_PROSE.length; i++) {
+    out = out.replace(MACHINE_PROSE[i][0], MACHINE_PROSE[i][1]);
+  }
+  out = _tablesInProse(out);
+  return out === before ? out : _sentenceCase(before, out);
 }
 
 /* The observed bq_query argument is a literal SELECT naming its table in

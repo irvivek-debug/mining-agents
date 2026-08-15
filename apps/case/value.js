@@ -690,21 +690,27 @@ el("prov").innerHTML = technicalDrawer(
   drawerBody(),
   "pool codes, process codes, agent ids"
 ) + provenance(
-  `<dt>Value tree</dt><dd>${esc(tree.root_source)}, rooted on ${esc(tree.root)}.</dd>` +
+  /* Each file is named in an element of its own rather than run into the
+     sentence beside it: a citation is a citation, and a file name inside a
+     sentence is the machinery talking on the reader's side of the drawer. */
+  `<dt>Value tree</dt><dd>Rooted on ${esc(tree.root)}. ` +
+    `<span class="mono">${esc(tree.root_source)}</span></dd>` +
     `<dt>The calculation</dt><dd>Feed grade is the median of ${esc(
       ROI.feed_grade_days
-    )} days in ${esc(ROI.feed_grade_source)}. ${esc(GAP.method)} ${esc(
+    )} days of plant assays. <span class="mono">${esc(
+      ROI.feed_grade_source
+    )}</span> ${esc(GAP.method)} ${esc(
       ROI.basis
     )} Throughput and price are entered by the reader and are never defaulted.</dd>` +
-    `<dt>Benchmarks</dt><dd>${esc(citedBench)}. Held in ${esc(
-      BENCH.source
-    )} with a URL per figure; ${esc(
+    `<dt>Benchmarks</dt><dd>${esc(citedBench)}. Held in ` +
+    `<span class="mono">${esc(BENCH.source)}</span> with a URL per figure; ${esc(
       BENCH.excluded.length
     )} further figures were found and are recorded there as unverifiable rather ` +
     "than printed.</dd>" +
-    `<dt>Evidence</dt><dd>${esc(DATA.signals.source)}, reduced at build time to ${esc(
+    `<dt>Evidence</dt><dd>Reduced at build time to ${esc(
       DATA.signals.buckets
-    )} points per series. Each card names its own file.</dd>` +
+    )} points per series; each card names its own file. ` +
+    `<span class="mono">${esc(DATA.signals.source)}</span></dd>` +
     "<dt>Correction</dt><dd>That document's branch table gives Branch 6 a count of 10 while " +
     "naming only 9 agents under it, which absorbs S12 into a branch its own prose places above all " +
     "six. The catalog settles it: safety holds 9, S12 stands alone. The build refuses to emit " +

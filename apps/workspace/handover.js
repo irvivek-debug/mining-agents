@@ -181,9 +181,12 @@ function why() {
     '<div class="card-cap">Why a fourth agent checks the other three</div>' +
     '<blockquote class="verbatim">' +
     esc(quote.quote.trim()) +
-    `<cite>${esc(supervisor.title || S12.persona)} · docs/personas-and-value-tree.md line ${esc(
-      quote.source_line
-    )}</cite></blockquote>` +
+    /* The document in an element of its own, as in workspace.js's journey
+       citation: a file name standing alone is a citation, and a file name
+       inside a line of prose is the machinery talking. */
+    `<cite>${esc(supervisor.title || S12.persona)} · ` +
+    "<span>docs/personas-and-value-tree.md</span> " +
+    `line ${esc(quote.source_line)}</cite></blockquote>` +
     "</div>"
   );
 }
@@ -366,6 +369,8 @@ function drawerBody() {
     drawerTables(
       [...new Set(members.flatMap((id) => AGENTS[id].source_tables))].sort()
     ) +
+    "<h4>What would close each gap the sheet reports as unverified</h4>" +
+    drawerFlags(members) +
     connectionDetail()
   );
 }

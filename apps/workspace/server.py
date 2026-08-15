@@ -166,9 +166,13 @@ def runtime() -> JSONResponse:
             "expected": len(expected),
             "deployed": sorted(deployed),
             "missing": sorted(set(expected) - set(deployed)),
+            # Body copy on the agent-teams screen, so it is written as body
+            # copy: apps/workspace/workspace.js prints this line under the
+            # connection badge, where naming the hosting product told a shift
+            # supervisor nothing and cost them the sentence.
             "note": (
-                "Cloud Run scales to zero. 'Deployed' means the service exists "
-                "and has a URL; between calls no instance is running, and that "
+                "'Deployed' means each agent has an address and answers when "
+                "it is called. Between calls nothing is left running, and that "
                 "is the intended cost behaviour, not a fault."
             ),
         }

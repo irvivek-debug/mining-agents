@@ -456,7 +456,12 @@ el("prov").innerHTML = technicalDrawer(
   drawerBody(),
   "graph names, query text, tables, agent ids"
 ) + provenance(
-  `<dt>Graph data</dt><dd>${esc(G.source)}</dd>` +
+  /* The build writes this line in the build's words — two file paths, the
+     dataset and the product name, in one paragraph — and the footer sits on
+     the reader's side of the drawer. plainProse() says the same two vintages
+     and the same unreachable warehouse without them; the paragraph as the
+     build wrote it is in the drawer above, at the foot of drawerBody(). */
+  `<dt>Graph data</dt><dd>${esc(plainProse(G.source))}</dd>` +
     "<dt>The query</dt><dd>Read out of " +
     "<span class=\"mono\">mining_agents/tools/graph_traverse.py</span> by the " +
     "build, not transcribed. The column names under the canvas are parsed " +

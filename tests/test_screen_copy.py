@@ -122,15 +122,26 @@ PLAIN_INSTEAD = {
 DRAWER_KEEPS = {
     "apps/index.html": ["r.source", "b.id"],
     "apps/case/index.html": ["b.url", "quote.source_line"],
-    "apps/case/scenario.html": ["r.source", "p.code"],
+    # u.why is the build's own sentence under each figure the local files cannot
+    # settle. The block on the screen says it in the reader's words; the drawer
+    # keeps the sentence it was rewritten from, so the rewrite is checkable.
+    "apps/case/scenario.html": ["r.source", "p.code", "u.why"],
     "apps/case/value.html": ["b.apqc", "b.code", "info.agents"],
     "apps/case/solution.html": ["a.pattern", "a.model_tier", "a.agent_id", "s.specialists"],
-    "apps/case/graph.html": ["g.sql", "g.traversal", "g.bigquery_graph"],
+    # G.source is the paragraph the build writes about where this graph came
+    # from — two paths, the dataset and the product. The footer says it in the
+    # reader's words; the drawer keeps it as written.
+    "apps/case/graph.html": ["g.sql", "g.traversal", "g.bigquery_graph", "G.source"],
     "apps/workspace/index.html": ["a.persona", "a.apqc_code", "a.model_tier", "WS.approval.table"],
     "apps/workspace/swarm.html": [
         "coord.apqc_code", "a.model_tier", "drawerMethod(current)", "swarmInputs()",
+        # The shell instruction, the semantics file and the model id that came
+        # off the unverified band.
+        "drawerFlags(members)",
     ],
-    "apps/workspace/handover.html": ["S12.apqc_code", "a.model_tier", "a.source_tables"],
+    "apps/workspace/handover.html": [
+        "S12.apqc_code", "a.model_tier", "a.source_tables", "drawerFlags(members)",
+    ],
     "apps/workspace/persona.html": ["a.model_tier", "a.apqc_code", "branchesOf("],
 }
 
@@ -536,7 +547,21 @@ def machine_tokens(run):
 # A word left beside a token once the token is blanked. Two letters or fewer is
 # a separator or an article, not a sentence — "of", "in", "at". Three is a
 # sentence starting.
-LEFTOVER_WORD = re.compile(r"[A-Za-z]{3,}")
+#
+# Except for the handful that say *where inside* a named source: "…md line
+# 1069", "…md section 1". Those are part of the citation, not prose around it,
+# and the list is kept this short deliberately — none of it weakens the rule,
+# because every sentence this gate exists to catch carries several other words.
+CITATION_WORDS = {
+    "line", "lines", "page", "pages", "row", "rows",
+    "section", "sections", "column", "columns",
+}
+WORD = re.compile(r"[A-Za-z]{3,}")
+
+
+def reads_as_prose(rest):
+    """Is what surrounds the blanked token a sentence, or a citation?"""
+    return any(word.lower() not in CITATION_WORDS for word in WORD.findall(rest))
 
 TEXT_RUN = re.compile(r"<[^>]*>")
 
@@ -571,7 +596,7 @@ def test_no_machine_vocabulary_survives_outside_the_drawer():
     for screen in SCREENS:
         for run in body_runs(visible_html(rendered(screen))):
             found, rest = machine_tokens(run)
-            if not found or not LEFTOVER_WORD.search(rest):
+            if not found or not reads_as_prose(rest):
                 continue
             said = ", ".join(sorted({f"{text} ({kind})" for kind, text in found}))
             problems.append(
@@ -601,7 +626,7 @@ def test_the_machine_vocabulary_rule_is_about_sentences_not_words():
     def fires(markup):
         for run in body_runs(visible_html(markup)):
             found, rest = machine_tokens(run)
-            if found and LEFTOVER_WORD.search(rest):
+            if found and reads_as_prose(rest):
                 return True
         return False
 
@@ -611,6 +636,12 @@ def test_the_machine_vocabulary_rule_is_about_sentences_not_words():
     assert not fires(attribute), "the rule fired on a <script src>-style attribute"
     assert fires("<p>Only 5 of the fleet_vehicles are known.</p>"), (
         "the rule stopped seeing a bare snake_case identifier in a sentence"
+    )
+    assert not fires("<p>docs/personas-and-value-tree.md section 1</p>"), (
+        "a citation may say where inside the source it points"
+    )
+    assert fires("<p>Rooted, in docs/personas-and-value-tree.md, on cost.</p>"), (
+        "the citation words became a licence for a sentence"
     )
 
 

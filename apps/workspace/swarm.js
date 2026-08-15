@@ -238,6 +238,8 @@ function drawerBody() {
     (drawerMethod(current) || "<p>Nothing deterministic is declared for this team.</p>") +
     "<h4>Every table these members read</h4>" +
     swarmInputs() +
+    "<h4>What would close each gap the band above reports</h4>" +
+    drawerFlags(members) +
     connectionDetail()
   );
 }

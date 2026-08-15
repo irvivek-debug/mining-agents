@@ -32,7 +32,17 @@ const RUNTIME = {
   missing: [],
   project: "example-project",
   region: "us-central1",
-  note: "rendered by tests/js/screen-render.js",
+  /* The server's own words, not a stand-in for them.
+   *
+   * apps/workspace/workspace.js prints this field under the connection badge,
+   * so it is body copy on a screen, and a placeholder here would hide whatever
+   * the deployed server actually says. It said "Cloud Run scales to zero" and
+   * no gate could see it, because the note this renderer substituted was the
+   * one every gate read. Kept in step with apps/workspace/server.py. */
+  note:
+    "'Deployed' means each agent has an address and answers when it is " +
+    "called. Between calls nothing is left running, and that is the intended " +
+    "cost behaviour, not a fault.",
 };
 
 /* A stand-in for a third-party drawing library.

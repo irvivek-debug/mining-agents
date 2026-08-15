@@ -210,11 +210,17 @@ el("window").innerHTML =
 
 /* The figures the local files cannot settle get their own block. Leaving them
    off the screen entirely would be the quieter choice and the worse one: the
-   audience would have no way to know the table above is partial. */
+   audience would have no way to know the table above is partial.
+
+   The reason each one cannot be settled is written by the build, in the build's
+   words — a file path, a table identifier and a product name in one sentence —
+   and this screen used to print it whole. It goes through plainProse() like
+   every other paragraph this application did not write; the sentence as the
+   build wrote it is in the drawer at the foot, where a path is allowed. */
 el("unknown").innerHTML = facts.not_locally_derivable.length
   ? '<div class="note"><strong>Not derivable from local files</strong><br>' +
     facts.not_locally_derivable
-      .map((u) => `<b>${esc(u.figure)}.</b> ${esc(u.why)}`)
+      .map((u) => `<b>${esc(u.figure)}.</b> ${esc(plainProse(u.why))}`)
       .join("<br>") +
     "</div>"
   : "";
@@ -276,10 +282,18 @@ function drawerBody() {
     )
     .join("");
 
+  /* And the reason each unsettled figure is unsettled, as the build wrote it.
+     The block above says the same thing in the reader's words; this is the
+     sentence it was rewritten from, with the file and the table named, so the
+     rewrite can be checked rather than trusted. */
+  const unsettled = facts.not_locally_derivable
+    .map((u) => `<dt>${esc(u.figure)}</dt><dd class="mono">${esc(u.why)}</dd>`)
+    .join("");
+
   return (
     "<p>Where each measurement was taken, where each count was taken, and the " +
     "code this estate files each role under.</p>" +
-    `<dl>${measured}${counted}${roles}</dl>` +
+    `<dl>${measured}${counted}${roles}${unsettled}</dl>` +
     `<p class="mono">${esc(GAP.method)}</p>`
   );
 }
