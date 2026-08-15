@@ -350,6 +350,315 @@ function failLine(name, args) {
 /* The honesty check. Every tool, traversal and table the catalogue declares
  * must have a plain phrase, or the activity log will print an identifier at a
  * reader who came here to avoid identifiers. */
+/* ------------------------------------------------------------------ answers
+ *
+ * Everything above rewrites text this repository wrote. This last section
+ * rewrites text a deployed model wrote, arriving over the wire while a reader
+ * watches, and that is a different problem in two ways.
+ *
+ * It is untrusted. The answer is going into innerHTML, so it is escaped before
+ * a single markdown rule is applied. The other order — render, then escape —
+ * is the one defect worth naming: it turns a <script> the model emitted into
+ * an element, and it also double-escapes the tags the renderer just made, so
+ * it fails loudly in one direction and silently in the other.
+ *
+ * And it is not ours to edit. A live run of S01 opened its answer with "The
+ * call to `default_api:graph_traverse` failed", listed an INVALID_ARGUMENT and
+ * a required `asset_id`, and put all of it in the largest body text on the role
+ * page. Three specialists, a critic and a coordinator write into one stream, so
+ * that arrives butted against the next agent's first sentence with no break.
+ *
+ * The rules below are narrow on purpose. Nothing here invents a phrase: a
+ * failed call is said with failLine(), the same sentence the activity log
+ * prints, and a table is said with TABLES. Where no mapping exists — a column
+ * name, a part number, an agent id — the term is left alone rather than
+ * guessed at, because a reader who meets `actual_duration_hours` has met an
+ * identifier, and a reader who meets an invented synonym for it has been
+ * misled.
+ */
+
+/* esc lives in shell.js: a global in the browser, where every page loads
+ * shell.js before this file, and a require under Node. Same shape as chat.js,
+ * so nothing here writes into a scope it does not own. */
+var PLAIN_SHELL = typeof require !== "undefined" ? require("./shell.js") : window;
+
+/* What the honest fact reduces to once its vocabulary is gone. The step failed
+ * and the answer is therefore short of something: this branch is built on not
+ * papering over that, and a de-jargoned answer that reads as complete would be
+ * a worse lie than the identifier it removed. */
+var ANSWER_INCOMPLETE = "This part of the answer is incomplete.";
+
+/* A token that means the machinery rather than the mine. Anything the model
+ * put in brackets or backticks around one of these is detail for the drawer.
+ *
+ * The third alternative is the general shape of an error constant —
+ * INVALID_ARGUMENT, QUERY_FAILED, SQL_INTERPOLATION — written as a shape and
+ * not as a list, because the backend raises these and the frontend cannot
+ * enumerate what it has not seen yet. It is deliberately narrower than "all
+ * capitals": SKU-BELT-SPLICE-G2 and PUMP-104A are things on the site that a
+ * supervisor says out loud, and neither carries an underscore.
+ */
+var MACHINE_TOKEN = new RegExp(
+  [
+    "default_api:",
+    "rows_scanned",
+    "success:\\s*(?:true|false)",
+    "\\berror\\.(?:code|message)\\b",
+    "\\b[A-Z][A-Z0-9]+_[A-Z0-9_]+\\b",
+    "\\bJob ID\\b",
+    "https?://",
+    "\\bML\\.[A-Z]+",
+    "@parameter",
+    "\\bAPQC\\b",
+    "\\b[A-Z]\\d{2}-[A-Z]+\\b",
+  ].join("|")
+);
+
+var TOOL_IDS = Object.keys(TOOLS).join("|");
+
+/* "SP1's call to `default_api:graph_traverse` failed" wants the bare verb —
+ * "call to trace connections" — and every other position wants the gerund.
+ * Two rules rather than one because "call to tracing connections" is not
+ * English and the reader would notice before the vocabulary registered. */
+var TOOL_AFTER_CALL = new RegExp(
+  "(\\bcalls? to\\s+)`?(?:default_api:)?(" + TOOL_IDS + ")`?", "g"
+);
+var TOOL_ANYWHERE = new RegExp("`?(?:default_api:)?\\b(" + TOOL_IDS + ")\\b`?", "g");
+
+/* The three shapes a failed call took in the live run. An announcement, the
+ * bullets under it, and the sentence that draws the consequence — the model
+ * wrote all three, in that order, three times, in two different bullet
+ * dialects. Matching the shape rather than the wording is what lets one rule
+ * cover "**Error Code:**", "**Error Code**:" and "**error.code**:". */
+var FAIL_ANNOUNCE = /^(?:the|a|an)\b[^\n]*\bcalls? to\b[^\n]*\bfailed\b[^\n]*$/i;
+var FAIL_BULLET =
+  /^\s*[-*]\s+\*\*\s*(?:failed(?:\s+tool)?\s+call|error[\s.]?code|error[\s.]?message)\s*:?\s*\*\*\s*:?/i;
+var FAIL_BECAUSE = /^because this tool\b[^\n]*\bfailed\b/i;
+
+/* An announcement is only an announcement if it names something in backticks.
+ * "The call to shut down the mill failed" is a fact about the mine and belongs
+ * on the page; "The call to `bqml_predict` failed" is a fact about the
+ * machinery and belongs behind the drawer. */
+function _startsFailure(line) {
+  return FAIL_ANNOUNCE.test(line) && line.indexOf("`") >= 0;
+}
+
+function _isFailLine(line) {
+  return _startsFailure(line) || FAIL_BULLET.test(line) || FAIL_BECAUSE.test(line);
+}
+
+/* Five agents write into one stream and their frames arrive butted together,
+ * so a heading, a failure announcement or a whole new sentence can begin in
+ * the middle of a line: "…can be provided.The call to `bqml_predict` failed."
+ * Three joins were observed live and each gets one rule.
+ *
+ * Backticks are handled in one pass over the spans, not two. A separate
+ * lookahead pass gets this wrong in a way that is invisible until it is run on
+ * a real answer: the engine restarts at every offset, so after failing on
+ * `default_api:graph_traverse` it matches from that span's *closing* backtick
+ * to the *opening* one of `INVALID_ARGUMENT`, and splits a bullet in half.
+ * Scanning left to right pairs the backticks the way the model wrote them.
+ *
+ * The heading rule excludes a preceding '#' for the same class of reason: a
+ * '###' contains a '##', so a rule that only asks what comes before the hash
+ * breaks every heading into two empty paragraphs and a heading. */
+function _unglue(text) {
+  return String(text)
+    .replace(/`[^`]*`([A-Z]?)/g, function (hit, next) {
+      var span = hit.slice(0, hit.length - next.length).replace(/\s*\n\s*/g, " ");
+      return next ? span + "\n\n" + next : span;
+    })
+    .replace(/([^\n#])(?=#{1,6} )/g, "$1\n\n")
+    .replace(/([a-z,)])\.(?=[A-Z])/g, "$1.\n\n");
+}
+
+/* The plain sentence a whole failure passage becomes.
+ *
+ * The tool and the noun are read out of the passage rather than passed in,
+ * because by the time the answer reaches this file the call that failed is
+ * only described in prose. failLine() then says it in exactly the words the
+ * activity log used a few lines further up the same page. */
+function _failSentence(passage) {
+  var name = "";
+  var at = passage.length;
+  Object.keys(TOOLS).forEach(function (id) {
+    var found = passage.indexOf(id);
+    if (found >= 0 && found < at) { at = found; name = id; }
+  });
+  if (!name) return "A step failed, so " + ANSWER_INCOMPLETE.charAt(0).toLowerCase() +
+    ANSWER_INCOMPLETE.slice(1);
+  var args = { sql: passage };
+  Object.keys(TRAVERSALS).forEach(function (id) {
+    if (!args.traversal && passage.indexOf(id) >= 0) args.traversal = id;
+  });
+  return failLine(name, args) + " " + ANSWER_INCOMPLETE;
+}
+
+/* Cut every failure passage out of the answer, leaving one plain sentence in
+ * its place and handing the raw text back for the drawer.
+ *
+ * A passage runs across the blank lines inside it — announcement, blank,
+ * bullets, blank, consequence is one passage and one sentence, not three — and
+ * stops at the first line that is about the mine again.
+ *
+ * It also stops at the next announcement, which is the whole reason this is a
+ * loop and not one regex. Two of the three failures in the live run were
+ * written back to back by two different specialists, and run together they
+ * collapsed to a single sentence naming one tool: the reader would have been
+ * told one step failed when two had. */
+function _cutFailures(lines) {
+  var out = [];
+  var kept = [];
+  var i = 0;
+  while (i < lines.length) {
+    if (!_isFailLine(lines[i])) { out.push(lines[i]); i++; continue; }
+    var passage = [];
+    var j = i;
+    while (j < lines.length) {
+      if (j > i && _startsFailure(lines[j])) break;
+      if (_isFailLine(lines[j])) { passage.push(lines[j]); j++; continue; }
+      if (lines[j].trim() === "") {
+        var k = j;
+        while (k < lines.length && lines[k].trim() === "") k++;
+        if (k < lines.length && _isFailLine(lines[k]) && !_startsFailure(lines[k])) {
+          j = k;
+          continue;
+        }
+      }
+      break;
+    }
+    kept.push(passage.join("\n"));
+    out.push("", _failSentence(passage.join("\n")), "");
+    i = j;
+  }
+  return { lines: out, technical: kept.join("\n\n") };
+}
+
+/* What is left after the passages are gone, said in the estate's own words.
+ *
+ * Order is load-bearing. Brackets go first, so that a bracket holding an error
+ * constant takes the constant with it before anything tries to rewrite inside
+ * it. Tables go next and qualified before bare, so `mining_data.telemetry_stream`
+ * becomes "the sensor readings" rather than two half-rewrites colliding.
+ */
+function _dejargon(line) {
+  var out = line;
+
+  out = out.replace(/\s*\(([^()]*)\)/g, function (whole, inside) {
+    return MACHINE_TOKEN.test(inside) ? "" : whole;
+  });
+
+  out = out.replace(/`?\bmining_data\.([a-z0-9_]+)`?/g, function (hit, id) {
+    var said = TABLES[id];
+    return said ? articleFor(said) + said : id;
+  });
+  out = out.replace(/`([a-z][a-z0-9_]*)`/g, function (hit, id) {
+    var said = TABLES[id];
+    return said ? articleFor(said) + said : hit;
+  });
+
+  out = out.replace(TOOL_AFTER_CALL, function (hit, lead, id) {
+    return lead + plainToolAbility(id);
+  });
+  out = out.replace(TOOL_ANYWHERE, function (hit, id) { return plainTool(id); });
+
+  /* One word, not the whole JARGON map. "traversal" has no other meaning in a
+   * sentence about a mine, so it is safe to swap wherever it lands. "node",
+   * "edge" and "median" do have one, and a blind swap of those produces worse
+   * English than the word it removed — see plainScope above for the same
+   * argument made about the build's own prose. */
+  out = out.replace(/\btraversals?\b/gi, function (hit) {
+    var said = JARGON.traversal + (hit.charAt(hit.length - 1).toLowerCase() === "s" ? "s" : "");
+    return hit.charAt(0) === hit.charAt(0).toUpperCase()
+      ? said.charAt(0).toUpperCase() + said.slice(1)
+      : said;
+  });
+
+  /* The backstop. A code span still holding machine vocabulary after all of
+   * the above is one this file has no mapping for, and printing it would put
+   * the identifier back on the page the rules just cleared. */
+  return out.replace(/`([^`]*)`/g, function (hit, inner) {
+    return MACHINE_TOKEN.test(inner) ? "" : hit;
+  });
+}
+
+/* Bold before code, so that "**`vibration_hz`**" — which the live run wrote
+ * five times — comes out as a bold code span rather than a code span with two
+ * asterisks inside it. */
+function _inline(escaped) {
+  return escaped
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+/* The whole of the markdown this renderer supports: headings, unordered lists,
+ * bold, code spans, paragraphs. No links, no images, no tables — a link in
+ * text a model wrote is an attack surface, and the agents do not emit any of
+ * the three.
+ *
+ * Headings clamp to h3 and h4 whatever the model asked for. The pane sits
+ * under the sidecar's own h2, and an answer that opens an h1 outranks the
+ * page it is printed on for anyone reading by heading order.
+ */
+function _markdown(lines) {
+  var html = [];
+  var para = [];
+  var list = [];
+
+  function flush() {
+    if (para.length) { html.push("<p>" + _inline(para.join(" ")) + "</p>"); para = []; }
+    if (list.length) {
+      html.push("<ul>" + list.map(function (item) {
+        return "<li>" + _inline(item) + "</li>";
+      }).join("") + "</ul>");
+      list = [];
+    }
+  }
+
+  lines.forEach(function (raw) {
+    var line = PLAIN_SHELL.esc(raw).trim();
+    if (!line || /^-{3,}$/.test(line)) { flush(); return; }
+
+    var heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      flush();
+      var level = heading[1].length >= 4 ? "h4" : "h3";
+      html.push("<" + level + ">" + _inline(heading[2]) + "</" + level + ">");
+      return;
+    }
+
+    var item = /^[-*]\s+(.*)$/.exec(line);
+    if (item) {
+      if (para.length) { html.push("<p>" + _inline(para.join(" ")) + "</p>"); para = []; }
+      list.push(item[1]);
+      return;
+    }
+
+    if (list.length) flush();
+    para.push(line);
+  });
+
+  flush();
+  return html.join("");
+}
+
+/* The answer pane's one entry point.
+ *
+ * Returns the body copy as markup and the raw passages it removed as text, so
+ * that the caller can file the second behind the technical drawer. Nothing is
+ * discarded: a step that failed is still on the page, in the reader's words in
+ * the body and in the model's own words one click away.
+ */
+function plainAnswer(rawText) {
+  var text = _unglue(String(rawText || ""));
+  if (!text.trim()) return { html: "", technical: "" };
+  var cut = _cutFailures(text.split("\n"));
+  return {
+    html: _markdown(cut.lines.map(_dejargon)),
+    technical: cut.technical,
+  };
+}
+
 function unmapped(DATA) {
   var tables = {}, tools = {}, traversals = {};
   (DATA.catalog.agents || []).forEach(function (agent) {
@@ -374,6 +683,6 @@ if (typeof module !== "undefined") {
     TOOLS, TOOL_ABILITY, TRAVERSALS, TABLES, JARGON, NODE_TYPES, LINK_LABELS,
     bareTable, plainTable, plainTool, plainToolAbility, plainTraversal, plainJargon,
     plainType, plainLink, plainScope, plainProse,
-    articleFor, tableFromSql, callLine, failLine, unmapped,
+    articleFor, tableFromSql, callLine, failLine, plainAnswer, unmapped,
   };
 }
