@@ -152,6 +152,25 @@ def _mint_identity_token() -> tuple[str, float]:
     return payload["id_token"], float(payload.get("expires_in", 3600))
 
 
+# Small, because the unit that matters is one server-sent event and those are
+# a few hundred bytes. This only bounds a single read; it does not make the
+# relay wait for that many bytes to exist.
+_STREAM_CHUNK_BYTES = 1024
+
+
+def _is_stream(headers) -> bool:
+    """Whether this reply is a live stream rather than a finished document.
+
+    Decided on the content type alone. Every other reply these screens make —
+    HTML, JS, JSON, the fonts — is a complete document that benefits from being
+    relayed whole with its length intact, and only `/api/stream/{id}` declares
+    `text/event-stream`. Widening this to "anything without a Content-Length"
+    would drag in replies that merely arrived chunked and cost them a length
+    they could have kept.
+    """
+    return "text/event-stream" in (headers.get("Content-Type") or "").lower()
+
+
 def make_handler(target: str, tokens: _TokenCache) -> type[BaseHTTPRequestHandler]:
     """Build the request handler bound to one upstream service."""
 
@@ -187,7 +206,10 @@ def make_handler(target: str, tokens: _TokenCache) -> type[BaseHTTPRequestHandle
                 # ceiling; a shorter one here would cut off a working call and
                 # report it as a proxy failure.
                 with urllib.request.urlopen(request) as response:
-                    self._relay(response.status, response.headers, response.read())
+                    if _is_stream(response.headers):
+                        self._relay_stream(response.status, response.headers, response)
+                    else:
+                        self._relay(response.status, response.headers, response.read())
             except urllib.error.HTTPError as error:
                 # A 403 here is the interesting one: it means the identity is
                 # authenticated but not an invoker on this service, which is a
@@ -199,6 +221,46 @@ def make_handler(target: str, tokens: _TokenCache) -> type[BaseHTTPRequestHandle
                     {"Content-Type": "text/plain; charset=utf-8"},
                     f"proxy could not reach {target}: {error.reason}".encode(),
                 )
+
+        def _relay_stream(self, status: int, headers, response) -> None:
+            """Pass an event stream through as it arrives, not once it ends.
+
+            `/api/stream/{id}` reports each step while the agent is still
+            working, and that running commentary is the feature — a reader who
+            asked a question that takes a hundred seconds is told what is
+            happening for those hundred seconds. Collecting the body first
+            would deliver every step at the end, after the wait it existed to
+            explain.
+
+            The body is therefore delimited by the connection closing rather
+            than by a length: the length is unknowable until the agent has
+            finished, which is the very thing not being waited for. That is why
+            `Connection: close` goes out with it, and why each write is
+            flushed — anything still sitting in a buffer has not been streamed.
+            """
+            self.send_response(status)
+            for key, value in headers.items():
+                if key.lower() not in _HOP_BY_HOP:
+                    self.send_header(key, value)
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.close_connection = True
+            while True:
+                # read1, not read: read blocks until it can fill the buffer,
+                # which for a slow stream means holding events back until
+                # enough of them exist to fill it.
+                chunk = response.read1(_STREAM_CHUNK_BYTES)
+                if not chunk:
+                    break
+                try:
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    # The reader navigated away or asked something else. The
+                    # upstream call is already billed and cannot be recalled;
+                    # what matters is that this thread stops rather than
+                    # writing into a closed socket for the rest of the run.
+                    break
 
         def _relay(self, status: int, headers, body: bytes) -> None:
             self.send_response(status)
