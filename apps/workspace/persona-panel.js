@@ -212,14 +212,22 @@ function _blockSignoffs(persona, DATA) {
   );
 }
 
+/* What this role is trying to get done, open on the page.
+ *
+ * This was a closed <details> wearing the same class as the technical drawer at
+ * the foot of the screen, which put the reader's own work behind the affordance
+ * this suite uses for machinery — and gave the role page two things to open
+ * where the instruction asks for one. It is not machinery. It is the list this
+ * person came to the page holding, and it reads as a section like the four
+ * above it. */
 function _blockJobs(persona) {
   return (
-    '<details class="tbl pblock-jobs"><summary>What you\'re trying to get done</summary>' +
+    '<section class="pblock"><h2>What you\'re trying to get done</h2>' +
     '<ul class="jobs">' +
     (persona.jobs_to_be_done || []).map(function (job) {
       return "<li>" + esc(job) + "</li>";
     }).join("") +
-    "</ul></details>"
+    "</ul></section>"
   );
 }
 

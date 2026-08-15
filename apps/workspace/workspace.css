@@ -333,8 +333,9 @@ table.audit td.t { white-space: nowrap; }
 .ask:hover { border-color: var(--accent); color: var(--accent); }
 .ask:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--accent); }
 
-.pblock-jobs { margin-bottom: 26px; }
-.jobs { margin: 0; padding: 0 12px 12px 30px; font-size: 13px; }
+/* An ordinary section on the page now, not a collapsed disclosure, so the
+   indent is a list's own hanging indent rather than a box's inner padding. */
+.jobs { margin: 0; padding: 0 0 0 18px; font-size: 13px; }
 .jobs li { padding: 4px 0; max-width: 80ch; }
 
 /* --warn is not a token in this system; --warning is. Naming a variable that
