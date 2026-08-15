@@ -370,7 +370,7 @@ def test_the_screen_list_holds_every_script_a_screen_loads():
 
 
 @functools.lru_cache(maxsize=None)
-def rendered(screen):
+def rendered(screen, search=""):
     """What the screen actually draws, by running it.
 
     Counting the string ``technicalDrawer(`` in source text, as this file used
@@ -380,18 +380,62 @@ def rendered(screen):
     occurrence in a file and ten on the page. There is no build step here, so
     the screen is run — its own script tags, in its own order — and the markup
     it composed is what gets counted.
+
+    ``search`` is the query string the screen is opened with. Two of these
+    screens are configuration rather than content — the same code over a
+    different row of the catalogue — so rendering only the default checked one
+    of seven roles and one of twelve teams and said nothing about the other
+    seventeen. ``?s=S12`` files fifteen table schemas inside its drawer where
+    the default files five.
     """
     import subprocess
 
     result = subprocess.run(
-        ["node", str(REPO / "tests" / "js" / "screen-render.js"), screen],
+        ["node", str(REPO / "tests" / "js" / "screen-render.js"), screen, search],
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, (
-        f"{screen} did not render:\n{result.stderr[-2000:]}"
+        f"{screen}{search} did not render:\n{result.stderr[-2000:]}"
     )
     return result.stdout
+
+
+@functools.lru_cache(maxsize=None)
+def bundle():
+    """window.MINING_DATA, out of the browser file the screens actually load."""
+    import json
+
+    text = (APPS / "shared" / "data" / "bundle.js").read_text()
+    return json.loads(text[text.index("{") : text.rindex("}") + 1])
+
+
+@functools.lru_cache(maxsize=None)
+def parameterisations(screen):
+    """Every query string a screen has to be checked at, read not retyped.
+
+    The roles come from the personas the bundle declares and the teams from the
+    agents filed as coordinators, which is exactly how persona.js and swarm.js
+    decide what is a valid parameter. A role or a team added to the catalogue
+    therefore joins these gates on its own; a list typed here would not.
+    """
+    if screen.endswith("persona.html"):
+        return tuple(f"?p={code}" for code in sorted(bundle()["personas"]["personas"]))
+    if screen.endswith("swarm.html"):
+        return tuple(
+            f"?s={a['agent_id']}"
+            for a in sorted(bundle()["catalog"]["agents"], key=lambda a: a["agent_id"])
+            if a.get("swarm_role") == "coordinator"
+        )
+    return ("",)
+
+
+def renderings(screen):
+    """(what to call it in a failure, what it drew) for every parameterisation."""
+    return [
+        (screen + search, rendered(screen, search))
+        for search in parameterisations(screen)
+    ]
 
 
 def disclosures(html):
@@ -422,18 +466,19 @@ def disclosures(html):
 def test_every_screen_ends_with_exactly_one_technical_drawer():
     problems = []
     for screen in SCREENS:
-        found = disclosures(rendered(screen))
-        if len(found) != 1:
-            listed = "\n".join(f"      {tag} — {label!r}" for tag, label in found)
-            problems.append(
-                f"{screen} renders {len(found)} collapsibles; it must render one:\n{listed}"
-            )
-            continue
-        tag, label = found[0]
-        if "drawer" not in tag or not label.startswith("Technical detail"):
-            problems.append(
-                f"{screen}: its one collapsible is not the technical drawer: {tag} — {label!r}"
-            )
+        for opened, html in renderings(screen):
+            found = disclosures(html)
+            if len(found) != 1:
+                listed = "\n".join(f"      {tag} — {label!r}" for tag, label in found)
+                problems.append(
+                    f"{opened} renders {len(found)} collapsibles; it must render one:\n{listed}"
+                )
+                continue
+            tag, label = found[0]
+            if "drawer" not in tag or not label.startswith("Technical detail"):
+                problems.append(
+                    f"{opened}: its one collapsible is not the technical drawer: {tag} — {label!r}"
+                )
     assert not problems, "collapsibles a reader has to open:\n" + "\n".join(problems)
 
 
@@ -594,14 +639,15 @@ def test_no_machine_vocabulary_survives_outside_the_drawer():
     """
     problems = []
     for screen in SCREENS:
-        for run in body_runs(visible_html(rendered(screen))):
-            found, rest = machine_tokens(run)
-            if not found or not reads_as_prose(rest):
-                continue
-            said = ", ".join(sorted({f"{text} ({kind})" for kind, text in found}))
-            problems.append(
-                f"{screen}: {said}\n      in body copy: {run.strip()[:160]!r}"
-            )
+        for opened, html in renderings(screen):
+            for run in body_runs(visible_html(html)):
+                found, rest = machine_tokens(run)
+                if not found or not reads_as_prose(rest):
+                    continue
+                said = ", ".join(sorted({f"{text} ({kind})" for kind, text in found}))
+                problems.append(
+                    f"{opened}: {said}\n      in body copy: {run.strip()[:160]!r}"
+                )
     assert not problems, (
         "the machinery's own vocabulary in body copy:\n" + "\n".join(problems)
     )
@@ -781,15 +827,16 @@ def test_no_heading_counts_the_estate_for_itself():
     """
     problems = []
     for screen in SCREENS:
-        html = visible_html(rendered(screen))
-        for heading in re.findall(r"<h[12][^>]*>(.*?)</h[12]>", html, re.S):
-            words = re.findall(r"[a-z]+", heading.lower())
-            for word in words:
-                if word in COUNT_WORDS:
-                    problems.append(f"{screen}: <h> counts the estate — {heading.strip()!r}")
-                    break
-            if re.search(r"\d", heading):
-                problems.append(f"{screen}: <h> carries a digit — {heading.strip()!r}")
+        for opened, html in renderings(screen):
+            html = visible_html(html)
+            for heading in re.findall(r"<h[12][^>]*>(.*?)</h[12]>", html, re.S):
+                words = re.findall(r"[a-z]+", heading.lower())
+                for word in words:
+                    if word in COUNT_WORDS:
+                        problems.append(f"{opened}: <h> counts the estate — {heading.strip()!r}")
+                        break
+                if re.search(r"\d", heading):
+                    problems.append(f"{opened}: <h> carries a digit — {heading.strip()!r}")
     assert not problems, "counts typed into headings:\n" + "\n".join(problems)
 
 

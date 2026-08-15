@@ -9,9 +9,17 @@ it replaced.
 """
 import pathlib
 import re
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 WORKSPACE = REPO / "apps" / "workspace"
+
+# Borrowed rather than copied. Running a screen and counting the collapsibles it
+# drew is one mechanism, and a second copy of it here would be a copy free to
+# drift — this file would keep passing while the real gate moved. The explicit
+# path insert is so this works when pytest is pointed at this file alone.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from test_screen_copy import bundle, disclosures, rendered  # noqa: E402
 
 
 def test_the_persona_page_and_its_two_scripts_exist():
@@ -146,8 +154,29 @@ def test_the_runtime_check_is_the_one_the_other_screens_use():
 
 
 def test_the_page_ends_with_one_technical_drawer():
-    panel = (WORKSPACE / "persona-panel.js").read_text() + (WORKSPACE / "persona.js").read_text()
-    assert panel.count("technicalDrawer(") == 1
+    """Counted on the rendered page, for every role, not in the source text.
+
+    This counted the string ``technicalDrawer(`` in two files, which cannot fail
+    on the thing it exists to prevent: a collapsible written as a literal
+    ``'<details>'`` is invisible to it, and one such literal written inside a
+    loop is a single occurrence in a file and one per row on the screen. It also
+    only ever described the default role, and this screen is configuration — the
+    same code over a different row of the catalogue — so seven of the eight roles
+    were never described at all.
+    """
+    problems = []
+    for code in sorted(bundle()["personas"]["personas"]):
+        found = disclosures(rendered("apps/workspace/persona.html", f"?p={code}"))
+        if len(found) != 1:
+            listed = "\n".join(f"      {tag} — {label!r}" for tag, label in found)
+            problems.append(
+                f"?p={code} renders {len(found)} collapsibles; it must render one:\n{listed}"
+            )
+            continue
+        tag, label = found[0]
+        if "drawer" not in tag or not label.startswith("Technical detail"):
+            problems.append(f"?p={code}: its one collapsible is not the drawer: {tag} — {label!r}")
+    assert not problems, "collapsibles on the role screen:\n" + "\n".join(problems)
 
 
 def test_no_measurement_is_typed_into_the_page():

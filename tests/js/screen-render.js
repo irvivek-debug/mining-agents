@@ -66,8 +66,18 @@ const chainable = () =>
 
 const VENDOR_STUBS = { "cytoscape.min.js": () => chainable() };
 
-/** Load a screen, let its promises settle, and hand back everything it drew. */
-function renderScreen(screen) {
+/** Load a screen, let its promises settle, and hand back everything it drew.
+ *
+ *  `search` is the query string the screen is opened with, and it defaults to
+ *  none so every existing caller is unaffected. It matters because these
+ *  screens are configuration, not content: `persona.html?p=P7` and
+ *  `swarm.html?s=S12` run the same code over a different row of the catalogue
+ *  and draw substantially different pages — one team files two table schemas
+ *  inside its drawer and another files fourteen. A gate that only ever renders
+ *  the default has checked one of seven roles and one of twelve teams, and has
+ *  said nothing at all about the other seventeen.
+ */
+function renderScreen(screen, search = "") {
   const page = path.join(ROOT, screen);
   const pageHtml = fs.readFileSync(page, "utf8");
   const dir = path.dirname(page);
@@ -105,7 +115,11 @@ function renderScreen(screen) {
       addListener: noop,
     }),
     document: dom.document,
-    location: { search: "", href: "", hash: "" },
+    /* href carries the search too: a screen that reads its parameter out of
+       the full address rather than out of location.search would otherwise see
+       a default while location.search says otherwise, and the two would
+       disagree inside one render. */
+    location: { search, href: `http://localhost/${screen}${search}`, hash: "" },
     history: { pushState: noop, replaceState: noop },
     getComputedStyle: () => ({ getPropertyValue: () => "" }),
     addEventListener: noop,
@@ -147,11 +161,13 @@ function renderScreen(screen) {
 async function main() {
   const screen = process.argv[2];
   if (!screen) {
-    console.error("usage: node tests/js/screen-render.js apps/<screen>.html");
+    console.error(
+      "usage: node tests/js/screen-render.js apps/<screen>.html [?p=P7]"
+    );
     process.exitCode = 2;
     return;
   }
-  const rendered = renderScreen(screen);
+  const rendered = renderScreen(screen, process.argv[3] || "");
   // The connection blocks resolve through two chained thens; the drawer's
   // placeholder through a third. Draining lets the settled page be printed.
   for (let i = 0; i < 5; i += 1) await new Promise((r) => setImmediate(r));
