@@ -42,20 +42,55 @@ def test_the_uninstrumented_drivers_are_declared_not_omitted():
 
 @pytest.mark.integration
 def test_the_liberation_diagnostic_reproduces_the_design_finding():
+    """The magnitudes, not just the signs.
+
+    Checking only that tight > mid > wide would pass on a query that dropped
+    100 days or separated the bands by 0.01 pp — neither of which reproduces
+    anything. The generator is seeded and deterministic, so the day counts and
+    a floor under the separation are safe to pin, and they are what makes this
+    a reproduction rather than a smoke test.
+    """
     driver = next(d for d in load_pack(PACK).drivers if d.id == "liberation")
     rows, _ = run_query(
         (ROOT / "method" / driver.sql).read_text(), driver.params, BOTH
     )
     bands = {r["band"]: r for r in rows}
     assert set(bands) == {"tight", "mid", "wide"}
-    # Recovery falls monotonically as the gap opens.
+    # Every day is banded and none is counted twice: the campaign schedule
+    # holds one setting per day, so the three counts partition the record.
+    assert [bands[b]["days"] for b in ("tight", "mid", "wide")] == [23, 116, 28]
+    assert sum(b["days"] for b in bands.values()) == 167
+    # Recovery falls monotonically as the gap opens, and by an operationally
+    # meaningful margin rather than a rounding artefact.
     assert bands["tight"]["recovery_pct"] > bands["mid"]["recovery_pct"]
     assert bands["mid"]["recovery_pct"] > bands["wide"]["recovery_pct"]
+    separation = bands["tight"]["recovery_pct"] - bands["wide"]["recovery_pct"]
+    assert separation > 3.0, separation
     # Throughput does not improve when the gap opens — this is what kills the
     # "but you will lose tonnes" objection, so it is a gate.
     assert bands["wide"]["throughput_tph"] <= bands["tight"]["throughput_tph"]
-    # Torque stays under the documented 4500 Nm critical alarm in every band.
-    assert max(b["torque_max_nm"] for b in bands.values()) < 4500
+
+
+@pytest.mark.integration
+def test_the_torque_column_is_named_for_the_daily_mean_it_reports():
+    """The pack must not let a daily-mean maximum pass as an instantaneous one.
+
+    crusher_states is a daily roll-up of the 2-hourly telemetry, so a MAX over
+    it bounds average duty, not peak duty. An earlier version of this test
+    asserted the value sat under the documented 4,500 Nm critical alarm, which
+    reads as headroom against that alarm — a claim this table cannot support,
+    and one that would silently become false on unrelated data changes. What
+    belongs in a pack test is that the column and the guard say what the
+    number actually is.
+    """
+    driver = next(d for d in load_pack(PACK).drivers if d.id == "liberation")
+    rows, _ = run_query(
+        (ROOT / "method" / driver.sql).read_text(), driver.params, BOTH
+    )
+    assert "daily_mean_torque_max_nm" in rows[0]
+    assert "torque_max_nm" not in rows[0]
+    assert "DAILY MEAN" in driver.guard
+    assert "instantaneous" in driver.guard
 
 
 @pytest.mark.integration
@@ -66,7 +101,21 @@ def test_the_setting_effect_survives_the_feed_grade_control():
     )
     assert len(rows) == 3
     for row in rows:
+        # An empty side makes AVG return NULL, and `None > float` raises
+        # TypeError — destroying the assertion message that explains what
+        # actually failed. Check the strata are populated first.
+        assert row["tight_days"] and row["wide_days"], (
+            f"tercile {row['feed_tercile']} has no comparison to make: "
+            f"{row['tight_days']} tight days, {row['wide_days']} wide days"
+        )
         assert row["recovery_tight"] > row["recovery_wide"], (
             f"tercile {row['feed_tercile']} does not hold; the finding would "
             "be a feed-grade artefact"
+        )
+        # The residual feed imbalance is what licenses the control. If tight
+        # and wide days inside a stratum still differ materially in feed, the
+        # stratum has not controlled for feed and the gap is not attributable.
+        assert abs(row["feed_tight"] - row["feed_wide"]) < 0.05, (
+            f"tercile {row['feed_tercile']} still carries a feed gap of "
+            f"{row['feed_tight'] - row['feed_wide']:+.3f}"
         )

@@ -16,8 +16,11 @@ drivers:
       wide_min: 123
     doc_query: crusher gap size aperture torque limit feed rate
     guard: >-
-      Confirm throughput neutrality across bands and torque headroom under the
-      documented critical alarm before recommending any setting change.
+      Confirm throughput neutrality across bands before recommending any
+      setting change. The torque column is a maximum over DAILY MEAN torque,
+      so it bounds the average duty only; it cannot evidence headroom under an
+      instantaneous critical alarm. Say so, and require the 2-hourly telemetry
+      to be checked against the documented alarm before the change is made.
 
   - id: feed_variability
     question: Does feed grade explain the recovery gap instead of the setting?
@@ -32,6 +35,8 @@ drivers:
     guard: >-
       The setting effect must hold within every feed-grade stratum. If it does
       not, the finding is a feed-grade artefact and must not be recommended.
+      Cite the residual feed means alongside the recovery gap: a stratum whose
+      tight and wide days still differ in feed has not controlled for feed.
 
   - id: bypass
     question: Are bypass events costing recovery?
