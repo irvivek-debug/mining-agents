@@ -36,9 +36,35 @@ LIMIT @n
 """
 
 
-def test_the_dataset_exposes_eight_models():
-    models = list_models()
-    assert len(models) == 8, f"expected 8 BQML models, found {len(models)}: {models}"
+#: The eight models an agent may run ML.PREDICT against.
+PREDICTIVE_MODELS = [
+    "asset_clustering_model",
+    "downtime_regression_model",
+    "inventory_impact_model",
+    "inventory_impact_model_crusher",
+    "inventory_impact_model_mill",
+    "inventory_impact_model_pump",
+    "safety_model",
+    "telemetry_alarm_risk_model",
+]
+
+#: A REMOTE model over Vertex text-embedding-005, added to embed the PDF
+#: corpus for doc_search. It lives in the same dataset as the eight, so
+#: list_models() returns it, but ML.PREDICT is not what it is for.
+EMBEDDING_MODEL = "text_embedding_model"
+
+
+def test_the_dataset_exposes_eight_predictive_models_and_one_embedding_model():
+    """A census, not an allowlist.
+
+    list_models() reports what is deployed; it does not decide what any agent
+    may call. The count is pinned so a model appearing in the dataset without
+    a decision behind it is noticed here.
+    """
+    models = sorted(list_models())
+    assert models == sorted([*PREDICTIVE_MODELS, EMBEDDING_MODEL]), (
+        f"model census mismatch: {models}"
+    )
 
 
 def test_telemetry_alarm_risk_model_is_present():
@@ -46,19 +72,21 @@ def test_telemetry_alarm_risk_model_is_present():
     assert "telemetry_alarm_risk_model" in list_models()
 
 
-def test_allowlist_contains_all_eight_known_models():
-    """Pin the exact allowlist so a missing or renamed model is caught immediately."""
-    models = sorted(list_models())
-    assert models == sorted([
-        "asset_clustering_model",
-        "downtime_regression_model",
-        "inventory_impact_model",
-        "inventory_impact_model_crusher",
-        "inventory_impact_model_mill",
-        "inventory_impact_model_pump",
-        "safety_model",
-        "telemetry_alarm_risk_model",
-    ]), f"allowlist mismatch: {models}"
+def test_the_embedding_model_cannot_be_predicted_with():
+    """Deployment is not permission.
+
+    The embedding model sits in the same dataset as the eight predictive
+    models, so it shows up in any census of the dataset. What stops an agent
+    reaching it is that bqml_predict validates against the allowlist it was
+    built with, and no agent is built with this one. That is the property
+    worth testing, because the census alone would not catch it being handed
+    out — and ML.PREDICT over a remote embedding model is not a prediction,
+    it is a mistake with a number attached.
+    """
+    predict = make_bqml_predict(PREDICTIVE_MODELS)
+    env = predict(EMBEDDING_MODEL, "SELECT 1 AS x", {})
+    assert env["success"] is False
+    assert env["error"]["code"] == "MODEL_NOT_PERMITTED"
 
 
 def test_predict_returns_rows_inside_the_envelope():

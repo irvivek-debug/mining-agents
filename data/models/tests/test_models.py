@@ -97,6 +97,13 @@ TRAIN_END = "2026-05-19 22:00:00"
 #: reads `telemetry_stream`.
 TELEMETRY_MODEL = "telemetry_alarm_risk_model"
 
+#: The document-corpus embedding model. Not a predictive model at all: it is a
+#: REMOTE model over Vertex text-embedding-005, used once at build time to
+#: embed the PDF corpus and at query time by `doc_search`. It is listed here
+#: only so the census below stays closed; it carries no training query, no
+#: features, and no retrain baseline, and the retrain machinery must skip it.
+EMBEDDING_MODEL = "text_embedding_model"
+
 #: Its features.  All six are backward-looking functions of `telemetry_stream`.
 #: The set is asserted exactly, because the whole value of this model rests on
 #: what is NOT in it: no asset_id, no metric_name, no timestamp, no ramp/window
@@ -291,14 +298,18 @@ def test_model_types_unchanged(deployed_models):
     """The seven keep their types, and nothing unaccounted-for is deployed.
 
     Not a plain equality against the seven any more -- Task 10b adds
-    `telemetry_alarm_risk_model` -- but the allowlist is closed, so a model that
-    appears without a decision behind it still fails here.
+    `telemetry_alarm_risk_model` and the corpus work adds `text_embedding_model`
+    -- but the census stays closed, so a model that appears without a decision
+    behind it still fails here. Each addition is named individually and on
+    purpose; widening this to "anything else is fine" would retire the only
+    check that notices a model nobody decided to deploy.
     """
     assert {k: v for k, v in deployed_models.items() if k in EXPECTED_MODEL_TYPES} \
         == EXPECTED_MODEL_TYPES
+    accounted = {TELEMETRY_MODEL, EMBEDDING_MODEL}
     extra = set(deployed_models) - set(EXPECTED_MODEL_TYPES)
-    assert extra == {TELEMETRY_MODEL}, (
-        f"unexpected models in the dataset: {sorted(extra - {TELEMETRY_MODEL})}"
+    assert extra == accounted, (
+        f"unexpected models in the dataset: {sorted(extra - accounted)}"
     )
 
 
