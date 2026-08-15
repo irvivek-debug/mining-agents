@@ -63,3 +63,31 @@ the collapsed **Technical detail** drawer at the foot of the answer.
 
 That is the intended behaviour: the gap is reported honestly, in the reader's
 words, and the engineer's evidence is one click away rather than deleted.
+
+## Known residual — bare column and parameter names in answer prose
+
+One class of vocabulary still reaches body copy. Outside a failure passage, an
+agent's own explanation can carry a lower-case identifier in a code span:
+
+> "…because the `blast_radius` connection trace requires a specific
+> `asset_id` parameter."
+
+`plain.js` clears code spans holding machine vocabulary, but that rule keys on
+`MACHINE_TOKEN`, whose snake_case shape is upper case only — it was written for
+error constants like `INVALID_ARGUMENT`. Lower-case identifiers do not match.
+
+**Deleting them was tried and is wrong.** In the live fixture the identifier is
+often the subject of its own sentence:
+
+```
+* **`vibration_hz`**: Baseline average is 5.60 Hz
+```
+
+Removing it leaves *": Baseline average is 5.60 Hz"* — a sentence with no
+subject, which is worse copy than the identifier it removed. Mapping is not
+available either: `TABLES` names tables, and these are columns and parameters,
+so a fix means a column vocabulary that does not exist yet.
+
+Recorded rather than guessed at. The choice — build a column vocabulary, or
+accept these names in body copy — is a product decision, and the frequency is
+low: two occurrences in one sentence of an 8,239-character answer.
