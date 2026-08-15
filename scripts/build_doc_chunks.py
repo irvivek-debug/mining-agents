@@ -2,7 +2,8 @@
 
 The corpus is read from GCS directly. mining_data.unstructured_docs_metadata
 is NOT used: every file_path it carries resolves to nothing, and its
-chunk_count sums to 3,392 against a real corpus of roughly 38 chunks.
+chunk_count sums to 3,392 against the 48 chunks this script actually extracts
+from the 40 objects in the bucket.
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ import io
 
 from google.cloud import bigquery, storage
 from pypdf import PdfReader
+
+from mining_agents.config import settings
 
 BUCKET = "mining-knowledge-base"
 TABLE = "mining_data.doc_chunks"
@@ -61,7 +64,11 @@ def main() -> None:
     data = rows()
     if not data:
         raise SystemExit("no chunks extracted; refusing to write an empty table")
-    client = bigquery.Client(location="US")
+    # Pinned rather than inferred. An ambient default project would write this
+    # table somewhere else and say nothing, which is the whole failure mode
+    # unstructured_docs_metadata already demonstrates.
+    s = settings()
+    client = bigquery.Client(project=s.project_id, location=s.location)
     job = client.load_table_from_json(
         data,
         TABLE,

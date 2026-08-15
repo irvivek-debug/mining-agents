@@ -18,3 +18,25 @@ def test_long_text_splits_with_overlap():
 def test_empty_text_yields_no_chunks():
     assert chunk_text("") == []
     assert chunk_text("   ") == []
+
+
+def test_no_character_is_dropped_at_any_length():
+    """The windowing loses nothing — the property the other tests only imply.
+
+    A review of this file argued the range stop drops the tail just past one
+    window, reading range(0, 701, 700) as [0]. It is [0, 700], so the tail is
+    covered. The claim was wrong but the gap in the tests was real: nothing
+    here exercised a length between one window and two. This does, and it
+    checks the property directly rather than a chunk count.
+
+    Chunks overlap by `overlap`, so concatenating the first chunk with each
+    later chunk minus its leading overlap reconstructs the input exactly.
+    """
+    for length in list(range(1, 1700)) + [2000, 2400, 3500]:
+        body = "x" * length
+        chunks = chunk_text(body, size=800, overlap=100)
+        rebuilt = chunks[0] + "".join(c[100:] for c in chunks[1:])
+        assert len(rebuilt) == length, (
+            f"length {length} lost {length - len(rebuilt)} characters"
+        )
+        assert all(len(c) <= 800 for c in chunks), length
