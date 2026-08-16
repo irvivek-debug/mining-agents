@@ -333,8 +333,13 @@ S06 = SwarmDef(
     specialists=(
         _a("S06-SP1", "Assay-to-Block Variance Analyst", "S06", "specialist",
            apqc="2.0.1 / 4.2.2", persona="P5", branch="geology",
-           tables=["mining_data.drill_assay_logs", "mining_data.geological_block_models"],
-           tools=["bq_query"]),
+           tables=[
+               "mining_data.drill_assay_logs",
+               "mining_data.geological_block_models",
+               "mining_data.drill_holes",
+               "mining_data.metallurgical_recovery",
+           ],
+           tools=["bq_query", "method_lookup", "run_diagnostic", "doc_search"]),
         _a("S06-SP2", "Delivered Feed Grade Tracer", "S06", "specialist",
            apqc="2.0.1 / 4.2.2", persona="P5", branch="geology",
            tables=["mining_data.drill_assay_logs", "mining_data.metallurgical_recovery"],

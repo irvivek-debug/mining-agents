@@ -18,9 +18,12 @@ from mining_agents.method.pack import load_pack
 
 PACK_DIR = Path(__file__).resolve().parents[2] / "method"
 
-#: Only P6 has a pack. The others are sequenced in the spec, and a persona
-#: without one must fail loudly rather than return an empty tree.
-PACKS = {"P6": "p6-metallurgist.yaml"}
+#: Personas whose method is encoded. A persona without a pack must fail loudly
+#: rather than return an empty tree.
+PACKS = {
+    "P5": "p5-geologist.yaml",
+    "P6": "p6-metallurgist.yaml",
+}
 
 
 def make_method_lookup(persona: str):
