@@ -49,7 +49,21 @@ def test_the_agent_is_told_to_retrieve_the_constraint_before_recommending():
     # optional context rather than a condition the recommendation must satisfy.
     said = build_instruction(BY_ID["S07-SP3"])
     assert "doc_search" in said
-    assert "before" in said.lower()
+    # The word "before" proves nothing about order — it is satisfied by a
+    # clause that says "recommend, then retrieve the constraint before the
+    # change is made", which is the reversal this test exists to catch. Both
+    # the sentence and the positions are asserted: the literal pins the wording
+    # a reader can check, and the index comparison survives a rewording that
+    # keeps the order.
+    assert "with doc_search BEFORE you recommend" in said
+    # Ordering is compared INSIDE step 5, not across the whole instruction:
+    # step 4 already says "a recommendation that cannot answer this", so a
+    # whole-string comparison would be about that sentence instead of this one.
+    step5 = next(line for line in said.split("\n") if "doc_search" in line)
+    assert step5.index("doc_search") < step5.index("recommend"), (
+        f"the guard step recommends before it retrieves the constraint, which "
+        f"makes the constraint optional context: {step5}"
+    )
 
 
 def test_the_agent_is_told_to_read_the_guard_the_diagnostic_returns():
@@ -82,11 +96,16 @@ def test_the_instruction_distinguishes_run_diagnostic_from_bq_query():
     assert "run_diagnostic" in said
     # The clause must positively distinguish the two uses.
     assert "bq_query" in said
-    # And it must forbid using bq_query as a substitute for the pack's diagnostics.
-    said_lower = said.lower()
-    # The word "never" (or an equivalent) must appear near the bq_query / driver
-    # distinction — this is the clause that carries the prohibition.
-    assert "never" in said_lower
+    # And it must forbid using bq_query as a substitute for the pack's
+    # diagnostics. Searching for the bare word "never" cannot show that: every
+    # agent in the catalogue is told "NEVER supply a value a tool did not
+    # return", and every agent with bq_query is told "Never interpolate a value
+    # into SQL", so the assertion passed for agents that have no pack at all
+    # and would keep passing with this entire clause deleted. The prohibition
+    # is one sentence; assert that sentence.
+    assert "It must never substitute for run_diagnostic on any driver in the tree." in said
+    assert "Never use bq_query to re-derive or check a driver that the pack " \
+        "already computes" in said.replace("\n", " ")
 
 
 def test_an_agent_without_the_tool_gets_no_method_block():
@@ -97,12 +116,16 @@ def test_an_agent_without_the_tool_gets_no_method_block():
     assert "METHOD" not in said
 
 
-def test_both_new_tools_bind():
-    # If any new tool name is missing from builders, bind_tools raises.
-    # This catches "I added the catalog entry but forgot the builder" — which
-    # leaves the agent with an empty tool list and silent diagnostic failures.
-    bound = bind_tools(BY_ID["S07-SP3"])
-    assert len(bound) == len(BY_ID["S07-SP3"].tools)
+def test_every_bound_tool_is_the_tool_that_was_asked_for():
+    # This was a length comparison, which cannot fail: bind_tools appends one
+    # entry per name and raises on a name it does not know, so the two lengths
+    # are equal by construction. What can fail is a builder wired to the wrong
+    # callable — "doc_search": lambda: ontology_lookup binds four tools for four
+    # names and gives the agent one it was never granted. Comparing the bound
+    # names to the declared ones, in order, is the assertion that catches it.
+    agent = BY_ID["S07-SP3"]
+    bound = bind_tools(agent)
+    assert [t.__name__ for t in bound] == list(agent.tools)
 
 
 def test_all_three_new_tool_names_resolve():
