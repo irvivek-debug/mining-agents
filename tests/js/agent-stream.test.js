@@ -8,6 +8,82 @@ test("a text part becomes answer text, not a step", () => {
   assert.deepEqual(steps, [{ kind: "text", text: "Hello." }]);
 });
 
+/* The swarm authorship rules.
+ *
+ * A Pattern A swarm streams five authors over one connection: three
+ * specialists, a critic, then the coordinator. Measured on S07 against the
+ * governing P6 question, they wrote 4,898 / 7,195 / 5,982 / 3,421 characters
+ * of prose before the coordinator wrote a word. Rendered without regard to
+ * author, all of it lands in the answer pane as one document, in finish order
+ * — so the reader meets two specialists improvising off tables the critic then
+ * rejects as out of scope, and meets them BEFORE the answer.
+ *
+ * The swarm's own design says which one is the answer: the coordinator
+ * concludes last, after the critic has audited the rest. Everything before it
+ * is working material.
+ */
+test("only the agent that was asked writes the answer", () => {
+  const steps = S.eventToSteps(
+    { author: "s07", content: { parts: [{ text: "Here is the answer." }] } },
+    {},
+    { agentId: "S07" }
+  );
+  assert.deepEqual(steps, [{ kind: "text", text: "Here is the answer." }]);
+});
+
+test("a delegate's prose becomes an aside attributed to it, not answer text", () => {
+  // Not dropped. The critic's audit is the most load-bearing prose in the run —
+  // it is what caught SP2 querying a table outside its scope — and deleting it
+  // would leave the reader unable to see why a specialist's numbers vanished.
+  // It is demoted from the answer, and named, so the reader knows whose voice
+  // they are reading.
+  const steps = S.eventToSteps(
+    { author: "s07_critic", content: { parts: [{ text: "SP2 is out of scope." }] } },
+    {},
+    { agentId: "S07" }
+  );
+  assert.deepEqual(steps, [
+    { kind: "aside", author: "s07_critic", text: "SP2 is out of scope." },
+  ]);
+});
+
+test("author matching survives the id-to-node-name transform", () => {
+  // ADK names every node `agent_id.lower().replace("-", "_")`. A swarm's
+  // coordinator carries the swarm's own id, so S07's coordinator is "s07" —
+  // but a hyphenated id would arrive underscored, and comparing the raw id
+  // would classify the answer itself as a delegate.
+  const steps = S.eventToSteps(
+    { author: "d07_a", content: { parts: [{ text: "Answer." }] } },
+    {},
+    { agentId: "D07-A" }
+  );
+  assert.equal(steps[0].kind, "text");
+});
+
+test("without an agentId nothing is demoted", () => {
+  // The rule needs to know who was asked. Absent that, treating the first
+  // author as a delegate would silently blank the answer — so the safe
+  // default is the old behaviour: all text is answer text.
+  const steps = S.eventToSteps(
+    { author: "s07_sp1", content: { parts: [{ text: "Working." }] } },
+    {}
+  );
+  assert.deepEqual(steps, [{ kind: "text", text: "Working." }]);
+});
+
+test("a delegate's tool calls stay in the activity log as ordinary steps", () => {
+  // The demotion is about prose. A specialist reading the sensor readings is
+  // the swarm visibly working, and that is exactly what the activity log is
+  // for — hiding it would make the parallel phase look like a hang.
+  const steps = S.eventToSteps(
+    { author: "s07_sp1", content: { parts: [{ functionCall: { id: "1",
+      name: "bq_query", args: { sql: "SELECT 1 FROM `mining_data.assets`" } } }] } },
+    {},
+    { agentId: "S07" }
+  );
+  assert.deepEqual(steps, [{ kind: "step", text: "Reading the machine register" }]);
+});
+
 test("a function call becomes one named step", () => {
   const steps = S.eventToSteps({
     content: { parts: [{ functionCall: { id: "1", name: "bq_query",

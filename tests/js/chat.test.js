@@ -442,3 +442,61 @@ test("an answer with nothing to hide carries no drawer", () => {
   assert.ok(!answer.innerHTML.includes("<details"),
     "an empty drawer is a control that opens on nothing");
 });
+
+/* Asides: what a swarm's delegates wrote, kept but demoted.
+ *
+ * These test the pane, not the classifier — agent-stream.test.js owns the
+ * question of which author is a delegate. What matters here is that a step
+ * arriving as kind:"aside" lands below the answer, attributed, and folded.
+ */
+function paneAfter(steps) {
+  const rec = recorder();
+  const { chat, transcript } = mount("P1", rec);
+  chat.ask("which assets are most at risk?");
+  steps.forEach((step) => rec.opened[0].options.onStep(step));
+  return transcript.children.filter((c) => c.className === "answer")[0];
+}
+
+test("a delegate's prose lands below the answer, not inside it", () => {
+  const pane = paneAfter([
+    { kind: "aside", author: "s07_sp2", text: "PUMP-104A peaked at 17.11 Hz." },
+    { kind: "text", text: "Widen the gap to 115 mm." },
+  ]);
+  const body = pane.innerHTML.split("<details")[0];
+  assert.ok(body.includes("Widen the gap"), body);
+  assert.ok(!body.includes("17.11"),
+    "a specialist's working note was rendered as the answer");
+  assert.ok(pane.innerHTML.includes("17.11"),
+    "the working note was deleted rather than filed");
+});
+
+test("an aside is attributed by display name, never by ADK node name", () => {
+  const pane = paneAfter([
+    { kind: "aside", author: "s07_critic", text: "SP2 is out of scope." },
+    { kind: "text", text: "Widen the gap." },
+  ]);
+  assert.ok(pane.innerHTML.includes("Setpoint Safety Critic (critic)"),
+    pane.innerHTML);
+  assert.ok(!pane.innerHTML.includes("s07_critic"),
+    "the reader was shown an ADK node name");
+});
+
+test("one heading per delegate, however many frames it wrote in", () => {
+  // Prose arrives in as many frames as the model chose. A heading per frame
+  // would read as five agents saying one sentence each.
+  const pane = paneAfter([
+    { kind: "aside", author: "s07_sp1", text: "The 115 mm setting ran " },
+    { kind: "aside", author: "s07_sp1", text: "23 days." },
+    { kind: "text", text: "Widen the gap." },
+  ]);
+  const headings = pane.innerHTML.split("Crusher Setting Analyst").length - 1;
+  assert.equal(headings, 1, pane.innerHTML);
+  assert.ok(pane.innerHTML.includes("The 115 mm setting ran 23 days."),
+    "a delegate's sentence was split across two headings");
+});
+
+test("an answer with no delegates carries no aside drawer", () => {
+  const pane = paneAfter([{ kind: "text", text: "All five machines are inside their limits." }]);
+  assert.ok(!pane.innerHTML.includes("what each agent reported"),
+    "an empty drawer is a control that opens on nothing");
+});

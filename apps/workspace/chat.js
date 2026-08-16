@@ -48,6 +48,38 @@ function _name(agentId, DATA) {
   return agent ? agent.display_name : agentId;
 }
 
+/* The reader's name for whoever wrote an aside.
+ *
+ * The stream identifies authors by ADK node name — `s07_sp3` — which is the
+ * agent id lower-cased with hyphens underscored. Nothing else in the workspace
+ * ever shows that form, so it is mapped back through the catalogue to the
+ * display name and the role, giving "Recovery Sensitivity Modeller
+ * (specialist)" rather than a token the reader has no way to interpret.
+ *
+ * The map is built by node name rather than by reversing the transform,
+ * because `_` → `-` is not invertible: an id that legitimately contained an
+ * underscore would come back wrong, and the failure would be a silently
+ * mislabelled quotation. Unknown authors fall back to the raw name — visibly
+ * odd, which is the right outcome for a name the catalogue does not know.
+ */
+var CHAT_BY_NODE = null;
+var CHAT_BY_NODE_OF = null;
+
+function agentLabel(author, DATA) {
+  if (CHAT_BY_NODE_OF !== DATA) {
+    CHAT_BY_NODE = {};
+    DATA.catalog.agents.forEach(function (a) {
+      CHAT_BY_NODE[a.agent_id.toLowerCase().replace(/-/g, "_")] = a;
+    });
+    CHAT_BY_NODE_OF = DATA;
+  }
+  var agent = CHAT_BY_NODE[author];
+  if (!agent) return author;
+  return agent.swarm_role
+    ? agent.display_name + " (" + agent.swarm_role + ")"
+    : agent.display_name;
+}
+
 /* The one place the agent's name is framed. router.js returns a name-free
  * reason so that this prefix is not repeated inside it. */
 function pickLine(decision, DATA) {
@@ -194,6 +226,32 @@ function mountChat(node, personaCode, DATA, deps) {
      * the hundred seconds the reader is already waiting. */
     var wrote = "";
 
+    /* What the agents this one delegated to wrote, in the order they finished.
+     *
+     * A swarm streams five authors down one connection. Measured on S07, the
+     * three specialists and the critic wrote 21,496 characters before the
+     * coordinator wrote its first — so appending every author to `wrote` put
+     * two specialists' improvisation, and the critic's rejection of it, above
+     * the answer in one undifferentiated document.
+     *
+     * They are kept, because the critic's audit is the only place a reader can
+     * find out why a specialist's numbers are missing from the conclusion. They
+     * are kept below the answer, attributed, and folded away. */
+    var asides = [];
+
+    function asideDrawer() {
+      if (!asides.length) return "";
+      return CHAT_SHELL.technicalDrawer(
+        asides.map(function (aside) {
+          return (
+            '<p class="dim">' + CHAT_SHELL.esc(aside.label) + "</p>" +
+            CHAT_PLAIN.plainAnswer(aside.text).html
+          );
+        }).join(""),
+        "what each agent reported before the answer"
+      );
+    }
+
     function say() {
       var said = CHAT_PLAIN.plainAnswer(wrote);
       answer.innerHTML =
@@ -203,7 +261,8 @@ function mountChat(node, personaCode, DATA, deps) {
               '<pre class="mono">' + CHAT_SHELL.esc(said.technical) + "</pre>",
               "the agent's own words for the steps that failed"
             )
-          : "");
+          : "") +
+        asideDrawer();
       pin();
     }
 
@@ -224,6 +283,18 @@ function mountChat(node, personaCode, DATA, deps) {
         if (mine.abandoned) return;
         if (step.kind === "text") {
           wrote += step.text;
+          say();
+          return;
+        }
+        if (step.kind === "aside") {
+          var label = agentLabel(step.author, DATA);
+          var last = asides[asides.length - 1];
+          // One entry per author, not per frame. A delegate's prose arrives in
+          // as many frames as the model chose to break it into, and a new
+          // heading at every break would read as five agents saying one
+          // sentence each.
+          if (last && last.label === label) last.text += step.text;
+          else asides.push({ label: label, text: step.text });
           say();
           return;
         }
@@ -274,5 +345,5 @@ function mountChat(node, personaCode, DATA, deps) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { pickLine, alternatives, opening, mountChat };
+  module.exports = { pickLine, alternatives, opening, mountChat, agentLabel };
 }

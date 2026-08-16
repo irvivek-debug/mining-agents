@@ -25,14 +25,63 @@ var PLAIN = typeof require !== "undefined" ? require("../shared/plain.js") : win
  * this function stays pure with respect to module state and a test can hand it
  * a fresh one.
  */
-function eventToSteps(adkEvent, calls) {
+/* The node name ADK gives an agent, derived from its catalog id.
+ *
+ * `_llm` in both patterns builds every node as
+ * `agent.agent_id.lower().replace("-", "_")`, and that name is what arrives on
+ * the wire as `author`. Comparing the raw id would miss on any hyphenated one.
+ */
+function nodeName(agentId) {
+  return String(agentId || "").toLowerCase().replace(/-/g, "_");
+}
+
+/* Whether this event came from someone the asked-for agent delegated to.
+ *
+ * Unknown counts as no. The rule needs to know who was asked; without that,
+ * guessing would blank the answer pane, which is a far worse failure than
+ * showing a delegate's prose.
+ */
+function isDelegate(adkEvent, options) {
+  var asked = options && options.agentId;
+  if (!asked) return false;
+  var author = adkEvent && adkEvent.author;
+  if (!author) return false;
+  return author !== nodeName(asked);
+}
+
+/* Text is attributed; steps are not.
+ *
+ * A Pattern A swarm streams five authors down one connection — three
+ * specialists, the critic, then the coordinator. Measured on S07 against the
+ * governing P6 question, the four delegates wrote 21,496 characters of prose
+ * before the coordinator wrote its first. Rendered without regard to author,
+ * all of it lands in the answer pane as a single document in finish order, so
+ * the reader meets two specialists improvising off a table the critic then
+ * rejects as out of scope — and meets them before the answer.
+ *
+ * The swarm's own design settles which one is the answer: the coordinator
+ * concludes last, after the critic has audited the rest. So prose from anyone
+ * else is demoted to an aside and attributed, never deleted — the critic's
+ * audit is the only place the reader can learn why a specialist's numbers are
+ * absent from the conclusion.
+ *
+ * Tool calls are left alone deliberately. A specialist reading the sensor
+ * readings is the swarm visibly working, which is what the activity log exists
+ * to show; suppressing it would make the whole parallel phase look like a hang.
+ */
+function eventToSteps(adkEvent, calls, options) {
   var parts = (adkEvent && adkEvent.content && adkEvent.content.parts) || [];
   var seen = calls || {};
   var steps = [];
+  var delegate = isDelegate(adkEvent, options);
   parts.forEach(function (part) {
     if (!part) return;
     if (typeof part.text === "string" && part.text.length) {
-      steps.push({ kind: "text", text: part.text });
+      steps.push(
+        delegate
+          ? { kind: "aside", author: adkEvent.author, text: part.text }
+          : { kind: "text", text: part.text }
+      );
       return;
     }
     if (part.functionCall) {
@@ -93,7 +142,7 @@ function _streamAgentWithSource(source, options) {
     } catch (err) {
       return; // A frame this module cannot read is not a frame worth guessing at.
     }
-    eventToSteps(parsed, calls).forEach(function (step) {
+    eventToSteps(parsed, calls, options).forEach(function (step) {
       if (options.onStep) options.onStep(step);
     });
   };
