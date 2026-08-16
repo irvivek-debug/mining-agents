@@ -184,6 +184,24 @@ def deploy_command(agent_id: str, service_account: str) -> list[str]:
         # biometric tables is not a risk worth taking for demo convenience;
         # callers authenticate with an identity token.
         "--no-allow-unauthenticated",
+        # Cloud Run's default request timeout is 300s. A Pattern A swarm does
+        # not fit inside it: S07 on the governing P6 question was measured at
+        # 293.99s and cut off mid-loop, after the critic had reported and while
+        # the coordinator was still verifying. An earlier run of the same
+        # question took 209s, so the margin was 90 seconds, and a critic that
+        # checked its specialists more carefully spent it.
+        #
+        # What makes this worth a comment rather than a number: Cloud Run
+        # closes the connection cleanly at the limit. There is no error, no
+        # 504 on the stream, nothing in the events to distinguish "the platform
+        # stopped it" from "the agent chose to stop". The page can only say the
+        # agent finished without writing an answer, which is true and useless.
+        # A deploy-time ceiling is the only place this can be fixed honestly.
+        #
+        # 3600s is the maximum Cloud Run allows for an HTTP/1 request. It is a
+        # ceiling, not a budget — nothing here should take an hour — but an
+        # unreached ceiling costs nothing and a breached one costs the answer.
+        "--timeout=3600",
     ]
 
 

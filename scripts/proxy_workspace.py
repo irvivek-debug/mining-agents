@@ -202,9 +202,17 @@ def make_handler(target: str, tokens: _TokenCache) -> type[BaseHTTPRequestHandle
             )
             try:
                 # No timeout. /api/invoke waits on an agent that may think for
-                # minutes, and the service itself is deployed with a 600s
-                # ceiling; a shorter one here would cut off a working call and
+                # minutes; a shorter one here would cut off a working call and
                 # report it as a proxy failure.
+                #
+                # This comment used to claim the service was deployed with a
+                # 600s ceiling. It never was — nothing set a timeout, so Cloud
+                # Run's 300s default applied, and an S07 swarm run was measured
+                # being cut off at 293.99s with no answer written. The ceiling
+                # is now real and is set at the deploy, in
+                # `scripts/deploy.py::deploy_command` (`--timeout=3600`), which
+                # is the only place it can be stated as a fact rather than an
+                # assumption.
                 with urllib.request.urlopen(request) as response:
                     if _is_stream(response.headers):
                         self._relay_stream(response.status, response.headers, response)

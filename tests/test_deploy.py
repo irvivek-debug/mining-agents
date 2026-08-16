@@ -243,6 +243,35 @@ def test_deploy_command_keeps_the_endpoint_private():
     assert "--no-allow-unauthenticated" in deploy_command("D01", "sa@x.com")
 
 
+def test_deploy_command_allows_a_swarm_longer_than_the_cloud_run_default():
+    """Cloud Run's default request timeout is 300s, and a Pattern A swarm
+    exceeds it.
+
+    Measured on S07 against the governing P6 question: the whole graph — three
+    specialists in parallel, the join, the critic, then the coordinator — ran
+    293.99s and was cut off by the platform mid-loop, after the critic had
+    reported and while the coordinator was still verifying. No answer was ever
+    written. An earlier run of the same question finished in 209s, which is why
+    this stayed invisible: the margin was 90 seconds and a stricter critic
+    consumed it.
+
+    The failure mode is the worst kind. Cloud Run closes the connection
+    cleanly, so the stream ends with `proxy-done` and no error; the page's only
+    honest reading is "The agent finished without writing an answer." Nothing
+    anywhere says the platform stopped it.
+
+    3600s is the maximum Cloud Run allows for an HTTP/1 request. It is a
+    ceiling, not a target — a run that needs an hour has a different problem —
+    but there is no cost to a ceiling that is never reached, and every cost to
+    one that is.
+    """
+    argv = deploy_command("D01", "sa@x.com")
+    assert "--timeout=3600" in argv
+    assert argv.index("--timeout=3600") > argv.index("--"), (
+        "the timeout was passed to ADK rather than to gcloud"
+    )
+
+
 def test_deploy_command_states_the_session_backend_explicitly():
     """ADK defaults this to 'memory://' silently. Passing it makes the choice
     visible in the dry run, which is where anyone forking this will read it."""
