@@ -7,11 +7,13 @@
 # own data — a pack that answered that in advance would be a report with a
 # chat interface in front of it.
 #
-# Thin cells are the defining constraint of this persona. The corpus holds
-# 60 incidents. Any two-way split gives cells of three to five. Every guard
-# for an instrumented driver requires the count to be reported beside the
-# finding — that requirement is a methodological obligation, not a formatting
-# convention.
+# Thin cells are the defining constraint for this persona. Safety incident
+# corpora in operations of this scale are bounded — any cross-tabulation
+# produces cells small enough that a single event can shift a rate materially.
+# Every guard for an instrumented driver therefore requires the count to be
+# reported beside the finding; a finding read off a thin cell without the
+# count stated is uninterpretable. That requirement is a methodological
+# obligation, not a formatting convention.
 #
 # Two drivers are not_instrumented for measured reasons:
 # - fatigue_to_incident: only 5 of 60 incidents carry an operator link in
@@ -36,10 +38,8 @@ drivers:
       log; it is not a rate normalised against hours worked, equipment-hours, or
       personnel exposure at that location. A higher count at a location may
       reflect higher exposure rather than weaker controls. Report the incident
-      count and each severity-level cell count beside any location finding; the
-      severity cells in this dataset are small — each location's severity
-      breakdown spans the full range of three to seventeen — and a conclusion
-      drawn from a severity cell that holds fewer than five incidents cannot be
+      count and each severity-level cell count beside any location finding; a
+      conclusion drawn from a severity cell without its count stated cannot be
       distinguished from random variation. A biometric alert, as defined in
       OPS-FMS-001 clause 3.2, is an exposure indicator and is not on its own
       evidence of an incident cause; that clause applies equally here: a high
@@ -54,16 +54,16 @@ drivers:
     params: {}
     doc_query: OPS-FMS-001 severity fatality LTI MTI HAZARD near miss incident classification exposure
     guard: >-
-      incident_count and share_pct are derived from a log of 60 recorded
-      incidents. share_pct is each level's proportion of recorded incidents,
-      not a rate against hours worked or exposure. Report the incident_count
-      for each severity level alongside its share; the LTI cell in this dataset
-      is particularly small, and a share derived from five or fewer incidents
-      carries high variance. Severity classification is applied at investigation
-      close; reclassification during investigation means that the distribution
-      at any point in time reflects the current status of open investigations,
-      not a settled record. A shift in the mix over time is observable only if
-      the dataset spans multiple reporting periods.
+      incident_count and share_pct are derived from the recorded incident log.
+      share_pct is each level's proportion of recorded incidents, not a rate
+      against hours worked or exposure. Report the incident_count for each
+      severity level alongside its share; a share derived from a small cell
+      carries high variance and must be read with its count stated. Severity
+      classification is applied at investigation close; reclassification during
+      investigation means that the distribution at any point in time reflects
+      the current status of open investigations, not a settled record. A shift
+      in the mix over time is observable only if the dataset spans multiple
+      reporting periods.
 
   - id: fatigue_exposure
     question: What does the biometric monitoring record show about sleep-deficit exposure across the workforce?
@@ -94,7 +94,10 @@ drivers:
     status: instrumented
     controllable: false
     sql: sql/p3/radio_distress.sql
-    params: {}
+    params:
+      day_start_hour: 6
+      afternoon_start_hour: 14
+      night_start_hour: 22
     doc_query: OPS-FMS-001 radio emergency alert control room supervisor contact response checklist
     guard: >-
       emergency_count is the count of transmissions flagged by the
@@ -102,16 +105,17 @@ drivers:
       system and may not match a human assessment of distress. mean_sentiment_score
       is the mean of a continuous score derived from transcript text; it is a
       statistical summary of recorded language, not a direct measurement of
-      operator state or incident proximity. Report transmission_count and
-      emergency_count for each shift bucket beside any finding about
-      concentration; the three-bucket split produces cells of approximately 190
-      transmissions each — a finding about a specific hour within a bucket
-      requires the hourly data to be examined directly before a conclusion can
-      rest on it. OPS-FMS-001 clause 3.3 requires the control-room supervisor
-      to contact the worker by radio within 2 minutes of a biometric alert; a
-      concentration of emergency traffic in a shift bucket is consistent with
-      both genuine distress events and with the response protocol generating
-      secondary radio activity.
+      operator state or incident proximity. The shift buckets are parameterised
+      (@day_start_hour, @afternoon_start_hour, @night_start_hour); the
+      site's own roster boundaries must be supplied before a concentration
+      finding is read as a shift finding. Report transmission_count and
+      emergency_count for each bucket beside any finding about concentration;
+      a finding about a specific hour within a bucket requires the hourly data
+      to be examined directly before a conclusion can rest on it. OPS-FMS-001
+      clause 3.3 requires the control-room supervisor to contact the worker by
+      radio within 2 minutes of a biometric alert; a concentration of emergency
+      traffic in a shift bucket is consistent with both genuine distress events
+      and with the response protocol generating secondary radio activity.
 
   - id: fatigue_to_incident
     question: Can fatigue exposure measured by biometric monitoring be attributed to specific incidents?

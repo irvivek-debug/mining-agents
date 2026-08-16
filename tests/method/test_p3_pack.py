@@ -46,10 +46,10 @@ def test_every_diagnostic_uses_parameters_not_literals():
 
 def test_the_uninstrumented_drivers_are_declared_not_omitted():
     # Dropping them would let the answer imply the tree was fully explored.
-    # fatigue_to_incident: only 5 of 60 incidents carry an operator link, so
+    # fatigue_to_incident: only 5 incidents carry an operator link, so
     #   the attributing join does not exist at usable scale.
     # shift_pattern: incident and fatigue timestamps are all 00:00, so no
-    #   within-day temporal resolution exists in this dataset.
+    #   within-day temporal resolution exists in this corpus.
     statuses = {d.id: d.status for d in load_pack(PACK).drivers}
     assert statuses["fatigue_to_incident"] == "not_instrumented"
     assert statuses["shift_pattern"] == "not_instrumented"
@@ -75,13 +75,36 @@ def test_no_driver_decides_in_advance_what_its_own_diagnostic_will_show():
             )
 
 
-def test_every_instrumented_driver_guards_the_cell_count():
-    """Sixty incidents is the ceiling on this persona.
+def test_no_guard_describes_the_data():
+    """A guard describes what a measurement is, not what this corpus contains.
 
-    Any two-way split gives cells of three to five, so a finding read off a
-    thin cell is the failure mode here. Each guard must require the count to be
-    reported beside the finding — without saying what the count will be, which
-    the verdict test forbids.
+    The phrase 'in this dataset' is the marker of a data-specific claim. A
+    guard that uses it is stating something about the rows — a finding — rather
+    than about the measurement. Guards must be true before any row is read, so
+    they must not contain observations about any particular dataset.
+
+    A future author who needs to write 'in this dataset' should instead state
+    the methodological concern (e.g. 'a small cell count must be reported')
+    and require the count to be reported — leaving the measurement to decide
+    what the count is.
+    """
+    for driver in load_pack(PACK).drivers:
+        said = (driver.guard or "").lower()
+        assert "in this dataset" not in said, (
+            f"{driver.id}: the guard contains 'in this dataset', which describes "
+            "the data rather than the measurement. Guards must be true before any "
+            "row is read; state the methodological concern and require the count "
+            "to be reported instead."
+        )
+
+
+def test_every_instrumented_driver_guards_the_cell_count():
+    """Safety incident corpora in operations of this scale are bounded.
+
+    Any cross-tabulation produces cells small enough that a single event can
+    shift a rate materially. Each guard must require the count to be reported
+    beside the finding — without saying what the count will be, which the
+    verdict test forbids.
     """
     for driver in load_pack(PACK).drivers:
         if driver.status != "instrumented":
@@ -92,17 +115,31 @@ def test_every_instrumented_driver_guards_the_cell_count():
 
 @pytest.mark.integration
 def test_location_concentration_returns_five_locations_with_correct_totals():
-    """17/12/12/10/9 across five locations — the generator is seeded so counts
-    are exactly pinnable.
+    """17/12/12/10/9 across five locations — counts are deterministic for a
+    given corpus and are exactly pinnable.
 
     The query returns one row per (location, severity_level) pair to avoid
-    string-literal predicates; the test aggregates to location-level to verify
-    totals. Five locations partition all 60 incidents; any location or severity
-    cell missing indicates a filter or grouping error.
+    string-literal predicates; 21 rows cover all location-severity combinations.
+    Five locations partition all 60 incidents; any location or severity cell
+    missing indicates a filter or grouping error. Every row must carry a
+    non-null severity_level — the severity breakdown within each location is the
+    driver's whole purpose.
     """
     driver = next(d for d in load_pack(PACK).drivers if d.id == "location_concentration")
     rows, _ = run_query(
         (ROOT / "method" / driver.sql).read_text(), driver.params, INCIDENT_TABLES
+    )
+    # Every row must carry a non-null severity_level — a query that collapsed
+    # to location-only rows would satisfy the location-total assertions but
+    # would defeat the entire purpose of this driver.
+    for r in rows:
+        assert r["severity_level"] is not None, (
+            f"row for location {r.get('location_description', '?')} has NULL "
+            "severity_level; the query may have dropped the severity grouping"
+        )
+    assert len(rows) == 21, (
+        f"expected 21 (location, severity_level) rows, got {len(rows)}; "
+        "a missing row indicates a filter or grouping error"
     )
     # Aggregate to location level from (location, severity_level, count) rows
     from collections import defaultdict
@@ -124,7 +161,8 @@ def test_location_concentration_returns_five_locations_with_correct_totals():
 
 @pytest.mark.integration
 def test_severity_mix_returns_all_five_levels_with_correct_counts():
-    """HAZARD 16, MTI 14, FATALITY 14, NEAR_MISS 11, LTI 5 — seeded and pinnable.
+    """HAZARD 16, MTI 14, FATALITY 14, NEAR_MISS 11, LTI 5 — counts are
+    deterministic for a given corpus and are exactly pinnable.
 
     All five severity levels must appear; a missing level or a wrong count
     indicates a grouping error or a filter that excluded a level. The share
@@ -158,15 +196,22 @@ def test_fatigue_exposure_returns_banded_counts_and_aggregate_metrics():
 
     The total log count across both bands must equal 3,340 (all logs accounted
     for). Alert counts must be non-negative. Mean and max deficit are real
-    numbers derived from the seeded generator; the max must be above the
-    OPS-FMS-001 clause 4.3 cumulative-deficit threshold (6 hours) given the
-    validated maximum of 7.98.
+    numbers; the max must exceed the OPS-FMS-001 clause 4.3 cumulative-deficit
+    stand-down threshold (6 hours). Each band must report exactly 20 distinct
+    operators; both above and below threshold must independently reach that
+    count — max() across bands would pass even if one band dropped operators.
     """
     driver = next(d for d in load_pack(PACK).drivers if d.id == "fatigue_exposure")
     rows, _ = run_query(
         (ROOT / "method" / driver.sql).read_text(), driver.params, FATIGUE_TABLES
     )
-    assert len(rows) >= 1, "query returned no rows"
+    assert len(rows) == 2, (
+        f"expected 2 bands (above_threshold and below_threshold), got {len(rows)}"
+    )
+    by_band = {r["deficit_band"]: r for r in rows}
+    assert set(by_band) == {"above_threshold", "below_threshold"}, (
+        f"unexpected bands: {set(by_band)}"
+    )
     total_logs = sum(r["log_count"] for r in rows)
     assert total_logs == 3340, (
         f"expected 3,340 total fatigue logs across all bands, got {total_logs}"
@@ -175,31 +220,91 @@ def test_fatigue_exposure_returns_banded_counts_and_aggregate_metrics():
     assert total_alerts == 117, (
         f"expected 117 alerts across all bands, got {total_alerts}"
     )
-    # Max deficit must exceed the OPS-FMS-001 clause 4.3 stand-down threshold
+    # Pin the per-band log and alert splits — a query that mis-assigned rows
+    # between bands would still satisfy the total assertions.
+    assert by_band["above_threshold"]["log_count"] == 1728, (
+        f"above_threshold log_count {by_band['above_threshold']['log_count']} != 1728"
+    )
+    assert by_band["below_threshold"]["log_count"] == 1612, (
+        f"below_threshold log_count {by_band['below_threshold']['log_count']} != 1612"
+    )
+    assert by_band["above_threshold"]["alert_count"] == 115, (
+        f"above_threshold alert_count {by_band['above_threshold']['alert_count']} != 115"
+    )
+    assert by_band["below_threshold"]["alert_count"] == 2, (
+        f"below_threshold alert_count {by_band['below_threshold']['alert_count']} != 2"
+    )
+    # Max deficit must exceed the OPS-FMS-001 clause 4.3 stand-down threshold.
+    # The measured maximum is 7.98 hours; the floor is set at 6.0 to discriminate
+    # against a query bug that collapsed or mis-scaled the deficit column.
     max_deficit = max(r["max_sleep_deficit_hours"] for r in rows)
     assert max_deficit >= 6.0, (
-        f"max sleep deficit {max_deficit} is below the validated floor of 6.0 hours"
+        f"max sleep deficit {max_deficit} is below the OPS-FMS-001 clause 4.3 "
+        "stand-down threshold floor of 6.0 hours; the deficit column may be "
+        "mis-scaled or the above_threshold band may have been dropped"
     )
-    # Distinct operator count must be 20 (seeded generator)
-    total_distinct_ops = max(r["distinct_operators"] for r in rows)
-    assert total_distinct_ops >= 20, (
-        f"expected at least 20 distinct operators, got {total_distinct_ops}"
+    # Each band must independently report exactly 20 distinct operators.
+    # Using max() across bands would pass even if one band dropped to 15.
+    assert by_band["above_threshold"]["distinct_operators"] == 20, (
+        f"above_threshold distinct_operators "
+        f"{by_band['above_threshold']['distinct_operators']} != 20"
+    )
+    assert by_band["below_threshold"]["distinct_operators"] == 20, (
+        f"below_threshold distinct_operators "
+        f"{by_band['below_threshold']['distinct_operators']} != 20"
     )
 
 
 @pytest.mark.integration
 def test_radio_distress_returns_total_and_emergency_counts():
-    """573 total transmissions, 164 emergency-flagged — seeded and pinnable.
+    """573 total transmissions, 164 emergency-flagged — counts are deterministic
+    for a given corpus and are exactly pinnable.
 
-    The total across all time buckets must equal 573. Emergency count must
-    equal 164. Sentiment scores are real numbers; emergency transmissions must
-    have lower mean sentiment than all transmissions combined.
+    The query produces exactly three shift buckets (day / afternoon / night).
+    A query whose CASE collapsed every row into a single bucket would pass a
+    len >= 1 assertion but would defeat the driver's entire purpose. The total
+    across all buckets must equal 573 transmissions and 164 emergency-flagged.
+    Per-bucket transmission and emergency counts are also pinned so that a query
+    that mis-assigned rows between buckets cannot pass.
+
+    The test verifies that mean_sentiment_score is present for every bucket.
+    The query returns only a per-bucket mean over all transmissions in that
+    bucket; there is no emergency-only sentiment column, so no cross-bucket
+    sentiment comparison is asserted here.
     """
     driver = next(d for d in load_pack(PACK).drivers if d.id == "radio_distress")
     rows, _ = run_query(
         (ROOT / "method" / driver.sql).read_text(), driver.params, RADIO_TABLES
     )
-    assert len(rows) >= 1, "query returned no rows"
+    assert len(rows) == 3, (
+        f"expected exactly 3 shift buckets (day, afternoon, night), got {len(rows)}; "
+        "the three-bucket split is the core of this driver — a query that collapsed "
+        "buckets would produce a count-of-one that cannot evidence shift concentration"
+    )
+    by_bucket = {r["shift_bucket"]: r for r in rows}
+    assert set(by_bucket) == {"day", "afternoon", "night"}, (
+        f"unexpected shift buckets: {set(by_bucket)}"
+    )
+    # Pin per-bucket transmission and emergency counts so a mis-assignment
+    # between buckets cannot pass on totals alone.
+    assert by_bucket["day"]["transmission_count"] == 191, (
+        f"day transmission_count {by_bucket['day']['transmission_count']} != 191"
+    )
+    assert by_bucket["afternoon"]["transmission_count"] == 191, (
+        f"afternoon transmission_count {by_bucket['afternoon']['transmission_count']} != 191"
+    )
+    assert by_bucket["night"]["transmission_count"] == 191, (
+        f"night transmission_count {by_bucket['night']['transmission_count']} != 191"
+    )
+    assert by_bucket["day"]["emergency_count"] == 44, (
+        f"day emergency_count {by_bucket['day']['emergency_count']} != 44"
+    )
+    assert by_bucket["afternoon"]["emergency_count"] == 57, (
+        f"afternoon emergency_count {by_bucket['afternoon']['emergency_count']} != 57"
+    )
+    assert by_bucket["night"]["emergency_count"] == 63, (
+        f"night emergency_count {by_bucket['night']['emergency_count']} != 63"
+    )
     total_transmissions = sum(r["transmission_count"] for r in rows)
     assert total_transmissions == 573, (
         f"expected 573 total transmissions, got {total_transmissions}"
