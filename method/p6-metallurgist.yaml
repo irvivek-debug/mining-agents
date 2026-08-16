@@ -1,13 +1,18 @@
 # The Metallurgist's driver tree. Skeleton only: no resolution prose lives
 # here. Resolution content is retrieved from the document corpus so that a
 # recommendation is the site's own standard rather than ours.
+#
+# `status` says whether a diagnostic exists and nothing else. Whether a driver
+# is evidenced is decided from the rows that diagnostic returns, on the site's
+# own data — a pack that answered that in advance would be a report with a
+# chat interface in front of it.
 metric: unit cost per tonne of contained metal
 root: contained metal lost to tailings
 
 drivers:
   - id: liberation
     question: Is the crusher closed-side setting costing recovery?
-    status: evidenced
+    status: instrumented
     controllable: true
     compare: setting_band
     sql: sql/p6/liberation.sql
@@ -24,7 +29,7 @@ drivers:
 
   - id: feed_variability
     question: Does feed grade explain the recovery gap instead of the setting?
-    status: evidenced
+    status: instrumented
     controllable: false
     compare: setting_band
     sql: sql/p6/feed_variability.sql
@@ -40,13 +45,13 @@ drivers:
 
   - id: bypass
     question: Are bypass events costing recovery?
-    status: unevidenced
+    status: instrumented
     controllable: true
     sql: sql/p6/bypass.sql
     doc_query: crusher bypass valve clog abnormal situation
     guard: >-
-      Report the observed count. Too few events to support a conclusion is a
-      finding; silence is not.
+      State the observed count and whether it supports a conclusion. A driver
+      you cannot evidence is reported as such; silence is not.
 
   - id: reagent_regime
     question: Is the reagent regime costing recovery?

@@ -37,7 +37,46 @@ def test_the_uninstrumented_drivers_are_declared_not_omitted():
     statuses = {d.id: d.status for d in load_pack(PACK).drivers}
     assert statuses["reagent_regime"] == "not_instrumented"
     assert statuses["grind_size_p80"] == "not_instrumented"
-    assert statuses["bypass"] == "unevidenced"
+    # bypass has a diagnostic, so it is instrumented. Whether its rows evidence
+    # anything is decided when the query runs, not here: this pack was written
+    # against one site's 167 days, and on a fork with plenty of bypass events a
+    # status of "unevidenced" would be a wrong answer shipped in a YAML file.
+    assert statuses["bypass"] == "instrumented"
+
+
+def test_no_driver_decides_in_advance_what_its_own_diagnostic_will_show():
+    """The pack is a method, not a precomputed report with a chat interface.
+
+    Status is instrumentation. The guard is the caveat the method puts on a
+    finding — a statement about what a measurement can and cannot establish,
+    which is true before any row is read. Neither may carry the finding itself.
+    The bypass guard did: "Too few events to support a conclusion is a finding"
+    told the agent the count was small before it had counted anything.
+    """
+    verdicts = ("too few", "too many", "unevidenced", "no signal", "insufficient")
+    for driver in load_pack(PACK).drivers:
+        assert driver.status in ("instrumented", "not_instrumented"), driver.id
+        said = (driver.guard or "").lower()
+        for verdict in verdicts:
+            assert verdict not in said, (
+                f"{driver.id}: the guard says {verdict!r}, which decides the "
+                "diagnostic's result before it runs"
+            )
+
+
+def test_the_two_banded_drivers_compare_across_a_setting_band():
+    """Pinned here because the schema can no longer require it of every driver.
+
+    While `evidenced` implied a comparison, load_pack demanded `compare` on
+    every driver carrying SQL. `bypass` counts events and compares nothing, so
+    that requirement could not survive the status change — the whitelist still
+    refuses an outcome-percentile comparison, but nothing now forces the two
+    drivers that DO compare to declare it. This is what makes the shipped pack
+    compare against a band the site itself ran rather than its own best days.
+    """
+    compares = {d.id: d.compare for d in load_pack(PACK).drivers}
+    assert compares["liberation"] == "setting_band"
+    assert compares["feed_variability"] == "setting_band"
 
 
 @pytest.mark.integration

@@ -25,9 +25,7 @@ def test_uninstrumented_drivers_are_returned_not_filtered():
     # them here would make that impossible and the answer would imply the
     # tree was fully explored.
     drivers = make_method_lookup("P6")()["data"]["drivers"]
-    assert {d["status"] for d in drivers} == {
-        "evidenced", "unevidenced", "not_instrumented"
-    }
+    assert {d["status"] for d in drivers} == {"instrumented", "not_instrumented"}
 
 
 def test_the_sql_is_not_exposed_to_the_model():

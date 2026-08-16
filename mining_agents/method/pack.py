@@ -12,8 +12,17 @@ from pathlib import Path
 
 import yaml
 
-#: A driver is never silently absent from an answer. It is one of these.
-STATUSES = frozenset({"evidenced", "unevidenced", "not_instrumented"})
+#: Whether a diagnostic exists for this driver, and NOTHING about what that
+#: diagnostic will show.
+#:
+#: `unevidenced` used to live here, and it was a verdict written before the
+#: query ran: the bypass driver declared it while carrying `sql`, so the pack
+#: had already decided what its own diagnostic would find. That reaches the
+#: model twice — through the method_lookup projection and again in every
+#: run_diagnostic result — and on a fork whose data holds plenty of bypass
+#: events the pack would still have said "unevidenced". Evidenced or not is a
+#: conclusion the agent draws from the rows it was actually returned.
+STATUSES = frozenset({"instrumented", "not_instrumented"})
 
 #: Comparison is across bands of a controllable SETTING. Comparing to the best
 #: decile of an OUTCOME banks noise as achievable, because the top decile of a
@@ -61,21 +70,32 @@ def _driver(raw: dict, index: int) -> Driver:
         raise PackError(
             f"{where}: status {raw['status']!r} is not one of {sorted(STATUSES)}"
         )
-    if raw["status"] == "evidenced":
+    if raw["status"] == "instrumented":
         if not raw.get("sql"):
-            raise PackError(f"{where}: an evidenced driver must carry 'sql'")
-        if raw.get("compare") not in COMPARISONS:
+            raise PackError(f"{where}: an instrumented driver must carry 'sql'")
+    else:
+        if raw.get("sql"):
+            # The converse, and it matters because two consumers read the two
+            # fields: run_diagnostic decides DRIVER_NOT_INSTRUMENTED on `sql`,
+            # method_lookup reports `status`. A driver that declares one and
+            # carries the other tells the agent two different things about
+            # itself.
             raise PackError(
-                f"{where}: compare must be one of {sorted(COMPARISONS)}; "
-                "outcome-percentile comparison overstates the prize"
+                f"{where}: status is not_instrumented but 'sql' is set; a "
+                "driver with a diagnostic behind it is instrumented"
             )
-    elif raw.get("compare") is not None:
-        # A comparison on a driver with no diagnostic behind it is a claim the
-        # pack cannot honour. Left to load, it tells an author a comparison is
-        # happening when nothing computes one.
+        if raw.get("compare") is not None:
+            # A comparison on a driver with no diagnostic behind it is a claim
+            # the pack cannot honour. Left to load, it tells an author a
+            # comparison is happening when nothing computes one.
+            raise PackError(
+                f"{where}: compare is set but status is {raw['status']!r}; "
+                "only an instrumented driver compares anything"
+            )
+    if raw.get("compare") is not None and raw["compare"] not in COMPARISONS:
         raise PackError(
-            f"{where}: compare is set but status is {raw['status']!r}; "
-            "only an evidenced driver compares anything"
+            f"{where}: compare must be one of {sorted(COMPARISONS)}; "
+            "outcome-percentile comparison overstates the prize"
         )
     return Driver(
         id=raw["id"],

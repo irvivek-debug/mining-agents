@@ -3,7 +3,7 @@ root: contained metal lost to tailings
 drivers:
   - id: liberation
     question: Is the crusher setting costing recovery?
-    status: evidenced
+    status: instrumented
     controllable: true
     compare: outcome_decile
     sql: sql/p6/liberation.sql

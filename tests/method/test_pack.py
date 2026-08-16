@@ -43,13 +43,49 @@ def test_an_unknown_status_is_refused(tmp_path):
         load_pack(bad)
 
 
-def test_an_evidenced_driver_must_carry_a_diagnostic(tmp_path):
+def test_a_status_that_states_a_verdict_is_refused(tmp_path):
+    """`unevidenced` was a status, and it was a conclusion written in advance.
+
+    A driver carrying both `sql` and a verdict has decided what its own query
+    will show. On a fork whose data has plenty of bypass events, the pack would
+    still have said "unevidenced" — which is the precomputed-report failure the
+    whole redesign exists to replace. Status now says only whether a diagnostic
+    exists; evidenced or not is a conclusion drawn at runtime from the rows.
+    """
     bad = tmp_path / "bad.yaml"
     bad.write_text(
         "metric: m\nroot: r\ndrivers:\n  - id: d\n    question: q\n"
-        "    status: evidenced\n    controllable: true\n    compare: setting_band\n"
+        "    status: unevidenced\n    controllable: false\n"
+    )
+    with pytest.raises(PackError, match="unevidenced"):
+        load_pack(bad)
+
+
+def test_an_instrumented_driver_must_carry_a_diagnostic(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "metric: m\nroot: r\ndrivers:\n  - id: d\n    question: q\n"
+        "    status: instrumented\n    controllable: true\n    compare: setting_band\n"
     )
     with pytest.raises(PackError, match="sql"):
+        load_pack(bad)
+
+
+def test_a_not_instrumented_driver_may_not_carry_a_diagnostic(tmp_path):
+    """The converse, which nothing checked while status carried a verdict.
+
+    run_diagnostic decides DRIVER_NOT_INSTRUMENTED on the presence of `sql`,
+    while method_lookup reports the `status` field — so a driver that declares
+    one and carries the other tells the agent two different things about the
+    same driver, and the agent reports whichever it read last.
+    """
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "metric: m\nroot: r\ndrivers:\n  - id: d\n    question: q\n"
+        "    status: not_instrumented\n    controllable: true\n"
+        "    sql: sql/p6/liberation.sql\n"
+    )
+    with pytest.raises(PackError, match="not_instrumented"):
         load_pack(bad)
 
 
@@ -70,7 +106,7 @@ def test_a_comparison_on_a_driver_with_no_diagnostic_is_refused(tmp_path):
         "    status: not_instrumented\n    controllable: false\n"
         "    compare: setting_band\n"
     )
-    with pytest.raises(PackError, match="only an evidenced driver compares"):
+    with pytest.raises(PackError, match="only an instrumented driver compares"):
         load_pack(bad)
 
 
