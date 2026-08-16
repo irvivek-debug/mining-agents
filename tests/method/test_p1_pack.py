@@ -152,6 +152,7 @@ def test_criticality_load_returns_two_tiers_and_critical_dominates():
         f"expected 2 HIGH assets, got {tiers['HIGH']['asset_count']}"
     )
     # Total work orders across both tiers must sum to 500 (seeded exactly).
+    # Note: same work-order population as test_cost_concentration_returns_all_five_assets_and_cost_varies.
     total_wos = tiers["CRITICAL"]["wo_count"] + tiers["HIGH"]["wo_count"]
     assert total_wos == 500, (
         f"expected 500 total WOs, got {total_wos}; a row may be missing or duplicated"
@@ -199,8 +200,9 @@ def test_repair_duration_returns_all_five_assets_and_log_count_is_exact():
         "column approx_median_duration_hours not found; the probabilistic-qualifier "
         "rename may have been reverted"
     )
-    assert "median_duration_hours" not in rows[0] or "approx_median_duration_hours" in rows[0], (
-        "plain median_duration_hours present without approx_ qualifier"
+    assert "median_duration_hours" not in rows[0], (
+        "the unqualified column name is back; this median is APPROX_QUANTILES, "
+        "not an exact median, and the name must say so"
     )
     # Duration floor: the highest mean in the validated data is 11.79h (CRUSHER-03).
     # A floor of 6.0h on the overall max mean catches a query returning near-zero
