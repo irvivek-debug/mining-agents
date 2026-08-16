@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from mining_agents.envelope import fail, ok
-from mining_agents.method.pack import PackError, load_pack
+from mining_agents.method.pack import load_pack
 
 PACK_DIR = Path(__file__).resolve().parents[2] / "method"
 

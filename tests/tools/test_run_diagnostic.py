@@ -52,26 +52,34 @@ def test_a_persona_with_no_pack_fails_with_no_method_pack():
     assert env["error"]["code"] == "NO_METHOD_PACK"
 
 
-def test_the_envelope_never_carries_the_sql_text_or_a_sql_path():
+def test_no_failure_envelope_carries_the_sql_text_or_a_sql_path():
     # Returning the SQL text would undo the withholding that method_lookup
     # enforces.  Assert against the full JSON dump so a field added anywhere
     # in the envelope is caught, not just in the obvious places.
     run = make_run_diagnostic("P6")
-    # Use a driver whose failure is cheap (no_such_driver) to get an envelope
-    # without hitting BigQuery.  The assertion is about what the envelope does
-    # NOT contain, so any envelope shape is a valid subject.
     for driver_id in ("no_such_driver", "reagent_regime"):
-        env = run(driver_id)
-        dumped = json.dumps(env)
-        assert ".sql" not in dumped, (
-            f"envelope for {driver_id!r} contains a .sql path: {dumped}"
-        )
-        # The SQL text of the liberation query starts with 'WITH cs AS'; check
-        # a representative substring that could only appear if SQL were leaked.
-        assert "WITH cs AS" not in dumped
-        assert "metallurgical_recovery" not in dumped or driver_id not in (
-            "no_such_driver", "reagent_regime"
-        ), "SQL table reference leaked into failure envelope"
+        dumped = json.dumps(run(driver_id))
+        assert ".sql" not in dumped, f"{driver_id!r}: a .sql path leaked: {dumped}"
+        assert "WITH cs AS" not in dumped, f"{driver_id!r}: SQL text leaked: {dumped}"
+
+
+@pytest.mark.integration
+def test_the_success_envelope_carries_results_without_the_query_behind_them():
+    # The failure paths above never touch the SQL file, so on their own they
+    # would still pass if the success path returned the whole query. This is
+    # the path that actually reads the file, so it is the one where a leak is
+    # possible — and the one an agent sees on every real call.
+    env = make_run_diagnostic("P6")("liberation")
+    assert env["success"] is True, env.get("error")
+    dumped = json.dumps(env)
+    assert "WITH cs AS" not in dumped, f"SQL text leaked into the result: {dumped}"
+    assert "sql/p6" not in dumped, f"the SQL file path leaked: {dumped}"
+    # meta.tables_read legitimately names the tables, so a bare table name is
+    # not evidence of a leak. A bound parameter marker is: it appears in
+    # liberation.sql and has no reason to appear in a result. (NTILE was the
+    # obvious second sentinel but lives only in feed_variability.sql, so
+    # asserting it here would have passed no matter what leaked.)
+    assert "@tight_max" not in dumped, f"a query parameter leaked: {dumped}"
 
 
 @pytest.mark.integration

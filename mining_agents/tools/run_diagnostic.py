@@ -19,6 +19,7 @@ loudly rather than silently widening access — BigQuery is the control.
 """
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -30,6 +31,8 @@ from mining_agents.tools.method_lookup import PACK_DIR, PACKS, load_pack
 # pattern as bqml_predict._TABLE_REF.  The regex is a declaration, not a
 # security control; the dry run is the control.
 _TABLE_REF = re.compile(r"`?(?:[\w-]+\.)?(mining_data\.\w+)`?")
+
+LOG = logging.getLogger(__name__)
 
 
 def _referenced_tables(sql: str) -> list[str]:
@@ -93,10 +96,17 @@ def make_run_diagnostic(persona: str):
         try:
             rows, scanned = run_query(sql, driver.params, tables)
         except Exception as exc:  # noqa: BLE001 — boundary with BigQuery
+            # str(exc) is deliberately NOT returned. BigQuery echoes fragments
+            # of the failing statement in its error text, so passing it through
+            # would hand the model the SQL by the back door — the one thing
+            # this tool and method_lookup exist to prevent. The type name is
+            # enough for the agent to know the diagnostic did not run; the
+            # detail belongs in the server log, where it is not a leak.
+            LOG.exception("diagnostic %s failed for persona %s", driver_id, persona)
             return fail(
                 "QUERY_FAILED",
-                str(exc),
-                {"driver": driver_id},
+                f"the {driver_id!r} diagnostic could not be completed",
+                {"driver": driver_id, "reason": type(exc).__name__},
                 tables,
             )
 
