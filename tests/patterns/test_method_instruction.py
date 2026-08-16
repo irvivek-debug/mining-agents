@@ -52,6 +52,24 @@ def test_the_agent_is_told_to_retrieve_the_constraint_before_recommending():
     assert "before" in said.lower()
 
 
+def test_the_agent_is_told_to_read_the_guard_the_diagnostic_returns():
+    # The step-5 clause names doc_search, which retrieves the SITE's documented
+    # constraint. That is not the same thing as the 'guard' field run_diagnostic
+    # returns, which is the METHOD's own caveat on the finding — and the two are
+    # easy to conflate because both are called guards.
+    #
+    # This matters concretely. The P6 liberation guard says the torque figure is
+    # a maximum over daily MEAN torque, so it bounds average duty and cannot
+    # evidence headroom under an instantaneous alarm. If the instruction never
+    # tells the agent to read the field, that caveat is dead text and the agent
+    # will recommend a setting change on torque evidence that does not support
+    # one. Without this assertion, the clause can be dropped in a refactor and
+    # every other test here still passes.
+    said = build_instruction(BY_ID["S07-SP3"])
+    assert "'guard' field" in said, "the guard field is never surfaced to the agent"
+    assert "run_diagnostic result" in said
+
+
 def test_the_instruction_distinguishes_run_diagnostic_from_bq_query():
     # bq_query stays on S07-SP3 to size the prize and cover questions the tree
     # does not address. The risk: the agent uses bq_query to re-derive a driver

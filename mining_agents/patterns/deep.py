@@ -128,6 +128,14 @@ def build_instruction(agent: AgentDef) -> str:
             "BEFORE you recommend anything, cite the document, and show from "
             "the data that this site stays inside it.",
             "",
+            "Every run_diagnostic result carries a 'guard' field. That text is "
+            "the condition the method itself puts on the finding, and it is "
+            "written to be quoted: it says what the numbers do and do not "
+            "establish. Read it and satisfy it before you recommend. Where a "
+            "guard says a measurement cannot support a particular conclusion, "
+            "say so plainly in your answer rather than quietly drawing the "
+            "conclusion anyway — a caveat you drop is a claim you invented.",
+            "",
             "For every driver in the tree, use run_diagnostic to execute its "
             "fixed diagnostic query. Never use bq_query to re-derive or check "
             "a driver that the pack already computes — doing so produces a "
