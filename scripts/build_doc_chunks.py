@@ -8,6 +8,7 @@ from the 40 objects in the bucket.
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 from google.cloud import bigquery, storage
 from pypdf import PdfReader
@@ -16,6 +17,8 @@ from mining_agents.config import settings
 
 BUCKET = "mining-knowledge-base"
 TABLE = "mining_data.doc_chunks"
+SOP_DIR = Path(__file__).resolve().parents[1] / "method" / "sop"
+SOP_FOLDER = "site-standards"
 SCHEMA = [
     bigquery.SchemaField("doc_id", "STRING"),
     bigquery.SchemaField("folder", "STRING"),
@@ -42,6 +45,27 @@ def extract(blob) -> str:
     return "\n".join((page.extract_text() or "") for page in reader.pages)
 
 
+def sop_rows() -> list[dict]:
+    """Chunk the standards this repository authored.
+
+    They are markdown in the repository rather than PDFs in the bucket so that
+    a reviewer can read them in a diff, and they are filed under their own
+    folder so that a document we wrote is never mistaken for one the site
+    supplied.
+    """
+    out: list[dict] = []
+    for path in sorted(SOP_DIR.glob("*.md")):
+        for index, chunk in enumerate(chunk_text(path.read_text())):
+            out.append({
+                "doc_id": f"repo://method/sop/{path.name}",
+                "folder": SOP_FOLDER,
+                "file_name": path.name,
+                "chunk_index": index,
+                "chunk_text": chunk,
+            })
+    return out
+
+
 def rows() -> list[dict]:
     client = storage.Client()
     out = []
@@ -61,7 +85,7 @@ def rows() -> list[dict]:
 
 
 def main() -> None:
-    data = rows()
+    data = rows() + sop_rows()
     if not data:
         raise SystemExit("no chunks extracted; refusing to write an empty table")
     # Pinned rather than inferred. An ambient default project would write this
