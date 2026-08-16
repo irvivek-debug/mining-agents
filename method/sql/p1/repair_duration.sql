@@ -8,7 +8,9 @@ SELECT
   a.asset_name,
   COUNT(m.log_entry_id)                                                     AS log_count,
   ROUND(AVG(m.actual_duration_hours), 2)                                    AS mean_duration_hours,
-  ROUND(APPROX_QUANTILES(m.actual_duration_hours, 2)[OFFSET(1)], 1)         AS median_duration_hours,
+  -- approx_median: APPROX_QUANTILES is probabilistic, not exact; the qualifier
+  -- prevents an agent from citing this as a precise percentile boundary.
+  ROUND(APPROX_QUANTILES(m.actual_duration_hours, 2)[OFFSET(1)], 1)         AS approx_median_duration_hours,
   ROUND(MAX(m.actual_duration_hours), 1)                                    AS max_duration_hours
 FROM `mining_data.maintenance_logs` m
 JOIN `mining_data.assets` a USING (asset_id)

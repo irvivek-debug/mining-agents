@@ -46,7 +46,7 @@ joined AS (
 SELECT
   IF(had_excursion, 'excursion', 'normal')                               AS band,
   COUNT(*)                                                                AS asset_days,
-  ROUND(AVG(wo_in_window), 4)                                            AS mean_wo_per_day
+  ROUND(AVG(wo_in_window), 4)                                            AS mean_wo_in_window_per_asset_day
 FROM joined
 GROUP BY had_excursion
 ORDER BY had_excursion DESC

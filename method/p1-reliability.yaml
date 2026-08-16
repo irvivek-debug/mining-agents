@@ -62,7 +62,11 @@ drivers:
       excursion magnitude against the documented limit, which this diagnostic
       does not do. Report the sigma threshold applied and note that the same
       threshold produces different absolute counts across series with different
-      variability.
+      variability. A low excursion rate is not on its own sufficient to conclude
+      a series is well behaved: if elevated readings are a persistent majority,
+      the series' own mean shifts upward and its standard deviation widens,
+      which suppresses the computed rate. The series' absolute mean should be
+      reviewed against an OEM reference before drawing that conclusion.
 
   - id: repair_duration
     question: Do repair durations differ materially across assets?
@@ -96,13 +100,14 @@ drivers:
       a telemetry excursion against the rate on days that did not. A
       meaningful separation between bands is required before recommending
       condition-based intervention; state the separation between the excursion
-      and normal bands in the result. If the bands do not separate, do not
-      recommend condition monitoring as a cost-reduction lever on this data —
-      the generator does not yet inject genuine cross-domain causal structure,
-      and a flat result is a finding about the dataset, not evidence that
-      condition monitoring is ineffective at the site. The window of
-      @window_days and sigma threshold are instrumentation choices; changing
-      them to manufacture a signal is not warranted.
+      and normal bands in the result. If the bands do not separate, that is a
+      finding about this data and must be reported as such; a flat result does
+      not license the inference that condition monitoring is ineffective at the
+      site — it establishes only that this data does not demonstrate a
+      separation. Do not recommend condition-based intervention when the bands
+      do not separate. The window of @window_days and sigma threshold are
+      instrumentation choices; changing them to manufacture a signal is not
+      warranted.
 
   - id: availability
     question: What is the overall asset availability and how does it vary by asset class?
