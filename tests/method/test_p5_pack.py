@@ -81,3 +81,44 @@ def test_the_model_bias_diagnostic_pairs_samples_to_blocks():
     # was built on, not merely that a query ran.
     assert row["paired_samples"] >= 100, row
     assert row["modelled_grade"] > 0 and row["assayed_grade"] > 0
+    # A variance magnitude floor pins the validated result (abs ~0.016 at the
+    # design radius). Checking only sign would pass on near-zero variance from
+    # 100 random pairs bearing no relation to the design finding. Direction is
+    # NOT asserted: on a fork whose model over-calls the sign reverses, and a
+    # direction assertion would ship a wrong answer in the test suite.
+    assert abs(row["variance"]) >= 0.01, (
+        f"variance magnitude {row['variance']:.4f} is below the validated floor; "
+        "the desurvey join may have returned pairs that are not the design pairs"
+    )
+
+
+@pytest.mark.integration
+def test_the_feed_grade_vs_model_diagnostic_reproduces_the_design_gap():
+    """The day count and gap magnitude, not just the sign.
+
+    Checking only that feed_grade differs from model_grade would pass on a query
+    that silently dropped 100 days or produced a gap of 0.001 — neither of which
+    reproduces the 43.8% gap the design was validated against. The generator is
+    seeded and deterministic, so the day count is exactly pinnable. Direction is
+    NOT asserted: a fork whose model over-calls would invert the sign, and a
+    direction assertion would be a wrong answer shipped in the test suite.
+    """
+    driver = next(d for d in load_pack(PACK).drivers if d.id == "feed_grade_vs_model")
+    rows, _ = run_query(
+        (ROOT / "method" / driver.sql).read_text(), driver.params, TABLES
+    )
+    assert rows, "feed_grade_vs_model returned nothing"
+    row = rows[0]
+    # The generator is seeded: 167 days is the complete metallurgical_recovery
+    # record. A different count means a row was dropped or duplicated.
+    assert row["day_count"] == 167, (
+        f"expected 167 days, got {row['day_count']}; the query may be "
+        "filtering or duplicating rows"
+    )
+    # The validated gap is 0.333 (43.8%). A floor of 0.20 is generous enough
+    # to survive minor re-seeding while still catching a query returning
+    # near-zero variance — which would pass a sign-only assertion.
+    assert abs(row["feed_vs_model_variance"]) >= 0.20, (
+        f"gap magnitude {row['feed_vs_model_variance']:.4f} is below the validated "
+        "floor of 0.20; the diagnostic may not be reading the correct columns"
+    )

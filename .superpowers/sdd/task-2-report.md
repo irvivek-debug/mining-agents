@@ -140,3 +140,47 @@ Evidence that these retrieve GEO-GRS-003: the standard contains the exact terms 
 - Modified: `mining_agents/catalog/definitions.py` (S06-SP1 tools and source_tables)
 
 Commit SHA: `7a53225`
+
+## Fix round 1
+
+### Finding 1 — `bias_by_depth` guard: coverage ceiling added
+
+The guard previously described band-definition mechanics and mechanism attribution but never stated that paired coverage has a hard ceiling — the desurvey join exhausts block coverage at approximately 275 m while the deposit runs to roughly 448 m, leaving the bottom ~170 m uncharacterised by this diagnostic.
+
+New guard text appended (after the existing band-definition paragraph):
+
+> Paired coverage extends only as far as the depth at which the spatial join still finds block centroids within the declared radius; the deposit continues below that point but this diagnostic reaches no further than the deepest paired sample. Material below that depth is not characterised here. Report the deepest paired depth alongside any depth finding so that the coverage boundary is visible in the result.
+
+Voice check: stated as a property of what the measurement reaches, not a verdict on what it will find. No forbidden words (`too few`, `too many`, `unevidenced`, `no signal`, `insufficient`). The `test_no_driver_decides_in_advance_what_its_own_diagnostic_will_show` test passes.
+
+### Finding 2 — `test_p5_pack.py`: two assertions added
+
+#### (a) Variance magnitude floor on `model_bias` integration test
+
+The existing assertions (`paired_samples >= 100`, `modelled_grade > 0 and assayed_grade > 0`) would pass on near-zero variance from 100 random pairs. The validated result (task-2 BigQuery run) was `variance = -0.0162`. A floor of `abs(variance) >= 0.01` is added. Direction is NOT asserted — on a fork whose model over-calls the sign reverses, and a direction assertion would be wrong.
+
+Real number behind the floor: `abs(-0.0162) = 0.0162`; floor set at `0.01` (generous enough to survive minor re-seeding, tight enough to fail on near-zero noise).
+
+#### (b) New integration test `test_the_feed_grade_vs_model_diagnostic_reproduces_the_design_gap`
+
+`feed_grade_vs_model` had no integration test despite producing the largest gap in the pack. Two assertions:
+
+1. `day_count == 167` — exact pin. The validated result was 167 days (the complete metallurgical_recovery record). A weaker `>= 100` check would pass on a query dropping 67 rows silently. The generator is seeded and deterministic, matching the same guarantee the P6 tests rely on.
+
+2. `abs(feed_vs_model_variance) >= 0.20` — magnitude floor. The validated result was `0.3331` (43.8% gap). Floor at `0.20` is generous enough for re-seeding while rejecting a near-zero gap that a sign-only assertion would accept. Direction NOT asserted for the same reason as `model_bias`.
+
+### Test command and output
+
+```
+PYTHONPATH=. /Users/amritharajendran/.local/pythons/py312/bin/python -m pytest tests/method/ -q
+```
+
+```
+...........................
+27 passed in 18.77s
+```
+
+### Files changed
+
+- Modified: `method/p5-geologist.yaml` (bias_by_depth guard extended with coverage ceiling)
+- Modified: `tests/method/test_p5_pack.py` (variance floor on model_bias; new feed_grade_vs_model integration test)

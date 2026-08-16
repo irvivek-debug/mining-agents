@@ -63,7 +63,12 @@ drivers:
       mechanism, which may be estimation uncertainty, drill spacing, QA/QC
       protocol differences between campaigns, or domain boundary placement.
       Report the band definitions and the paired count per band alongside the
-      result.
+      result. Paired coverage extends only as far as the depth at which the
+      spatial join still finds block centroids within the declared radius; the
+      deposit continues below that point but this diagnostic reaches no further
+      than the deepest paired sample. Material below that depth is not
+      characterised here. Report the deepest paired depth alongside any depth
+      finding so that the coverage boundary is visible in the result.
 
   - id: bias_by_elevation
     question: Does the grade variance change with block elevation, suggesting an elevation-related structural or weathering control?
