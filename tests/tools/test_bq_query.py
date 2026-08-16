@@ -254,14 +254,47 @@ def test_a_view_resolves_to_its_base_table_not_the_view():
 
 
 def test_run_query_enforces_the_constraint_for_every_tool_not_just_bq_query():
-    """The check lives in run_query, so the four tools with author-written SQL
-    are covered by the same gate as the agent-authored one."""
+    """The check lives in run_query, so every tool with author-written SQL is
+    covered by the same gate as the agent-authored one. Counting them here
+    would be a number to maintain twice; run_query's own docstring names them,
+    and test_every_tool_that_reads_bigquery_goes_through_run_query holds the
+    set to whatever the package actually ships."""
     with pytest.raises(UndeclaredTableError):
         run_query(
             "SELECT COUNT(*) AS n FROM `mining_data.biometric_fatigue_logs`",
             {},
             ["mining_data.assets"],
         )
+
+
+def test_every_tool_that_reads_bigquery_goes_through_run_query():
+    """The declared-table check is only estate-wide while run_query is the one
+    door out to BigQuery.
+
+    A fork adding the hundred-and-first agent's tool is far likelier to reach
+    for `bigquery.Client().query(...)` — every example on the internet does —
+    than to find this module, and nothing at runtime would object: the query
+    would run, return rows, and read whatever it liked. So the door is held
+    shut here, by reading the package rather than by trusting the habit.
+
+    Writes are a separate matter and are allowed their own client. The check
+    dry-runs a SELECT to learn which tables it touches; an insert reads
+    nothing, and the tables it writes are fixed by this repository's own code
+    rather than chosen by an agent.
+    """
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).resolve().parents[2] / "mining_agents"
+    reads = re.compile(r"\.query\(|\.query_and_wait\(")
+    offenders = sorted(
+        str(path.relative_to(root))
+        for path in root.rglob("*.py")
+        if path.name != "bq_query.py" and reads.search(path.read_text())
+    )
+    assert offenders == [], (
+        f"{offenders} query BigQuery directly, so nothing checks what they read"
+    )
 
 
 def test_an_undeclared_read_fails_inside_the_envelope_not_as_a_crash():
@@ -276,7 +309,8 @@ def test_an_undeclared_read_fails_inside_the_envelope_not_as_a_crash():
 # ---------------------------------------------------------------------------
 # Inbound biometric masking, applied in run_query for the same reason the
 # declared-table check is: every tool that returns BigQuery rows goes through
-# it, so none of the five can be left out by omission.
+# it, so no tool can be left out by omission — and the test above keeps that
+# "every" true as tools are added.
 # ---------------------------------------------------------------------------
 
 def test_run_query_masks_raw_biometric_columns():

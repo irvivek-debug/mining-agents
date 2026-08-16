@@ -375,7 +375,7 @@ test("every driver in every shipped method pack has a phrase", () => {
     const ids = [...text.matchAll(/^\s*-\s*id:\s*(\S+)/gm)].map((m) => m[1]);
     assert.ok(ids.length, `${pack} declares no driver`);
     for (const id of ids) {
-      assert.ok(P.DRIVERS[id],
+      assert.ok(P.METHOD_DRIVERS[id],
         `${pack}: driver "${id}" has no reader-facing phrase, so the activity ` +
         "log will print the identifier at someone who came here to avoid one");
     }

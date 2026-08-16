@@ -80,8 +80,14 @@ var TOOL_FAILED = {
  * carry no article, like the traversal phrases, because "Checking whether …"
  * frames them already. An id with no entry here degrades to the tool's own
  * line rather than printing the identifier, and a test over the shipped packs
- * is what reports the gap. */
-var DRIVERS = {
+ * is what reports the gap.
+ *
+ * Named for the method pack rather than called DRIVERS, because these files
+ * load as script tags into one shared global scope and apps/case/graph.js
+ * already holds a DRIVERS — the operators who drive a vehicle, an unrelated
+ * sense of the same word. A second `var` of that name is not a shadow; it is a
+ * SyntaxError that takes the whole screen down. */
+var METHOD_DRIVERS = {
   liberation: "whether the crusher setting is costing recovery",
   feed_variability: "whether feed grade explains the recovery gap",
   bypass: "whether bypass events are costing recovery",
@@ -384,8 +390,8 @@ function _noun(name, args) {
   }
   if (name === "run_diagnostic") {
     for (i = 0; i < values.length; i++) {
-      if (DRIVERS[values[i]]) {
-        return { kind: "driver", plain: DRIVERS[values[i]] };
+      if (METHOD_DRIVERS[values[i]]) {
+        return { kind: "driver", plain: METHOD_DRIVERS[values[i]] };
       }
     }
   }
@@ -775,7 +781,7 @@ function unmapped(DATA) {
 if (typeof module !== "undefined") {
   module.exports = {
     TOOLS, TOOL_ABILITY, TRAVERSALS, TABLES, JARGON, NODE_TYPES, LINK_LABELS,
-    TOOL_VERB, TOOL_FAILED, DRIVERS,
+    TOOL_VERB, TOOL_FAILED, METHOD_DRIVERS,
     bareTable, plainTable, plainTool, plainToolAbility, plainTraversal, plainJargon,
     plainType, plainLink, plainScope, plainProse,
     articleFor, tableFromSql, callLine, failLine, plainAnswer, unmapped,
