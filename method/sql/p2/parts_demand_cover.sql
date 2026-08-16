@@ -11,11 +11,15 @@
 -- a subset of the 105 SKUs in the catalogue. A LEFT JOIN is used so that any
 -- edge row without a matching inventory record surfaces as NULL rather than
 -- being silently dropped.
--- GROUP BY includes il.part_number alongside wope.part_number so that a fork
--- whose inventory_levels table carries one row per warehouse location will
--- surface as multiple output rows per part rather than silently collapsing to
--- a MAX of a single location's stock. On a one-row-per-part schema the two
--- columns are always equal and the GROUP BY behaviour is unchanged.
+-- ASSUMPTION: inventory_levels holds exactly one row per part_number.
+-- MAX() is written to survive an accidental duplicate but it does NOT surface
+-- multi-location schemas as extra rows — the join predicate forces
+-- il.part_number = wope.part_number, so any GROUP BY on il.part_number
+-- produces the same groups as GROUP BY on wope.part_number alone.
+-- A fork whose inventory_levels carries one row per warehouse location must
+-- confirm that these four columns represent site-wide totals before drawing
+-- any cover conclusion. Verify by checking part_number uniqueness in
+-- inventory_levels before running this diagnostic.
 SELECT
   wope.part_number,
   COUNT(wope.work_order_id)          AS demand_count,
@@ -26,5 +30,5 @@ SELECT
 FROM `mining_data.work_order_parts_edge` wope
 LEFT JOIN `mining_data.inventory_levels` il
   ON wope.part_number = il.part_number
-GROUP BY wope.part_number, il.part_number
+GROUP BY wope.part_number
 ORDER BY demand_count DESC

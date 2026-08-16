@@ -92,8 +92,13 @@ drivers:
       closest available demand signal. The demand record spans only the
       distinct subset of parts named in work_order_parts_edge, which is a
       catalogue subset; the cover finding does not speak to parts that appear
-      in work descriptions but are not recorded in the edge table. stock_on_hand
-      is the current inventory level and does not account for reservations
+      in work descriptions but are not recorded in the edge table. stock_on_hand,
+      reorder_point_limit, lead_time_days, and unit_price_usd are each read as
+      a single record per part from inventory_levels; the query assumes that
+      table is unique on part_number. Where a site holds inventory by location,
+      these figures must be confirmed to represent site-wide totals before any
+      cover conclusion rests on them — the SQL does not detect or reject a
+      multi-location schema. stock_on_hand does not account for reservations
       already placed against other open work orders or parts in transit.
 
   - id: schedule_compliance

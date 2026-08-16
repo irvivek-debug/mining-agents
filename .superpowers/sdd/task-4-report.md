@@ -185,3 +185,90 @@ PYTHONPATH=. /Users/amritharajendran/.local/pythons/py312/bin/python -m pytest t
 ```
 
 189 passed, 0 failures.
+
+---
+
+## Fix round 2
+
+### Path taken: no location column — remove no-op GROUP BY column and replace false comment
+
+**Schema evidence:** `bq query ... SELECT column_name, data_type FROM mining_data.INFORMATION_SCHEMA.COLUMNS WHERE table_name = "inventory_levels"` returned six columns: `part_number`, `stock_level`, `reorder_point_limit`, `lead_time_days`, `unit_price_usd`, `part_description`. No location, warehouse, or site key column exists. Path B was correct.
+
+**Why the earlier fix was strictly worse:** the join predicate `il.part_number = wope.part_number` makes every joined `il.part_number` value identical to the corresponding `wope.part_number` value. Adding `il.part_number` to the GROUP BY therefore yields exactly the same distinct groups as `GROUP BY wope.part_number` alone — a provable no-op — while the comment claimed it would "surface multiple output rows per part," which it cannot.
+
+### Before (SQL, GROUP BY line and false comment)
+
+```sql
+-- GROUP BY includes il.part_number alongside wope.part_number so that a fork
+-- whose inventory_levels table carries one row per warehouse location will
+-- surface as multiple output rows per part rather than silently collapsing to
+-- a MAX of a single location's stock. On a one-row-per-part schema the two
+-- columns are always equal and the GROUP BY behaviour is unchanged.
+...
+GROUP BY wope.part_number, il.part_number
+```
+
+### After (SQL)
+
+```sql
+-- ASSUMPTION: inventory_levels holds exactly one row per part_number.
+-- MAX() is written to survive an accidental duplicate but it does NOT surface
+-- multi-location schemas as extra rows — the join predicate forces
+-- il.part_number = wope.part_number, so any GROUP BY on il.part_number
+-- produces the same groups as GROUP BY on wope.part_number alone.
+-- A fork whose inventory_levels carries one row per warehouse location must
+-- confirm that these four columns represent site-wide totals before drawing
+-- any cover conclusion. Verify by checking part_number uniqueness in
+-- inventory_levels before running this diagnostic.
+...
+GROUP BY wope.part_number
+```
+
+### Before (guard, parts_demand_cover in p2-planner.yaml)
+
+```
+stock_on_hand is the current inventory level and does not account for reservations
+already placed against other open work orders or parts in transit.
+```
+(The guard had no mention of the one-row-per-part assumption or multi-location risk.)
+
+### After (guard)
+
+```
+stock_on_hand, reorder_point_limit, lead_time_days, and unit_price_usd are each read as
+a single record per part from inventory_levels; the query assumes that table is unique
+on part_number. Where a site holds inventory by location, these figures must be confirmed
+to represent site-wide totals before any cover conclusion rests on them — the SQL does not
+detect or reject a multi-location schema. stock_on_hand does not account for reservations
+already placed against other open work orders or parts in transit.
+```
+
+### BQ validation
+
+Row shape identical to recorded output:
+
+```
+part_number,demand_count,stock_on_hand,reorder_point_limit,lead_time_days,unit_price_usd
+SKU-LUBE-HEAVY-T2,67,1,3,3,180.0
+SKU-BELT-SPLICE-G2,34,2,4,7,450.0
+SKU-BEARING-PUMP-G1,33,0,8,14,1250.0
+SKU-VALVE-SEAL-22,26,2,3,7,450.0
+SKU-AIR-FILTER-08,26,2,4,7,450.0
+```
+
+5 rows, values match recorded output exactly.
+
+Note: an initial draft of the SQL comment included an inline SQL example (`COUNT(*) > 1`) that triggered `assert_no_interpolation` (the regex does not skip comment lines). Removed; the comment now describes the verification step in prose.
+
+### Test output
+
+```
+PYTHONPATH=. /Users/amritharajendran/.local/pythons/py312/bin/python -m pytest tests/method/ -q
+```
+
+```
+................................................                         [100%]
+48 passed in 35.02s
+```
+
+48 passed, 0 failures.
