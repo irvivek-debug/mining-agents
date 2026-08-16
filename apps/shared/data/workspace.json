@@ -140,6 +140,7 @@
           "D31",
           "S01",
           "S01-SP2",
+          "S01-SP3",
           "S02",
           "S02-SP2",
           "S08",
@@ -419,7 +420,8 @@
         "local_parquet": null,
         "description": null,
         "agents": [
-          "D19"
+          "D19",
+          "S06-SP1"
         ]
       },
       "mining_data.erp_work_orders": {
@@ -480,6 +482,7 @@
           "D09",
           "D29",
           "D31",
+          "S01-SP3",
           "S02",
           "S02-CRITIC",
           "S02-SP1",
@@ -977,6 +980,7 @@
           "D24",
           "S06",
           "S06-CRITIC",
+          "S06-SP1",
           "S06-SP2",
           "S06-SP3",
           "S07",
@@ -1186,6 +1190,7 @@
           "D37",
           "S05",
           "S05-CRITIC",
+          "S05-SP2",
           "S05-SP3",
           "S11",
           "S11-CRITIC",
@@ -1390,6 +1395,7 @@
           "D04",
           "S01",
           "S01-SP1",
+          "S01-SP3",
           "S07",
           "S07-SP2",
           "S12",
@@ -1704,5 +1710,5 @@
     "consequence": "Structure, method and provenance below are the deployed article. Anything an agent would have generated in its own words is marked NOT CONNECTED rather than written for it.",
     "proxy_route": "/api/invoke/{agent_id}"
   },
-  "generated_at": "2026-08-16T02:57:19+00:00"
+  "generated_at": "2026-08-16T16:47:23+00:00"
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-16T02:57:19+00:00",
+  "generated_at": "2026-08-16T16:47:22+00:00",
   "source": "mining_agents.catalog.definitions",
   "counts": {
     "agent_nodes": 100,
@@ -654,11 +654,17 @@
       "model_tier": "balanced",
       "hitl_required": false,
       "source_tables": [
-        "mining_data.maintenance_logs"
+        "mining_data.maintenance_logs",
+        "mining_data.erp_work_orders",
+        "mining_data.assets",
+        "mining_data.telemetry_stream"
       ],
       "tools": [
         "bq_query",
-        "bqml_predict"
+        "bqml_predict",
+        "method_lookup",
+        "run_diagnostic",
+        "doc_search"
       ],
       "traversals": [],
       "models": [
@@ -770,7 +776,11 @@
         "mining_data.assets"
       ],
       "tools": [
-        "graph_traverse"
+        "graph_traverse",
+        "bq_query",
+        "method_lookup",
+        "run_diagnostic",
+        "doc_search"
       ],
       "traversals": [
         "stockout_exposure"
@@ -1173,10 +1183,15 @@
         "mining_data.operator_vehicle_assignments",
         "mining_data.fleet_vehicles",
         "mining_data.incident_involvements",
-        "mining_data.safety_incidents"
+        "mining_data.safety_incidents",
+        "mining_data.radio_communications"
       ],
       "tools": [
-        "graph_traverse"
+        "graph_traverse",
+        "bq_query",
+        "method_lookup",
+        "run_diagnostic",
+        "doc_search"
       ],
       "traversals": [
         "fatigue_to_incident"
@@ -1280,10 +1295,15 @@
       "hitl_required": false,
       "source_tables": [
         "mining_data.drill_assay_logs",
-        "mining_data.geological_block_models"
+        "mining_data.geological_block_models",
+        "mining_data.drill_holes",
+        "mining_data.metallurgical_recovery"
       ],
       "tools": [
-        "bq_query"
+        "bq_query",
+        "method_lookup",
+        "run_diagnostic",
+        "doc_search"
       ],
       "traversals": [],
       "models": [],

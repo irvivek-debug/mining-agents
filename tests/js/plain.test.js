@@ -327,7 +327,7 @@ test("each driver in the tree names the cause it is checking", () => {
   assert.equal(P.callLine("run_diagnostic", { driver_id: "liberation" }),
     "Checking whether the crusher setting is costing recovery");
   assert.equal(P.callLine("run_diagnostic", { driver_id: "bypass" }),
-    "Checking whether bypass events are costing recovery");
+    "Checking whether ore routed around the grinding circuit is costing recovery");
   // Five drivers, five distinct lines: the repetition is the defect.
   const ids = ["liberation", "feed_variability", "bypass", "reagent_regime",
                "grind_size_p80"];
@@ -379,6 +379,34 @@ test("every driver in every shipped method pack has a phrase", () => {
         `${pack}: driver "${id}" has no reader-facing phrase, so the activity ` +
         "log will print the identifier at someone who came here to avoid one");
     }
+  }
+});
+
+/* fatigue_to_incident exists twice: as a graph traversal and as a P3 driver.
+ * The traversal walks a graph edge ("how crew fatigue connects to incidents").
+ * The driver asks whether the data supports attributing incidents to fatigue at all.
+ * They are different operations; identical wording would mislead a reader watching
+ * the activity log. This test pins the distinction so a later edit that collapses
+ * them fails loudly. */
+test("fatigue_to_incident has distinct phrasings as a traversal and as a driver", () => {
+  const traversalPhrase = P.TRAVERSALS.fatigue_to_incident;
+  const driverPhrase = P.METHOD_DRIVERS.fatigue_to_incident;
+  assert.ok(traversalPhrase, "fatigue_to_incident must have a traversal phrase");
+  assert.ok(driverPhrase, "fatigue_to_incident must have a driver phrase");
+  assert.notEqual(traversalPhrase, driverPhrase,
+    "the traversal and driver phrases must differ: the traversal walks a graph " +
+    "edge; the driver asks a coverage question the data cannot yet answer");
+});
+
+test("every driver id in every pack has a plain phrase", () => {
+  // The fixture is generated from method/*.yaml so it cannot drift from what ships.
+  // The assertion checks callLine output rather than the map directly: a phrase that
+  // is present but still prints the id (e.g., "Checking cost_concentration") would
+  // pass a map-key test and fail here, which is the failure worth having.
+  const ids = require("../fixtures/driver-ids.json"); // written in step 3
+  for (const id of ids) {
+    const line = P.callLine("run_diagnostic", { driver_id: id });
+    assert.ok(line && !line.includes(id), `no plain phrase for ${id}: ${line}`);
   }
 });
 

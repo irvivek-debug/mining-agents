@@ -88,9 +88,52 @@ var TOOL_FAILED = {
  * sense of the same word. A second `var` of that name is not a shadow; it is a
  * SyntaxError that takes the whole screen down. */
 var METHOD_DRIVERS = {
+  /* P1 — Reliability Engineer (governing metric: unplanned repair cost per asset) */
+  cost_concentration: "whether a handful of assets are carrying most of the repair bill",
+  criticality_load: "whether the highest-consequence assets are also the costliest to repair",
+  excursion_rate: "whether telemetry is flagging which assets are running outside their normal range",
+  repair_duration: "whether repair time varies enough across assets to explain the cost spread",
+  condition_precursors: "whether telemetry excursions reliably precede a work order on the same asset",
+  availability: "whether uptime is being tracked and which assets are running the fewest operating hours",
+  mtbf: "whether mean time between failures is trending in the right direction per asset",
+
+  /* P2 — Maintenance Planner (governing metric: maintenance cost per completed work order) */
+  priority_cost_escalation: "whether higher-priority work orders consistently cost more to close",
+  backlog_aging: "whether stale work orders are sitting in the backlog long enough to inflate cost",
+  parts_stockout: "which parts are below their reorder point and how long it takes to restock them",
+  parts_demand_cover: "whether parts on hand are enough to cover what open work orders need",
+  schedule_compliance: "what proportion of work orders were closed within their scheduled window",
+  planned_ratio: "whether preventive work is growing as a share of the total maintenance programme",
+
+  /* P3 — HSE Lead (governing metric: severity-weighted incident exposure) */
+  location_concentration: "whether incident burden is concentrated in specific operational areas",
+  severity_mix: "whether the distribution of incident severity levels signals any pattern worth acting on",
+  fatigue_exposure: "whether the biometric monitoring record shows sleep-deficit exposure across the workforce",
+  radio_distress: "whether emergency radio traffic concentrates in any particular operational period",
+  /* fatigue_to_incident appears in TRAVERSALS as a graph edge walk — "how crew fatigue
+   * connects to incidents". Here it is a diagnostic question declared not_instrumented
+   * in the P3 pack: whether attributing specific incidents to measured fatigue is
+   * possible with the current data. The two are different operations asking different
+   * questions; identical wording would mislead a reader watching the activity log,
+   * because "Checking how crew fatigue connects to incidents" reads as a graph walk
+   * while this is a data-coverage verdict. The phrasing here names the coverage gap
+   * rather than the graph edge, so the distinction is visible in the log. */
+  fatigue_to_incident: "whether fatigue readings can be reliably linked to specific incidents in the data",
+  shift_pattern: "whether incidents or fatigue alerts concentrate in a particular shift window",
+
+  /* P5 — Geologist (governing metric: contained-metal variance between the block model and realised grade) */
+  model_bias: "whether the block model differs systematically from assayed grade across the dataset",
+  bias_by_lithology: "whether the grade variance is concentrated in one or more geological domains",
+  bias_by_depth: "whether grade variance changes with depth, pointing to a depth-dependent model error",
+  bias_by_elevation: "whether grade variance changes with elevation, suggesting a weathering or structural control",
+  feed_grade_vs_model: "whether the grade arriving at the plant matches what the block model predicted",
+  tonnage_reconciliation: "whether modelled tonnage matches the tonnes actually mined and delivered",
+  qaqc_bias: "whether laboratory QA/QC failures are introducing a systematic assay bias",
+
+  /* P6 — Metallurgist (governing metric: unit cost per tonne of contained metal) */
   liberation: "whether the crusher setting is costing recovery",
   feed_variability: "whether feed grade explains the recovery gap",
-  bypass: "whether bypass events are costing recovery",
+  bypass: "whether ore routed around the grinding circuit is costing recovery",
   reagent_regime: "whether the reagent regime is costing recovery",
   grind_size_p80: "whether grind size is costing recovery",
 };
