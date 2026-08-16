@@ -22,6 +22,7 @@ PACK_DIR = Path(__file__).resolve().parents[2] / "method"
 #: rather than return an empty tree.
 PACKS = {
     "P1": "p1-reliability.yaml",
+    "P2": "p2-planner.yaml",
     "P5": "p5-geologist.yaml",
     "P6": "p6-metallurgist.yaml",
 }
