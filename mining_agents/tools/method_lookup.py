@@ -38,8 +38,19 @@ def make_method_lookup(persona: str):
             )
         try:
             pack = load_pack(PACK_DIR / name)
-        except (OSError, PackError) as exc:
-            return fail("NO_METHOD_PACK", str(exc), {"persona": persona}, [])
+        except Exception:  # noqa: BLE001 — must never propagate; see module docstring
+            # An unhandled exception here reaches the ADK runtime as a
+            # traceback, bypassing every structured-error path the caller
+            # has.  yaml.YAMLError is the most common non-(OSError, PackError)
+            # case: a malformed pack raises ParserError, which is neither.
+            # The bare filename (not the absolute path) goes in details so
+            # support can identify the pack without the model seeing host paths.
+            return fail(
+                "NO_METHOD_PACK",
+                f"method pack for persona {persona!r} could not be loaded",
+                {"persona": persona, "pack_file": name},
+                [],
+            )
         return ok(
             {
                 "metric": pack.metric,

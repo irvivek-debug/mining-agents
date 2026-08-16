@@ -67,11 +67,6 @@ def test_the_dataset_exposes_eight_predictive_models_and_one_embedding_model():
     )
 
 
-def test_telemetry_alarm_risk_model_is_present():
-    """Added in Phase 4; the design doc's list of 7 predates it."""
-    assert "telemetry_alarm_risk_model" in list_models()
-
-
 def test_the_embedding_model_cannot_be_predicted_with():
     """Deployment is not permission.
 

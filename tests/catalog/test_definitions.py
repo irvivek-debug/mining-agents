@@ -138,6 +138,23 @@ def test_bqml_predict_is_never_granted_without_a_model(live_models):
         assert all(m in live_models for m in agent.models), agent.agent_id
 
 
+def test_no_agent_declares_the_embedding_model():
+    # text_embedding_model is a REMOTE model over Vertex text-embedding-005,
+    # deployed to embed the PDF corpus for doc_search.  It lives in the same
+    # dataset as the eight predictive models, so list_models() returns it and
+    # live_models contains it — meaning test_bqml_predict_is_never_granted_
+    # without_a_model would NOT catch an agent declaring it.  ML.PREDICT over a
+    # remote embedding model is not a prediction; it returns a number that means
+    # nothing.  Deployment is not permission, and this test is what enforces
+    # that distinction.  This test requires no live call: the catalogue is
+    # static data.
+    for agent in ALL_AGENTS:
+        assert "text_embedding_model" not in agent.models, (
+            f"{agent.agent_id} declares text_embedding_model; "
+            "ML.PREDICT over an embedding model is not a prediction"
+        )
+
+
 def test_graph_traverse_is_never_granted_without_a_traversal():
     granted = [a for a in ALL_AGENTS if "graph_traverse" in a.tools]
     assert granted, "no agent has graph_traverse — the loop below proves nothing"
