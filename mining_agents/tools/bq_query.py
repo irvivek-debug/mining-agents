@@ -250,11 +250,19 @@ def run_query(sql: str, params: dict, tables_read: list[str]) -> tuple[list[dict
     """Execute parameterised SQL. Returns (rows, row_count). No envelope.
 
     Every caller passes through here — the agent-authored `bq_query` tool and
-    the four tools whose SQL is written in this repo — so this is the single
-    place the declared-table constraint has to hold. Author-written SQL is
-    checked too, deliberately: a tool whose SQL drifts away from the tables it
-    declares is a provenance bug, and `meta.tables_read` should not be able to
-    say one thing while the query does another.
+    the six tools whose SQL is written in this repo (`bqml_predict`,
+    `doc_search`, `graph_traverse`, `ontology_lookup`, `request_approval` and
+    `run_diagnostic`) — so this is the single place the declared-table
+    constraint has to hold. Author-written SQL is checked too, deliberately: a
+    tool whose SQL drifts away from the tables it declares is a provenance bug,
+    and `meta.tables_read` should not be able to say one thing while the query
+    does another.
+
+    One qualification the bare count hid. This check compares a query against
+    the list its caller passes in, so it is only a constraint on the AGENT when
+    that list is the agent's declaration. `run_diagnostic` derives its list
+    from the diagnostic's own SQL — that is what makes meta.tables_read honest
+    there — and so checks the agent's grant itself before calling in.
     """
     assert_no_interpolation(sql)
     referenced = assert_reads_only_declared_tables(sql, params, tables_read)
