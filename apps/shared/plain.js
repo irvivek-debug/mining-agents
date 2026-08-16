@@ -48,11 +48,52 @@ var TOOL_ABILITY = {
   run_diagnostic: "check one cause against the data",
 };
 
-/* The verb for the composed form, "Reading the sensor readings". Only the two
- * tools that take a noun need one. The article is not part of the verb: see
- * articleFor. */
-var TOOL_VERB = { bq_query: "Reading", graph_traverse: "Tracing" };
-var TOOL_FAILED = { bq_query: "Couldn't read", graph_traverse: "Couldn't trace" };
+/* The verb for the composed form, "Reading the sensor readings". Only a tool
+ * whose arguments carry a noun needs one — method_lookup takes no argument at
+ * all, so there is nothing for it to name and it keeps its TOOL_DOING line,
+ * which it prints once. The article is not part of the verb: see articleFor.
+ *
+ * run_diagnostic and doc_search were missing from here, and the omission was
+ * loudest exactly where the method is: working a five-driver tree printed
+ * "Checking one cause against the data" five times, and a document search
+ * never said what it looked for. The activity log is where the reader watches
+ * the method being worked; five identical lines say a spinner would have done.
+ */
+var TOOL_VERB = {
+  bq_query: "Reading",
+  doc_search: "Searching the site's documents for",
+  graph_traverse: "Tracing",
+  run_diagnostic: "Checking",
+};
+var TOOL_FAILED = {
+  bq_query: "Couldn't read",
+  doc_search: "Couldn't search the site's documents for",
+  graph_traverse: "Couldn't trace",
+  run_diagnostic: "Couldn't check",
+};
+
+/* What each driver in a method pack asks, in the words a reader uses.
+ *
+ * The ids come from method/*.yaml and reach this file as the run_diagnostic
+ * argument. The phrases are the pack's own questions said plainly — "costing
+ * liberation" is the plant's word and becomes "costing recovery" — and they
+ * carry no article, like the traversal phrases, because "Checking whether …"
+ * frames them already. An id with no entry here degrades to the tool's own
+ * line rather than printing the identifier, and a test over the shipped packs
+ * is what reports the gap. */
+var DRIVERS = {
+  liberation: "whether the crusher setting is costing recovery",
+  feed_variability: "whether feed grade explains the recovery gap",
+  bypass: "whether bypass events are costing recovery",
+  reagent_regime: "whether the reagent regime is costing recovery",
+  grind_size_p80: "whether grind size is costing recovery",
+};
+
+/* A search term is the model's own text, so its length is not ours to trust:
+ * one line of the activity log is one step, and a paragraph pasted into the
+ * query would take the log apart. Cut at a length that still shows what was
+ * asked for. */
+var QUERY_MAX = 60;
 
 var TRAVERSALS = {
   blast_radius: "what else stops if this stops",
@@ -340,6 +381,30 @@ function _noun(name, args) {
       var table = tableFromSql(values[i]);
       if (table) return { kind: "table", plain: plainTable(table) };
     }
+  }
+  if (name === "run_diagnostic") {
+    for (i = 0; i < values.length; i++) {
+      if (DRIVERS[values[i]]) {
+        return { kind: "driver", plain: DRIVERS[values[i]] };
+      }
+    }
+  }
+  if (name === "doc_search" && args && typeof args.query === "string" && args.query.trim()) {
+    /* The one place a key is read rather than a value, and deliberately.
+     *
+     * A table id and a traversal id can be recognised by their shape, so the
+     * scans around this one can afford to look at every value. A search term
+     * is free text and cannot: any string would satisfy it. Two things follow.
+     * The key is safe to name — doc_search(query, k) is a signature written in
+     * this repository, not a guess about someone else's — and taking the first
+     * string instead would let _failSentence below hand this branch a whole
+     * passage of the model's prose to quote back at the reader, machine
+     * vocabulary and all, which is what the answer rules exist to remove.
+     *
+     * Quoted because the words are the model's and not this screen's. */
+    var asked = args.query.trim();
+    if (asked.length > QUERY_MAX) asked = asked.slice(0, QUERY_MAX) + "…";
+    return { kind: "query", plain: "“" + asked + "”" };
   }
   for (i = 0; i < values.length; i++) {
     if (typeof values[i] === "string" && TRAVERSALS[values[i]]) {
@@ -710,6 +775,7 @@ function unmapped(DATA) {
 if (typeof module !== "undefined") {
   module.exports = {
     TOOLS, TOOL_ABILITY, TRAVERSALS, TABLES, JARGON, NODE_TYPES, LINK_LABELS,
+    TOOL_VERB, TOOL_FAILED, DRIVERS,
     bareTable, plainTable, plainTool, plainToolAbility, plainTraversal, plainJargon,
     plainType, plainLink, plainScope, plainProse,
     articleFor, tableFromSql, callLine, failLine, plainAnswer, unmapped,

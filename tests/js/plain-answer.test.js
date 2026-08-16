@@ -111,6 +111,29 @@ test("a failed tool call collapses to the vocabulary the activity log already us
   );
 });
 
+/* The failure sentence is built from the passage itself, because by the time an
+ * answer reaches plainAnswer the call that failed is only described in prose.
+ * That makes the passage the argument list, and doc_search is the one tool
+ * whose argument is free text: a branch that took the first string it found
+ * would quote the model's whole failure report — error codes and all — into
+ * the sentence written to remove exactly that.
+ */
+test("a failed document search does not quote the model's own prose back", () => {
+  // Shaped like the live fixture's passages: an announcement naming the tool
+  // in backticks, then the machine detail underneath it.
+  const passage = [
+    "The call to `doc_search` failed.",
+    "- **Error Code:** `QUERY_FAILED` (`INVALID_ARGUMENT`), job 4f9c-11ee.",
+  ].join("\n");
+  const said = P.plainAnswer(passage);
+  const body = readerText(said.html);
+  for (const token of ["QUERY_FAILED", "INVALID_ARGUMENT", "4f9c-11ee", "doc_search"]) {
+    assert.ok(!body.includes(token), `the reader still meets ${token}: ${body}`);
+  }
+  assert.ok(body.includes("Couldn't finish"), `no plain failure sentence in: ${body}`);
+  assert.ok(said.technical.includes("QUERY_FAILED"), "the raw passage was not kept");
+});
+
 test("the honest fact that a step failed and the answer is short survives", () => {
   const body = readerText(P.plainAnswer(LIVE).html);
   assert.ok(/failed/i.test(body), "the answer no longer admits anything failed");

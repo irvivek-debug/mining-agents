@@ -316,3 +316,78 @@ test("rewriting the catalogue's prose substitutes, and never quietly drops", () 
     assert.equal(strip(after), strip(before), `${code} lost text in the rewrite`);
   }
 });
+
+/* Working a driver tree is five calls to one tool, and the activity log is the
+ * only place the reader can see the method being worked rather than a spinner.
+ * Before this, run_diagnostic had no TOOL_VERB entry, so every one of those
+ * five steps fell through to the same generic headline — "Checking one cause
+ * against the data", five times in a row — and doc_search never said what it
+ * searched for, although the query was in the arguments the whole time. */
+test("each driver in the tree names the cause it is checking", () => {
+  assert.equal(P.callLine("run_diagnostic", { driver_id: "liberation" }),
+    "Checking whether the crusher setting is costing recovery");
+  assert.equal(P.callLine("run_diagnostic", { driver_id: "bypass" }),
+    "Checking whether bypass events are costing recovery");
+  // Five drivers, five distinct lines: the repetition is the defect.
+  const ids = ["liberation", "feed_variability", "bypass", "reagent_regime",
+               "grind_size_p80"];
+  const lines = ids.map((id) => P.callLine("run_diagnostic", { driver_id: id }));
+  assert.equal(new Set(lines).size, ids.length, lines.join(" | "));
+});
+
+test("a doc_search says what it searched the documents for", () => {
+  assert.equal(
+    P.callLine("doc_search", { query: "crusher bypass valve clog", k: 5 }),
+    "Searching the site's documents for “crusher bypass valve clog”");
+});
+
+test("a long search query is cut rather than filling the log with a paragraph", () => {
+  const line = P.callLine("doc_search", { query: "a".repeat(200) });
+  assert.ok(line.length < 110, `an activity line ran to ${line.length} characters`);
+  assert.ok(line.endsWith("…”"), line);
+});
+
+test("a failed method step says which cause or query it was on", () => {
+  assert.equal(P.failLine("run_diagnostic", { driver_id: "liberation" }),
+    "Couldn't check whether the crusher setting is costing recovery — " +
+    "that lookup failed.");
+  assert.equal(P.failLine("doc_search", { query: "torque limit" }),
+    "Couldn't search the site's documents for “torque limit” — that lookup failed.");
+});
+
+test("an unknown driver id renders the tool's own line rather than the id", () => {
+  // Same rule as everywhere else in this file: an id with no phrase is not
+  // guessed at. A fork's new driver reads as the generic headline until
+  // somebody writes its phrase — which the coverage test below is what
+  // notices.
+  assert.equal(P.callLine("run_diagnostic", { driver_id: "no_such_driver" }),
+    "Checking one cause against the data");
+});
+
+test("every driver in every shipped method pack has a phrase", () => {
+  // The driver ids live in method/*.yaml, which this file cannot see and the
+  // bundle does not carry, so unmapped() cannot report them. Read the packs.
+  const dir = path.join(__dirname, "..", "..", "method");
+  const packs = fs.readdirSync(dir).filter((f) => f.endsWith(".yaml"));
+  assert.ok(packs.length, "no method pack found — this test would prove nothing");
+  for (const pack of packs) {
+    const text = fs.readFileSync(path.join(dir, pack), "utf8");
+    const ids = [...text.matchAll(/^\s*-\s*id:\s*(\S+)/gm)].map((m) => m[1]);
+    assert.ok(ids.length, `${pack} declares no driver`);
+    for (const id of ids) {
+      assert.ok(P.DRIVERS[id],
+        `${pack}: driver "${id}" has no reader-facing phrase, so the activity ` +
+        "log will print the identifier at someone who came here to avoid one");
+    }
+  }
+});
+
+test("every tool with a composed verb can also say that it failed", () => {
+  // unmapped() checks TOOLS, TOOL_DOING and TOOL_ABILITY, and cannot see this
+  // pair: TOOL_VERB is deliberately partial — only the tools whose arguments
+  // carry a noun have one — so "missing from TOOL_VERB" is not a defect the
+  // catalogue can define. What IS a defect is a tool that names its noun while
+  // running and loses it the moment it fails, which is exactly the moment the
+  // reader most needs to know which step broke.
+  assert.deepEqual(Object.keys(P.TOOL_VERB).sort(), Object.keys(P.TOOL_FAILED).sort());
+});
