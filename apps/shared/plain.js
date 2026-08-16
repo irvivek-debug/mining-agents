@@ -14,9 +14,12 @@
 var TOOLS = {
   bq_query: "looking up records",
   bqml_predict: "running a prediction",
+  doc_search: "searching the site's documents",
   graph_traverse: "tracing connections",
+  method_lookup: "listing the known causes",
   operational_math: "working out the numbers",
   request_approval: "asking for your sign-off",
+  run_diagnostic: "checking one cause against the data",
 };
 
 /* The present-participle headline for a tool, used in the activity log where a
@@ -24,9 +27,12 @@ var TOOLS = {
 var TOOL_DOING = {
   bq_query: "Looking up records",
   bqml_predict: "Running a prediction",
+  doc_search: "Searching the site's documents",
   graph_traverse: "Tracing connections",
+  method_lookup: "Listing the known causes",
   operational_math: "Working out the numbers",
   request_approval: "Asking for your sign-off",
+  run_diagnostic: "Checking one cause against the data",
 };
 
 /* The bare-verb phrase for a tool, used after a modal — "It can look up
@@ -34,9 +40,12 @@ var TOOL_DOING = {
 var TOOL_ABILITY = {
   bq_query: "look up records",
   bqml_predict: "run a prediction",
+  doc_search: "search the site's documents",
   graph_traverse: "trace connections",
+  method_lookup: "list the known causes",
   operational_math: "work out the numbers",
   request_approval: "ask for your sign-off",
+  run_diagnostic: "check one cause against the data",
 };
 
 /* The verb for the composed form, "Reading the sensor readings". Only the two
@@ -680,7 +689,13 @@ function unmapped(DATA) {
       var bare = bareTable(t);
       if (!TABLES[bare]) tables[bare] = true;
     });
-    (agent.tools || []).forEach(function (t) { if (!TOOLS[t]) tools[t] = true; });
+    /* All three tool maps, not just TOOLS. TOOL_DOING is what the live
+     * activity log renders, so a tool missing only from that map prints its
+     * own identifier at a reader in the most visible place on the screen —
+     * and checking TOOLS alone would not notice. */
+    (agent.tools || []).forEach(function (t) {
+      if (!TOOLS[t] || !TOOL_DOING[t] || !TOOL_ABILITY[t]) tools[t] = true;
+    });
     (agent.traversals || []).forEach(function (t) {
       if (!TRAVERSALS[t]) traversals[t] = true;
     });
