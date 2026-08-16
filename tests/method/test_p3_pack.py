@@ -234,14 +234,27 @@ def test_fatigue_exposure_returns_banded_counts_and_aggregate_metrics():
     assert by_band["below_threshold"]["alert_count"] == 2, (
         f"below_threshold alert_count {by_band['below_threshold']['alert_count']} != 2"
     )
-    # Max deficit must exceed the OPS-FMS-001 clause 4.3 stand-down threshold.
-    # The measured maximum is 7.98 hours; the floor is set at 6.0 to discriminate
-    # against a query bug that collapsed or mis-scaled the deficit column.
-    max_deficit = max(r["max_sleep_deficit_hours"] for r in rows)
-    assert max_deficit >= 6.0, (
-        f"max sleep deficit {max_deficit} is below the OPS-FMS-001 clause 4.3 "
-        "stand-down threshold floor of 6.0 hours; the deficit column may be "
-        "mis-scaled or the above_threshold band may have been dropped"
+    # A floor at the clause 4.3 threshold of 6.0 would not discriminate: a
+    # deficit column mis-scaled by a factor that returned 6.5 still clears it.
+    # The corpus is deterministic, so the observed maximum is pinned instead,
+    # and the relationship to the standard is asserted from the pinned value.
+    max_deficit = by_band["above_threshold"]["max_sleep_deficit_hours"]
+    assert max_deficit == 7.98, (
+        f"above_threshold max sleep deficit {max_deficit} != 7.98; the deficit "
+        "column may be mis-scaled or rows may have been dropped from the band"
+    )
+    # Which is what makes this driver worth running: the record reaches past the
+    # OPS-FMS-001 clause 4.3 mandatory stand-down threshold of 6 hours.
+    assert max_deficit > 6.0
+    # The band predicate must actually partition on @deficit_hours. Without
+    # this, a CASE that banded on the wrong column would still produce two
+    # bands with the right totals.
+    assert by_band["below_threshold"]["max_sleep_deficit_hours"] < driver.params[
+        "deficit_hours"
+    ], (
+        f"below_threshold holds a deficit of "
+        f"{by_band['below_threshold']['max_sleep_deficit_hours']}, at or above "
+        f"the @deficit_hours boundary of {driver.params['deficit_hours']}"
     )
     # Each band must independently report exactly 20 distinct operators.
     # Using max() across bands would pass even if one band dropped to 15.
