@@ -1,9 +1,11 @@
 # Agent tool defects observed in production
 
-Three tool calls fail every time they are made. All three were captured from
-live runs of S01 against the deployed agents on `genial-union-475913-i7`, with
-the agent's own error text quoted verbatim from the technical drawer on
-`persona.html`.
+Three tool calls fail every time they are made (D1–D3), and one table succeeds
+every time while describing a corpus that is not there (D4). D1–D3 were
+captured from live runs of S01 against the deployed agents on
+`genial-union-475913-i7`, with the agent's own error text quoted verbatim from
+the technical drawer on `persona.html`; D4 was found while building the P6
+document corpus and is measured against GCS.
 
 These are **agent-layer defects, not frontend ones**, and they are recorded
 here rather than fixed alongside the workspace changes: the frontend's job is
@@ -53,6 +55,37 @@ The guard that blocks literal values in predicates is correct in intent — it
 is what keeps a generated query from being injected into. But the agent has no
 route to supply an `@parameter` binding through the tool's current interface,
 so a legitimate filtered query cannot be expressed at all.
+
+## D4 — `unstructured_docs_metadata` describes a corpus that does not exist
+
+Not a failing call. This one returns rows, which is why it survived: every
+query against it succeeds, and every answer built on it is fiction.
+
+| | table says | GCS actually holds |
+|---|---|---|
+| documents | 50 rows, 50 distinct `file_path` | 40 PDF objects |
+| chunks | 3,392 (sum of `chunk_count`) | 48 rows in `doc_chunks` |
+| paths resolve | — | **none of the 50** |
+
+Every `file_path` names `gs://mining-knowledge-base/oem-manuals/manual_N.pdf`.
+There is no `oem-manuals/` folder; the real one is `oem-equipment-manuals/`,
+and its objects are named for their equipment (`crusher_03_manual.pdf`), not
+numbered. The other five folders — `capital-works-archives/`,
+`exploration-legacy-reports/`, `field-progress-reports/`,
+`legal-procurement-policies/`, `macroeconomic-analyst-reports/` — appear in the
+table not at all. So the table both invents documents and hides the ones that
+exist, and its chunk count overstates the corpus about seventyfold.
+
+An agent joining to this table gets a plausible citation to a document nobody
+can open. That is worse than D1–D3: those fail loudly and the agent reports
+BLOCKED, whereas this one produces a confident answer with a dead reference.
+
+`mining_agents/tools/ontology_lookup.py` had already reached the same
+conclusion from the other direction and abandoned document linking, because no
+honest join existed. `doc_search` and `scripts/build_doc_chunks.py` therefore
+read GCS directly and never touch this table. It is left in place because the
+data profile and three design documents reference it; the fix is to regenerate
+it from the real bucket, which belongs to the generator workstream.
 
 ## What the reader sees while these are broken
 
