@@ -164,7 +164,16 @@ test("a starter always routes to the agent it was derived from", () => {
       const pick = R.route(item.q, code, DATA);
       assert.ok(DATA.personas.personas[code].agents.includes(pick.agent_id),
         `${code}: starter "${item.q}" routed outside the persona`);
-      if (!item.isGeneric) {
+      if (!item.agent) {
+        // Two kinds are not derived from an agent and so cannot round-trip to
+        // one: the generic backstops, and the governing question, which comes
+        // from the persona's method rather than from any single agent's
+        // capabilities. Both are still held to routing inside the persona,
+        // asserted above. Anything else carrying no agent is a bug in
+        // _starterItems that would otherwise pass here silently.
+        assert.ok(item.isGeneric || item.isMethod,
+          `${code}: starter "${item.q}" names no agent and no reason for it`);
+      } else {
         // The core guarantee: the starter must route to the exact agent it was
         // derived from, not merely any agent in the persona.
         assert.strictEqual(pick.agent_id, item.agent.agent_id,
@@ -207,4 +216,51 @@ test("a starter never names a capability its agent does not have", () => {
       }
     }
   }
+});
+
+/* The governing starter.
+ *
+ * A persona whose method pack names a governing metric leads with a question
+ * about improving it. Before this, P6's three starters were "What's in the
+ * sensor readings right now?", "What's in the crusher run states right now?"
+ * and "What's in the plant recovery records right now?" — three table dumps on
+ * the landing screen for the one role this branch redesigned around problem
+ * solving, and the customer's exact criticism ("more like a natural-language-
+ * to-SQL thing than agents that replicate best-performing practice") printed
+ * back at them in their own words.
+ */
+test("a persona with a governing metric leads with it, not with a table", () => {
+  const metric = DATA.personas.personas.P6.method.metric;
+  assert.ok(metric, "P6 lost its governing metric from the export");
+  const first = R.starterQuestions("P6", DATA)[0];
+  assert.ok(first.includes(metric),
+    `P6's first starter does not name "${metric}": ${first}`);
+  assert.ok(!/^What's in the /.test(first),
+    `P6 still opens with a table question: ${first}`);
+  // It has to be a problem-solving question, not a metric-shaped table dump.
+  assert.ok(/problems/i.test(first) && /resolve/i.test(first), first);
+});
+
+test("the governing starter routes into the persona that owns the metric", () => {
+  // A starter that routed elsewhere would teach the reader the wrong thing
+  // about what the page does, which is why every derived starter is checked by
+  // routing it back. This one is derived from the persona's method rather than
+  // from an agent's capabilities, so it gets the check the others get.
+  const first = R.starterQuestions("P6", DATA)[0];
+  const pick = R.route(first, "P6", DATA);
+  assert.ok(DATA.personas.personas.P6.agents.includes(pick.agent_id), pick.agent_id);
+  assert.equal(pick.agent_id, "S07",
+    "the governing question no longer reaches the swarm that holds the method");
+});
+
+test("a persona with no method pack keeps exactly the starters it had", () => {
+  // The metric is the only thing that changes this, so a persona without one
+  // must be untouched — including the three the reader has already seen.
+  for (const code of CODES) {
+    if (DATA.personas.personas[code].method) continue;
+    const items = R._starterItems(code, DATA);
+    assert.equal(items.length, 3, code);
+    for (const item of items) assert.ok(!item.isMethod, `${code}: ${item.q}`);
+  }
+  assert.deepEqual(R.starterQuestions("P1", DATA).length, 3);
 });

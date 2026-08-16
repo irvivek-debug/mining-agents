@@ -205,6 +205,30 @@ function _tableQuestion(phrase) {
   return "What's in the " + phrase + " right now?";
 }
 
+/* The question the persona's method exists to answer.
+ *
+ * Every other starter is derived from a capability — a table an agent reads, a
+ * traversal it runs — and that is why the Metallurgist's page opened with
+ * "What's in the sensor readings right now?". The capabilities are the only
+ * thing the export carried, so a page about working a problem could only ask
+ * to see a table. This one is derived from the persona's METHOD instead: the
+ * pack names the metric the role is trying to move, and the question asks for
+ * the problems dragging it down, which is the shape of work the driver tree
+ * does. A persona with no pack has no such question and keeps what it had.
+ *
+ * It is not checked by routing it back to an agent the way the derived
+ * starters are, because it was not derived from one: the method belongs to the
+ * persona, and any of its agents may be the right place to take it. What the
+ * tests do check is that it stays inside the persona and reaches the swarm
+ * that holds the method.
+ */
+function _methodQuestion(persona) {
+  var metric = persona && persona.method && persona.method.metric;
+  if (!metric) return null;
+  return "I want to improve " + metric + ". What are the top problems " +
+    "dragging it down right now, and how do I resolve each one?";
+}
+
 /* Cold start. No example questions exist anywhere in the catalogue, so these are
  * derived rather than authored: each is built from one capability an agent
  * actually declares, and then checked by routing it back. A starter that did not
@@ -257,10 +281,12 @@ function _candidateQuestions(agent, allAgents) {
   return { tier1: tier1, tier2: tier2 };
 }
 
-/* Internal: returns [{q, agent, isGeneric}] of exactly 3 items. The agent field
- * is the specific agent the question was derived from (null for generic
- * backstops). Exposed for testing via _starterItems; the public starterQuestions
- * returns only the strings, keeping the external contract stable. */
+/* Internal: returns [{q, agent, isGeneric, isMethod}] of exactly 3 items. The
+ * agent field is the specific agent the question was derived from, and is null
+ * for the two kinds that were not derived from one — the governing question,
+ * which comes from the persona's method, and the generic backstops. Exposed for
+ * testing via _starterItems; the public starterQuestions returns only the
+ * strings, keeping the external contract stable. */
 function _starterItems(personaCode, DATA) {
   var persona = DATA.personas.personas[personaCode];
   var byId = {};
@@ -279,6 +305,14 @@ function _starterItems(personaCode, DATA) {
    * candidates honest — a question that routes to the wrong agent is discarded. */
   var chosen = [];
   var seen = {};
+
+  /* First, and only when the persona has a method. The reader's eye lands on
+   * the first one, so this is the position the argument is made in. */
+  var governing = _methodQuestion(persona);
+  if (governing) {
+    seen[governing] = true;
+    chosen.push({ q: governing, agent: null, isGeneric: false, isMethod: true });
+  }
 
   function tryPool(pools) {
     for (var depth = 0; depth < 30; depth++) {

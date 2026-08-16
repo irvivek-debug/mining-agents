@@ -25,7 +25,9 @@ import re
 import yaml
 
 from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.method.pack import load_pack
 from mining_agents.tools.graph_traverse import TRAVERSALS
+from mining_agents.tools.method_lookup import PACK_DIR, PACKS
 from scripts.build_workspace_data import build_workspace
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -227,6 +229,25 @@ def _counted(entries, key) -> dict:
     }
 
 
+def _persona_method(code: str) -> dict:
+    """The governing metric from this persona's method pack, if it has one.
+
+    Read through the same loader the runtime uses — PACKS says which persona
+    has which pack, load_pack validates it — so the metric a screen prints is
+    the metric the agent is working towards, rather than a second copy of it
+    that is free to drift. A persona with no pack gets nothing at all: an empty
+    method block would make the screens decide what an absent metric means.
+
+    The pack is a repository file, so a failure to load it is a build failure
+    and belongs here, loudly. It is not the runtime's situation, where the tool
+    must degrade to a structured error rather than a traceback.
+    """
+    name = PACKS.get(code)
+    if name is None:
+        return {}
+    return {"metric": load_pack(PACK_DIR / name).metric}
+
+
 def build_personas(catalog: dict) -> dict:
     """Merge the transcribed persona profiles with live catalog counts.
 
@@ -254,6 +275,9 @@ def build_personas(catalog: dict) -> dict:
             for a in catalog["agents"]
             if a["persona"] == code and a["is_entrypoint"] and a["hitl_required"]
         )
+        method = _persona_method(code)
+        if method:
+            entry["method"] = method
         out[code] = entry
     return {"generated_at": _now(), "source": str(PERSONA_PROFILES.relative_to(REPO)),
             "personas": out}

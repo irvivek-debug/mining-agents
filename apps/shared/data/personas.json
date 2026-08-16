@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-16T01:01:28+00:00",
+  "generated_at": "2026-08-16T02:57:19+00:00",
   "source": "docs/persona-profiles.yaml",
   "personas": {
     "P1": {
@@ -306,7 +306,10 @@
       "hitl_agents": [
         "D25",
         "S07"
-      ]
+      ],
+      "method": {
+        "metric": "unit cost per tonne of contained metal"
+      }
     },
     "P7": {
       "code": "P7",
