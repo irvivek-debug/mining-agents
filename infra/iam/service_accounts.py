@@ -60,10 +60,21 @@ MODEL_ROLE = "roles/aiplatform.user"
 BASE_ROLES = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser", MODEL_ROLE]
 HITL_ROLE = "roles/bigquery.dataEditor"
 
+# What `doc_search` needs beyond dataViewer. The tool runs VECTOR_SEARCH against
+# a remote embedding model, and a remote model is reached through a BigQuery
+# CONNECTION — a resource that lives outside the dataset and is not covered by
+# its ACL. Without this the query is refused with `bigquery.connections.use`,
+# 403, before it reads a row.
+DOC_ROLE = "roles/bigquery.connectionUser"
+
 # bigquery.* roles that BigQuery only accepts at project level. A dataset ACL
 # accepts READER/WRITER/OWNER (and the IAM roles that map onto them); jobUser
 # grants query execution against the project's billing and has no ACL form.
-_PROJECT_LEVEL_BQ_ROLES = frozenset({"roles/bigquery.jobUser"})
+# connectionUser has no ACL form either — the connection is not in the dataset,
+# so there is no ACL that could name it — and `_resource_kind` sends every
+# unlisted `roles/bigquery.*` to the dataset, which is why it must be listed
+# here rather than left to the default.
+_PROJECT_LEVEL_BQ_ROLES = frozenset({"roles/bigquery.jobUser", DOC_ROLE})
 
 Tier = Literal["base", "approver", "coordinator"]
 
@@ -83,15 +94,17 @@ TIER_ACCOUNT_ID: dict[Tier, str] = {
 # pinned by test_the_coordinator_account_over_grants_dataeditor_to_three so
 # it cannot become invisible.
 #
-# THREE ACCOUNTS, TWO DISTINCT ROLE SETS. Once MODEL_ROLE moved to the baseline
-# (see above), `approver` and `coordinator` became identical grants. The third
-# account is kept anyway, because the accounts are no longer only a privilege
-# boundary: they are the identity Cloud Run logs, traces and BigQuery job
-# history attribute a call to, so collapsing them would make a coordinator's
-# queries indistinguishable from a deep agent's in the audit trail. What it
-# does NOT do is confer any extra privilege, and
-# test_the_coordinator_and_approver_accounts_now_hold_identical_roles pins that
-# so the distinction cannot be mistaken for a security control.
+# NOT THE WHOLE TABLE. `DOC_ROLE` is appended below, to whichever tiers actually
+# run an agent holding `doc_search` — derived from the catalog rather than
+# written in here, so the role follows the tool as later personas pick it up.
+#
+# Once MODEL_ROLE moved to the baseline (see above), `approver` and
+# `coordinator` became identical grants, and for a while the third account was
+# pure attribution: the identity Cloud Run logs, traces and BigQuery job history
+# show, conferring no extra privilege. DOC_ROLE ends that — the coordinator
+# account now holds one role the approver does not, because the only agents that
+# search documents today run inside a coordinator's process. See
+# `test_the_coordinator_account_holds_exactly_one_role_the_approver_does_not`.
 TIER_ROLES: dict[Tier, list[str]] = {
     "base": [*BASE_ROLES],
     "approver": [*BASE_ROLES, HITL_ROLE],
@@ -121,6 +134,30 @@ def tier_of(agent: AgentDef) -> Tier:
     return "base"
 
 
+def running_tier_of(agent: AgentDef) -> Tier:
+    """Which account is authenticated when THIS agent's tools actually run.
+
+    `tier_of` answers a question about the agent's own privilege class. This
+    answers the operational one, and for a swarm's 4 sub-agents the two
+    disagree: a specialist is a node in its coordinator's `Workflow` graph,
+    inside the coordinator's process, holding no runtime identity of its own,
+    so every query it issues is issued as the coordinator.
+
+    Granting a tool's role by `tier_of` therefore grants it to an account that
+    never runs the tool. That is precisely how `doc_search` shipped returning
+    403: S07-SP3 is `tier_of` "base", but the VECTOR_SEARCH reaches BigQuery
+    as mag-agent-coordinator, and it was the coordinator account that lacked
+    the connection grant.
+
+    Only the 52 entrypoints are ever deployed, and for all of them the two
+    functions agree — which is why the distinction stayed invisible until a
+    sub-agent needed a role its coordinator did not already hold.
+    """
+    if agent.swarm_role in ("specialist", "critic"):
+        return "coordinator"
+    return tier_of(agent)
+
+
 def sa_id(agent: AgentDef) -> str:
     """The GCP service-account ID (≤30 chars) this agent runs as.
 
@@ -132,6 +169,29 @@ def sa_id(agent: AgentDef) -> str:
 def sa_email(agent: AgentDef) -> str:
     """Full service-account email address for the given agent."""
     return f"{sa_id(agent)}@{settings().project_id}.iam.gserviceaccount.com"
+
+
+def _grant_doc_role_to_the_tiers_that_search_documents() -> None:
+    """Append DOC_ROLE to every tier that actually executes a `doc_search` holder.
+
+    Derived from the catalog, not hand-listed, for the reason the rest of this
+    module keeps re-learning: a hand-written role table records a fact about the
+    catalog on the day it was written and cannot notice the catalog changing.
+    P6 is the first persona whose pack uses `doc_search`; P1, P2, P3, P5 and P8
+    follow, and the first of them on a tier this does not already cover would
+    otherwise reproduce the same 403 — a failure the agent reports honestly and
+    which therefore looks like a working agent giving a cautious answer.
+    """
+    for tier in sorted({
+        running_tier_of(agent)
+        for agent in ALL_AGENTS
+        if "doc_search" in agent.tools
+    }):
+        if DOC_ROLE not in TIER_ROLES[tier]:
+            TIER_ROLES[tier].append(DOC_ROLE)
+
+
+_grant_doc_role_to_the_tiers_that_search_documents()
 
 
 def tier_roles(agent: AgentDef) -> list[str]:

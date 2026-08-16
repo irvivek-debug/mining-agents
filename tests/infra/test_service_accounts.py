@@ -13,9 +13,11 @@ import pathlib
 import pytest
 from mining_agents.catalog.definitions import ALL_AGENTS
 from mining_agents.patterns.deep import BIOMETRIC_TABLES
+from mining_agents.registry import registrable
 from infra.iam import service_accounts
 from infra.iam.service_accounts import (
-    TIER_ACCOUNT_ID, TIER_ROLES, plan, sa_email, sa_id, tier_of, tier_roles,
+    TIER_ACCOUNT_ID, TIER_ROLES, plan, running_tier_of, sa_email, sa_id,
+    tier_of, tier_roles,
 )
 
 HITL = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S11",
@@ -129,15 +131,86 @@ def test_every_agent_can_reach_a_model():
     assert missing == []
 
 
-def test_the_coordinator_and_approver_accounts_now_hold_identical_roles():
+def test_an_agent_that_searches_documents_can_use_the_embedding_connection():
+    """doc_search runs VECTOR_SEARCH against a remote embedding model, and a
+    remote model is reached through a BigQuery CONNECTION, not through the
+    dataset ACL.
+
+    dataViewer on `mining_data` is not enough: the query is refused with
+    `bigquery.connections.use`, 403, before it reads a row. This was found in
+    the live run — S07-SP3 worked its whole driver tree correctly and then
+    could not retrieve the operating constraint that fences its one
+    recommendation, so step 5 of the method had no document behind it. The
+    agent reported the failure honestly, which is the designed behaviour and
+    also not an answer.
+
+    Asserted over every agent that holds the tool rather than a sample, because
+    the failure is exactly a per-tier gap: the tool spreads to more personas as
+    their packs land, and the first one on a different tier would repeat this.
+
+    Note `running_tier_of`, not `tier_of`. Both holders today are S07
+    sub-agents, which `tier_of` calls "base" — but they hold no runtime identity
+    and their queries reach BigQuery as the coordinator. Granting by `tier_of`
+    would satisfy a weaker version of this test and leave the live 403 exactly
+    where it was.
+    """
+    holders = [a for a in ALL_AGENTS if "doc_search" in a.tools]
+    assert holders, "no agent holds doc_search — this test would prove nothing"
+    missing = [
+        a.agent_id for a in holders
+        if "roles/bigquery.connectionUser" not in TIER_ROLES[running_tier_of(a)]
+    ]
+    assert missing == []
+
+
+def test_a_swarm_sub_agent_runs_as_its_coordinator_not_as_its_own_tier():
+    """The distinction the doc_search 403 turned on, pinned on its own.
+
+    A specialist is a node in its coordinator's Workflow graph, in the
+    coordinator's process. It is never deployed, never issued credentials, and
+    every query it makes is billed and authorised to the coordinator's account.
+    `tier_of` does not say that — it classifies the agent, not the process — so
+    anything that grants a role by tool must go through `running_tier_of`.
+    """
+    subs = [a for a in ALL_AGENTS if a.swarm_role in ("specialist", "critic")]
+    assert len(subs) == 48, "expected 12 swarms x 4 sub-agents"
+    assert {running_tier_of(a) for a in subs} == {"coordinator"}
+    # And the two functions genuinely disagree, or the test above proves nothing.
+    assert {tier_of(a) for a in subs} != {"coordinator"}
+
+    # For everything that actually deploys, they agree.
+    for agent in registrable():
+        assert running_tier_of(agent) == tier_of(agent), agent.agent_id
+
+
+def test_the_connection_role_is_bound_at_project_scope_never_the_dataset():
+    """`_resource_kind` sends every unlisted `roles/bigquery.*` to the dataset
+    ACL, and a dataset ACL has no entry that grants connection use. Binding it
+    there would be accepted by this module and rejected by BigQuery — or worse,
+    silently applied to the wrong resource — so the scope is pinned here."""
+    for entry in plan():
+        for binding in entry["bindings"]:
+            if binding["role"] == "roles/bigquery.connectionUser":
+                assert binding["resource_kind"] == "project", entry["tier"]
+
+
+def test_the_coordinator_account_holds_exactly_one_role_the_approver_does_not():
     """A consequence worth stating out loud rather than leaving to be noticed.
 
-    The coordinator account is retained for attribution — it is the identity
-    that logs, traces and BigQuery job history show — but it is no longer a
-    privilege boundary. Anyone reading `tier_of` as a security control needs
-    to see that the top two tiers grant exactly the same thing.
+    For a while these two accounts were identical: once MODEL_ROLE moved to the
+    baseline the coordinator account conferred no extra privilege and existed
+    only for attribution — the identity logs, traces and BigQuery job history
+    show. DOC_ROLE ends that, because the only agents that search documents
+    today are S07 sub-agents, which run in the coordinator's process.
+
+    Pinned as an exact difference rather than a containment, so that the next
+    role landing on one tier and not the other has to be justified here instead
+    of arriving unremarked.
     """
-    assert set(tier_roles(_by_id("S03"))) == set(tier_roles(_by_id("D07")))
+    coordinator = set(tier_roles(_by_id("S03")))
+    approver = set(tier_roles(_by_id("D07")))
+    assert coordinator - approver == {"roles/bigquery.connectionUser"}
+    assert approver - coordinator == set()
 
 
 def test_the_coordinator_account_over_grants_dataeditor_to_three():
