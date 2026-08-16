@@ -100,8 +100,13 @@ S01 = SwarmDef(
            tools=["graph_traverse"], traversals=["blast_radius"]),
         _a("S01-SP3", "Downtime Duration Forecaster", "S01", "specialist",
            apqc="11.0.3", persona="P1", branch="asset_reliability",
-           tables=["mining_data.maintenance_logs"],
-           tools=["bq_query", "bqml_predict"],
+           tables=[
+               "mining_data.maintenance_logs",
+               "mining_data.erp_work_orders",
+               "mining_data.assets",
+               "mining_data.telemetry_stream",
+           ],
+           tools=["bq_query", "bqml_predict", "method_lookup", "run_diagnostic", "doc_search"],
            models=["downtime_regression_model"]),
     ),
     critic=_a(

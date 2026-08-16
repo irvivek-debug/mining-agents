@@ -21,6 +21,7 @@ PACK_DIR = Path(__file__).resolve().parents[2] / "method"
 #: Personas whose method is encoded. A persona without a pack must fail loudly
 #: rather than return an empty tree.
 PACKS = {
+    "P1": "p1-reliability.yaml",
     "P5": "p5-geologist.yaml",
     "P6": "p6-metallurgist.yaml",
 }
