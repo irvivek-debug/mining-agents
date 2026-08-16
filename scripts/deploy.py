@@ -45,9 +45,16 @@ import json
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 from mining_agents.config import settings
 from mining_agents.registry import registrations
+from scripts.packages import write_packages
+
+# The directory `deploy_command` points the ADK verb at. It is gitignored
+# scratch that `write_packages` regenerates, which is exactly why a real deploy
+# must rewrite it first — see `deploy`.
+PACKAGES_DIR = Path("packages")
 
 # Cloud Run has its own regions; `settings().location` is the BigQuery dataset
 # location ("US") and is not one of them.
@@ -166,7 +173,7 @@ def deploy_command(agent_id: str, service_account: str) -> list[str]:
         # sitting inside it, which the model-policy scan reads as a stray
         # model id.
         f"--temp_folder={tempfile.gettempdir()}/adk-stage-{agent_id}",
-        f"./packages/{agent_id}",
+        f"./{PACKAGES_DIR}/{agent_id}",
         "--",
         # The runtime identity. Set here, at create time, so there is no window
         # in which the agent runs as the project's default compute account —
@@ -212,6 +219,19 @@ def deploy(
         if unknown:
             raise KeyError(f"not externally-callable entrypoints: {sorted(unknown)}")
         entries = [e for e in entries if e["agent_id"] in wanted]
+
+    if not dry_run:
+        # `packages/` is gitignored scratch, and this used to ship whatever was
+        # already sitting in it. A live verification found S07 serving from a
+        # container built four days before the code it was meant to be running:
+        # the deploy read a stale package, the build succeeded, the service came
+        # up healthy, and the agent quietly behaved like its previous self. A
+        # deploy is now self-contained — regenerate, then ship — so the snapshot
+        # cannot be older than the source it claims to be. A dry run does not
+        # do this: it reports, and touching the working tree is a side effect
+        # the name disclaims.
+        written = write_packages(PACKAGES_DIR)
+        print(f"# regenerated {len(written)} packages under {PACKAGES_DIR}/")
 
     if not dry_run and SESSION_SERVICE_URI == "memory://":
         print(

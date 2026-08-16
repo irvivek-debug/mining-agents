@@ -50,7 +50,16 @@ REQUIREMENTS_NAME = "requirements.txt"
 
 # Repo directories copied into every generated package because the container
 # reads them at runtime. See the module docstring for why a copy is required.
-SHARED_TREES = ("mining_agents", "references")
+#
+# `method` is here for the same reason `references` is, and was missed for the
+# same reason: it holds no Python, so it does not look like code. It holds the
+# persona method packs (`method/*.yaml`) and the fixed diagnostic queries
+# (`method/sql/**`), which `method_lookup` and `run_diagnostic` open by path on
+# every call. Omit it and the deploy succeeds, the container builds, the
+# service answers — and every diagnostic returns NO_METHOD_PACK, so the agent
+# falls back to improvising SQL. That reads as a working agent, not a broken
+# deploy, which is why it needs a test rather than vigilance.
+SHARED_TREES = ("mining_agents", "references", "method")
 
 # Build artefacts must not travel: a stale .pyc compiled against a different
 # interpreter is a failure that only appears inside the container.
@@ -59,9 +68,15 @@ _COPY_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
 # Packages the container does not need because nothing in `mining_agents/` imports
 # them at runtime. Everything else in the repo's requirements.txt travels, so
 # adding a runtime dependency there is enough — this module needs no edit.
-# pyyaml is read only by scripts/semantics.py, which is build-time tooling and
-# is deliberately not under mining_agents/ for exactly this reason.
-_TOOLING_ONLY = ("pytest", "pyyaml")
+#
+# pyyaml used to be listed here, on the reasoning that it was read only by
+# build-time tooling. That was true when written and false the moment
+# `mining_agents/method/pack.py` imported it — and a comment cannot notice when
+# its own premise expires. Stripping it left a container that built, deployed
+# and served, and would have died on the first method_lookup call.
+# `tests/test_packages_ship_the_method_pack.py` now derives this check from the
+# imports themselves, so the next entry added here has to survive that gate.
+_TOOLING_ONLY = ("pytest",)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 

@@ -24,6 +24,7 @@ import pytest
 from mining_agents.config import model_for_tier, settings
 from mining_agents.registry import registrations
 from scripts.deploy import (
+    CONFIRM_PHRASE,
     REGION,
     SERVICE_PREFIX,
     SESSION_SERVICE_URI,
@@ -327,3 +328,48 @@ def test_dry_run_never_executes_the_domain_binding(capsys):
         "aiplatform.user does not admit a caller to a Cloud Run endpoint"
     )
     assert "will NOT run it" in printed
+
+
+# ---------------------------------------------------------------------------
+# The snapshot the real run ships
+# ---------------------------------------------------------------------------
+
+def test_a_real_deploy_regenerates_the_packages_before_it_ships_them(monkeypatch):
+    """`packages/` is gitignored scratch, and `deploy()` used to ship whatever
+    happened to be sitting in it.
+
+    This is not a hypothetical. A live verification found S07 answering from a
+    container built four days before the code it was supposed to be running:
+    the deploy read a stale `packages/S07`, the container built cleanly, the
+    service came up healthy, and the agent quietly behaved like the old one.
+    Nothing failed, which is what made it expensive.
+
+    A deploy must therefore be self-contained — regenerate, then ship — so the
+    snapshot cannot be older than the source it claims to be.
+    """
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "scripts.deploy.write_packages",
+        lambda root: calls.append(str(root)) or [],
+    )
+    monkeypatch.setattr("subprocess.run", lambda *a, **k: None)
+
+    deploy(dry_run=False, only=("D01",), confirm=CONFIRM_PHRASE)
+
+    assert calls, (
+        "the real deploy shipped ./packages without regenerating it, so what "
+        "reaches the container is whatever was last written there"
+    )
+    assert calls[0].endswith("packages"), calls
+
+
+def test_a_dry_run_regenerates_nothing(monkeypatch):
+    """A dry run reports; it does not touch the working tree. If it rewrote
+    `packages/` it would be a side effect the name explicitly disclaims."""
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "scripts.deploy.write_packages",
+        lambda root: calls.append(str(root)) or [],
+    )
+    deploy(dry_run=True, only=("D01",))
+    assert calls == []

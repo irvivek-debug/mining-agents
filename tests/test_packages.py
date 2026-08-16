@@ -110,8 +110,18 @@ def test_every_package_ships_the_runtime_dependencies_agents_actually_imports(tm
 
 
 def test_test_only_dependencies_do_not_travel_to_the_container(tmp_path):
+    """pyyaml used to be asserted here too, on the reasoning that only
+    build-time tooling read it. That reasoning expired the moment
+    `mining_agents/method/pack.py` imported it, and this test then actively
+    defended the bug — it required the container to be missing a dependency the
+    agent tree needs. The complement (every import under `mining_agents/` is
+    covered by the container requirements) lives in
+    `tests/test_packages_ship_the_method_pack.py` and is derived from the
+    imports rather than hand-listed, so neither side can go stale in silence
+    again.
+    """
     requirements = (_repo_root() / "requirements.txt").read_text()
-    for package in ("pytest", "pyyaml"):
+    for package in ("pytest",):
         assert package in requirements, (
             f"requirements.txt no longer pins {package} — this test would pass "
             "vacuously"
