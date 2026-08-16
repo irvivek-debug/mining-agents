@@ -527,6 +527,79 @@ test("the delegates' drawer is not called Technical detail", () => {
     "the delegates' reasoning was filed under the drawer readers are taught to skip");
 });
 
+/* A delegate's failed step.
+ *
+ * plainAnswer cuts a failure passage out of prose and hands the raw text back
+ * as `.technical` so the pane can file it; the aside drawer ran that cut and
+ * threw the result away. A specialist whose lookup failed therefore left the
+ * reader a sentence saying a lookup failed and nowhere at all to find out
+ * which one — the same material that is carefully preserved when the agent
+ * that was asked is the one whose step broke.
+ */
+test("a delegate's failed step is filed rather than dropped", () => {
+  const pane = paneAfter([
+    {
+      kind: "aside", author: "s07_sp1",
+      text: "I checked the setting.\n\nThe call to `bq_query` failed.\n" +
+        "- **Error Code:** `INVALID_ARGUMENT` on job 4f9c-11ee.",
+    },
+    { kind: "text", text: "Widen the gap." },
+  ]);
+  const parts = pane.innerHTML.split("How the agents got here");
+  assert.equal(parts.length, 2, "the delegates' drawer is missing");
+  assert.ok(parts[0].includes("INVALID_ARGUMENT") && parts[0].includes("4f9c-11ee"),
+    "the delegate's raw failure text was dropped rather than filed");
+  assert.ok(parts[0].includes("Technical detail"),
+    "it was filed somewhere other than the drawer for plumbing");
+  assert.ok(!parts[1].includes("INVALID_ARGUMENT"),
+    "an error code was left in the reader-facing prose");
+  assert.ok(parts[1].includes("that lookup failed"),
+    "the delegate's prose no longer admits the step failed");
+});
+
+test("a filed passage says which agent's step it was", () => {
+  const pane = paneAfter([
+    {
+      kind: "aside", author: "s07_sp1",
+      text: "The call to `bq_query` failed.\n- **Error Code:** `INVALID_ARGUMENT`.",
+    },
+    { kind: "text", text: "Widen the gap.\n\nThe call to `bqml_predict` failed." },
+  ]);
+  const plumbing = pane.innerHTML
+    .slice(pane.innerHTML.indexOf("Technical detail"))
+    .split("How the agents got here")[0];
+  // Two agents' steps failed. Stacked unlabelled they read as one agent's run,
+  // so both passages are named — the asked agent's included.
+  const labels = (plumbing.match(/<p class="dim">([^<]*)<\/p>/g) || [])
+    .map((p) => p.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&"));
+  assert.equal(labels.length, 2, `expected a name over each passage: ${plumbing}`);
+  assert.equal(labels[1], "Crusher Setting Analyst (specialist)", plumbing);
+  // The asked agent is named the way the pick line above the answer names it,
+  // rather than by an id the reader has no way to interpret.
+  const asked = require("../../apps/workspace/router.js")
+    .route("which assets are most at risk?", "P1", DATA).agent_id;
+  const name = DATA.catalog.agents.find((a) => a.agent_id === asked).display_name;
+  assert.equal(labels[0], name, plumbing);
+});
+
+test("filing a delegate's failure adds no third drawer to open", () => {
+  const pane = paneAfter([
+    {
+      kind: "aside", author: "s07_critic",
+      text: "The call to `bq_query` failed.\n- **Error Code:** `INVALID_ARGUMENT`.",
+    },
+    { kind: "text", text: "Widen the gap.\n\nThe call to `bqml_predict` failed." },
+  ]);
+  assert.equal((pane.innerHTML.match(/<summary>/g) || []).length, 2, pane.innerHTML);
+  // A drawer inside a drawer is a control the reader has to open twice to
+  // reach one passage.
+  const bodies = pane.innerHTML.split('<div class="drawer-body">').slice(1);
+  for (const body of bodies) {
+    assert.ok(!body.split("</details>")[0].includes("<details"),
+      "a drawer was nested inside another drawer");
+  }
+});
+
 test("a failed step and a delegate produce two drawers a reader can tell apart", () => {
   // The two drawers answer different questions — "which step broke" versus
   // "what did each agent conclude" — so their summaries must differ. Before

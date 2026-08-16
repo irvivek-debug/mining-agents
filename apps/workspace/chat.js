@@ -259,14 +259,46 @@ function mountChat(node, personaCode, DATA, deps) {
       );
     }
 
+    /* One drawer for the plumbing, however many agents produced some.
+     *
+     * plainAnswer cuts a failed call's raw text out of the prose and hands it
+     * back as `.technical` so that the pane can file it somewhere reachable.
+     * The asides ran the same cut and dropped what came back, so a delegate
+     * whose lookup failed left the reader a sentence saying a lookup failed and
+     * nowhere to find out which one — the very material this drawer exists to
+     * keep, deleted for no reason other than that a delegate wrote it rather
+     * than the agent that was asked.
+     *
+     * They are filed here rather than under each aside, because a drawer inside
+     * a drawer is a control the reader must open twice to reach one passage,
+     * and because "Technical detail" is the name this product has already
+     * taught them for error codes and job ids wherever those came from.
+     *
+     * Every block is attributed, including the asked agent's own. Two passages
+     * stacked unlabelled read as one agent's run, and the one thing a reader
+     * comes to this drawer to learn is which step broke and whose it was. */
+    function technicalBody(own) {
+      var blocks = [];
+      if (own) blocks.push({ label: _name(decision.agent_id, DATA), text: own });
+      asides.forEach(function (aside) {
+        var cut = CHAT_PLAIN.plainAnswer(aside.text).technical;
+        if (cut) blocks.push({ label: aside.label, text: cut });
+      });
+      return blocks.map(function (b) {
+        return '<p class="dim">' + CHAT_SHELL.esc(b.label) + "</p>" +
+          '<pre class="mono">' + CHAT_SHELL.esc(b.text) + "</pre>";
+      }).join("");
+    }
+
     function say() {
       var said = CHAT_PLAIN.plainAnswer(wrote);
+      var plumbing = technicalBody(said.technical);
       answer.innerHTML =
         said.html +
-        (said.technical
+        (plumbing
           ? CHAT_SHELL.technicalDrawer(
-              '<pre class="mono">' + CHAT_SHELL.esc(said.technical) + "</pre>",
-              "the agent's own words for the steps that failed"
+              plumbing,
+              "each agent's own words for the steps that failed"
             )
           : "") +
         asideDrawer();
