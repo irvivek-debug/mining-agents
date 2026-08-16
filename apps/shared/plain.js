@@ -133,7 +133,7 @@ var METHOD_DRIVERS = {
   /* P6 — Metallurgist (governing metric: unit cost per tonne of contained metal) */
   liberation: "whether the crusher setting is costing recovery",
   feed_variability: "whether feed grade explains the recovery gap",
-  bypass: "whether ore routed around the grinding circuit is costing recovery",
+  bypass: "whether the crusher's divert valve is costing recovery",
   reagent_regime: "whether the reagent regime is costing recovery",
   grind_size_p80: "whether grind size is costing recovery",
 };
