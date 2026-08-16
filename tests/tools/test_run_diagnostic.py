@@ -11,16 +11,30 @@ guard invites an unguarded recommendation.  The SQL text and the file path do
 not — returning them would undo the withholding that `method_lookup` enforces.
 """
 import json
+import shutil
+from pathlib import Path
 
 import pytest
 
-from mining_agents.tools.run_diagnostic import make_run_diagnostic
+from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.method.pack import load_pack
+from mining_agents.tools import run_diagnostic as module
+from mining_agents.tools.method_lookup import PACK_DIR, PACKS
+from mining_agents.tools.run_diagnostic import _referenced_tables, make_run_diagnostic
+
+#: What S07-SP3 — the one agent that holds this tool — declares. Written out
+#: rather than read from the catalog so that a test which widened the agent's
+#: access would have to say so here too.
+S07_SP3_TABLES = [
+    "mining_data.metallurgical_recovery",
+    "mining_data.crusher_states",
+]
 
 
 def test_an_unknown_driver_id_fails_with_the_valid_ids_listed():
     # A model that guessed an id needs to see the real ones so it can self-
     # correct without calling method_lookup again.
-    run = make_run_diagnostic("P6")
+    run = make_run_diagnostic("P6", S07_SP3_TABLES)
     env = run("no_such_driver")
     assert env["success"] is False
     assert env["error"]["code"] == "NO_SUCH_DRIVER"
@@ -35,7 +49,7 @@ def test_a_not_instrumented_driver_fails_with_driver_status_and_question():
     # The agent must be able to report that a driver exists but is not
     # instrumented.  DRIVER_NOT_INSTRUMENTED is a first-class answer: the agent
     # says "the driver exists; the data is not available", not "no driver found".
-    run = make_run_diagnostic("P6")
+    run = make_run_diagnostic("P6", S07_SP3_TABLES)
     env = run("reagent_regime")
     assert env["success"] is False
     assert env["error"]["code"] == "DRIVER_NOT_INSTRUMENTED"
@@ -47,7 +61,7 @@ def test_a_not_instrumented_driver_fails_with_driver_status_and_question():
 def test_a_persona_with_no_pack_fails_with_no_method_pack():
     # A persona that has no pack must fail loudly.  An agent with no method
     # must stop and escalate, not return an improvised answer.
-    env = make_run_diagnostic("P4")("liberation")
+    env = make_run_diagnostic("P4", S07_SP3_TABLES)("liberation")
     assert env["success"] is False
     assert env["error"]["code"] == "NO_METHOD_PACK"
 
@@ -56,7 +70,7 @@ def test_no_failure_envelope_carries_the_sql_text_or_a_sql_path():
     # Returning the SQL text would undo the withholding that method_lookup
     # enforces.  Assert against the full JSON dump so a field added anywhere
     # in the envelope is caught, not just in the obvious places.
-    run = make_run_diagnostic("P6")
+    run = make_run_diagnostic("P6", S07_SP3_TABLES)
     for driver_id in ("no_such_driver", "reagent_regime"):
         dumped = json.dumps(run(driver_id))
         assert ".sql" not in dumped, f"{driver_id!r}: a .sql path leaked: {dumped}"
@@ -69,7 +83,7 @@ def test_the_success_envelope_carries_results_without_the_query_behind_them():
     # would still pass if the success path returned the whole query. This is
     # the path that actually reads the file, so it is the one where a leak is
     # possible — and the one an agent sees on every real call.
-    env = make_run_diagnostic("P6")("liberation")
+    env = make_run_diagnostic("P6", S07_SP3_TABLES)("liberation")
     assert env["success"] is True, env.get("error")
     dumped = json.dumps(env)
     assert "WITH cs AS" not in dumped, f"SQL text leaked into the result: {dumped}"
@@ -87,7 +101,7 @@ def test_liberation_returns_three_bands_and_a_non_empty_guard():
     # The magnitudes are pinned to match test_the_liberation_diagnostic_
     # reproduces_the_design_finding in tests/method/test_p6_pack.py.
     # Two tests pinning the same data cannot silently drift apart.
-    run = make_run_diagnostic("P6")
+    run = make_run_diagnostic("P6", S07_SP3_TABLES)
     env = run("liberation")
     assert env["success"] is True, env.get("error")
     data = env["data"]
@@ -104,9 +118,76 @@ def test_liberation_meta_names_both_source_tables():
     # The provenance panel must show the real sources.  Deriving the declared
     # list from the SQL text via the _TABLE_REF regex is what makes this true:
     # if the regex under-extracts, the dry run refuses the query loudly.
-    run = make_run_diagnostic("P6")
+    run = make_run_diagnostic("P6", S07_SP3_TABLES)
     env = run("liberation")
     assert env["success"] is True, env.get("error")
     tables = env["meta"]["tables_read"]
     assert "mining_data.crusher_states" in tables
     assert "mining_data.metallurgical_recovery" in tables
+
+
+def test_a_missing_sql_file_is_a_structured_failure_not_a_traceback(tmp_path,
+                                                                    monkeypatch):
+    """The YAML can ship without the SQL, and has nearly done so twice.
+
+    `method/` was once absent from SHARED_TREES, and a packaging ignore pattern
+    could drop `*.sql` while leaving the pack in place — which is what
+    test_run_diagnostic_finds_its_sql_from_inside_a_generated_package exists
+    for. In that layout every driver resolves, and the file read then raises
+    FileNotFoundError straight into the ADK runtime, bypassing every structured
+    error path the agent knows how to read. A traceback is not an answer the
+    agent can report, so the reader is told nothing at all.
+    """
+    shutil.copy(PACK_DIR / PACKS["P6"], tmp_path / PACKS["P6"])
+    # The pack travels; sql/ does not. Exactly the shape of the two near misses.
+    assert not (tmp_path / "sql").exists()
+    monkeypatch.setattr(module, "PACK_DIR", Path(tmp_path))
+
+    env = make_run_diagnostic("P6", S07_SP3_TABLES)("liberation")
+    assert env["success"] is False
+    assert env["error"]["code"] == "QUERY_FAILED"
+    # Support has to be able to tell a missing file from a BigQuery refusal,
+    # and the reason is the only place that distinction survives.
+    assert env["error"]["details"]["reason"] == "FileNotFoundError"
+    # The withholding still holds on this path: no path, no SQL.
+    assert ".sql" not in json.dumps(env)
+
+
+def test_a_driver_reaching_beyond_the_agents_declared_tables_is_refused():
+    """The agent's own grant is the constraint, not the diagnostic's own SQL.
+
+    `tables` is extracted from the very SQL that is then checked against it, so
+    handing that list to run_query makes the declared-table check
+    self-satisfying on this path. Nothing today reaches past S07-SP3's grant —
+    but a fork that adds a diagnostic over biometric_fatigue_logs would get the
+    rows AND skip the BIOMETRIC instruction gating, because that gating keys on
+    source_tables. Silently.
+    """
+    run = make_run_diagnostic("P6", ["mining_data.metallurgical_recovery"])
+    env = run("liberation")
+    assert env["success"] is False, "a diagnostic reached past the agent's grant"
+    assert env["error"]["code"] == "UNDECLARED_TABLE"
+    assert env["error"]["details"]["undeclared"] == ["mining_data.crusher_states"]
+
+
+def test_every_shipped_diagnostic_fits_the_agent_that_holds_it():
+    """The other half of the check above: nothing shipped is refused today.
+
+    A diagnostic that does not fit its agent is a finding for the pack author,
+    never a reason to widen source_tables — widening would hand the agent every
+    other query in the catalogue's reach as well.
+    """
+    holders = [a for a in ALL_AGENTS if "run_diagnostic" in a.tools]
+    assert holders, "no agent holds run_diagnostic — this test would prove nothing"
+    for agent in holders:
+        pack = load_pack(PACK_DIR / PACKS[agent.persona])
+        declared = set(agent.source_tables)
+        for driver in pack.drivers:
+            if not driver.sql:
+                continue
+            reads = set(_referenced_tables((PACK_DIR / driver.sql).read_text()))
+            assert reads <= declared, (
+                f"{agent.agent_id}: the {driver.id!r} diagnostic reads "
+                f"{sorted(reads - declared)}, which the agent does not declare. "
+                "Fix the pack or move the driver; do not widen the agent."
+            )

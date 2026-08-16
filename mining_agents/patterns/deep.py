@@ -40,7 +40,11 @@ def bind_tools(agent: AgentDef) -> list:
         "request_approval": lambda: make_request_approval(agent.agent_id),
         "doc_search": lambda: doc_search,
         "method_lookup": lambda: make_method_lookup(agent.persona),
-        "run_diagnostic": lambda: make_run_diagnostic(agent.persona),
+        # The agent's own grant travels with the tool: a driver's SQL cannot
+        # authorise itself. See mining_agents/tools/run_diagnostic.py.
+        "run_diagnostic": lambda: make_run_diagnostic(
+            agent.persona, agent.source_tables
+        ),
     }
     bound = []
     for name in agent.tools:

@@ -16,6 +16,17 @@ the tables are derived from the SQL text at call time via `_TABLE_REF`, passed
 to `run_query` directly, and returned in `meta.tables_read` so the panel shows
 the real sources.  If `_TABLE_REF` under-extracts, the BigQuery dry run fails
 loudly rather than silently widening access — BigQuery is the control.
+
+That derivation is why the tool ALSO takes the agent's own `source_tables` and
+refuses any driver that reaches past them.  `run_query`'s declared-table check
+compares the query against the list handed to it, so a list derived from that
+same query satisfies itself: on this path alone, the check proves nothing about
+what the agent was granted.  No shipped diagnostic reaches past its agent today
+— but a pack that added one over `biometric_fatigue_logs` would obtain the rows
+AND bypass the BIOMETRIC instruction section, which keys on `source_tables`,
+with no test failing.  A driver that does not fit its agent is a finding for
+the pack author; widening the agent to accommodate it hands that agent every
+other query in the same reach.
 """
 from __future__ import annotations
 
@@ -40,8 +51,28 @@ def _referenced_tables(sql: str) -> list[str]:
     return sorted(set(_TABLE_REF.findall(sql)))
 
 
-def make_run_diagnostic(persona: str):
-    """Build a run_diagnostic tool bound to one persona's pack."""
+def _declared_tables(tables) -> set[str]:
+    """Normalise declared names to the form `_referenced_tables` yields.
+
+    The catalog writes `mining_data.crusher_states`, and the same regex absorbs
+    a project prefix on either side, so a declaration written either way
+    compares like for like against the query.  A name the regex does not
+    recognise is kept verbatim rather than dropped: a declaration this function
+    could not read must still be able to authorise the table it names.
+    """
+    out: set[str] = set()
+    for name in tables or ():
+        out.update(_TABLE_REF.findall(name) or [name])
+    return out
+
+
+def make_run_diagnostic(persona: str, source_tables: list[str]):
+    """Build a run_diagnostic tool bound to one persona's pack.
+
+    `source_tables` is the holding agent's own declaration.  It is required,
+    not optional: a default would let a fork bind the tool without saying what
+    the agent may read, and the failure of that omission is silent.
+    """
 
     def run_diagnostic(driver_id: str):
         """Execute the fixed diagnostic query for a named driver.
@@ -89,9 +120,45 @@ def make_run_diagnostic(persona: str):
                 [],
             )
 
-        sql_path = PACK_DIR / driver.sql
-        sql = sql_path.read_text()
+        try:
+            sql = (PACK_DIR / driver.sql).read_text()
+        except OSError as exc:  # noqa: BLE001 — boundary with the filesystem
+            # The pack YAML and its SQL are two trees, and they can ship apart:
+            # `method/` was once missing from SHARED_TREES entirely, and a
+            # packaging ignore pattern could still drop `*.sql` while leaving
+            # the YAML in place. In that layout every driver resolves and every
+            # read raises, so an unguarded read_text puts a FileNotFoundError
+            # into the ADK runtime rather than into the agent's hands — which
+            # bypasses every structured-error path the instruction teaches it
+            # to report. The path is deliberately not in the failure: it would
+            # hand back the location method_lookup withholds.
+            LOG.exception(
+                "diagnostic %s could not be read for persona %s", driver_id, persona
+            )
+            return fail(
+                "QUERY_FAILED",
+                f"the {driver_id!r} diagnostic could not be completed",
+                {"driver": driver_id, "reason": type(exc).__name__},
+                [],
+            )
+
         tables = _referenced_tables(sql)
+        undeclared = sorted(_declared_tables(tables) - _declared_tables(source_tables))
+        if undeclared:
+            # Refused before the query runs, and refused on the AGENT's grant
+            # rather than on the diagnostic's own reading of itself. See the
+            # module docstring for why the second is not a check at all.
+            return fail(
+                "UNDECLARED_TABLE",
+                f"the {driver_id!r} diagnostic reads {undeclared}, which this "
+                "agent has not declared",
+                {
+                    "driver": driver_id,
+                    "undeclared": undeclared,
+                    "declared": sorted(_declared_tables(source_tables)),
+                },
+                [],
+            )
 
         try:
             rows, scanned = run_query(sql, driver.params, tables)
