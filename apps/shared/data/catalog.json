@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-15T05:03:21+00:00",
+  "generated_at": "2026-08-16T01:01:28+00:00",
   "source": "mining_agents.catalog.definitions",
   "counts": {
     "agent_nodes": 100,
@@ -1466,7 +1466,10 @@
         "mining_data.crusher_states"
       ],
       "tools": [
-        "bq_query"
+        "bq_query",
+        "method_lookup",
+        "run_diagnostic",
+        "doc_search"
       ],
       "traversals": [],
       "models": [],
@@ -1493,7 +1496,8 @@
       ],
       "tools": [
         "bq_query",
-        "operational_math"
+        "operational_math",
+        "doc_search"
       ],
       "traversals": [],
       "models": [],
