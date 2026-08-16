@@ -10,7 +10,7 @@ invoke the build — they read the file it produced and check its content. If th
 file is stale (BigQuery credentials have expired and the build cannot re-run),
 re-run:
 
-    PYTHONPATH=. /Users/amritharajendran/.local/pythons/py312/bin/python -m scripts.build_app_data
+    PYTHONPATH=. python -m scripts.build_app_data
 
 after restoring credentials.
 """

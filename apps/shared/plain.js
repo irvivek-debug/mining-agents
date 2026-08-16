@@ -98,11 +98,11 @@ var METHOD_DRIVERS = {
   mtbf: "whether mean time between failures is trending in the right direction per asset",
 
   /* P2 — Maintenance Planner (governing metric: maintenance cost per completed work order) */
-  priority_cost_escalation: "whether higher-priority work orders consistently cost more to close",
+  priority_cost_escalation: "whether repair cost rises as work-order priority rises",
   backlog_aging: "whether stale work orders are sitting in the backlog long enough to inflate cost",
   parts_stockout: "which parts are below their reorder point and how long it takes to restock them",
   parts_demand_cover: "whether parts on hand are enough to cover what open work orders need",
-  schedule_compliance: "what proportion of work orders were closed within their scheduled window",
+  schedule_compliance: "what proportion of work orders were completed within their scheduled window",
   planned_ratio: "whether preventive work is growing as a share of the total maintenance programme",
 
   /* P3 — HSE Lead (governing metric: severity-weighted incident exposure) */
