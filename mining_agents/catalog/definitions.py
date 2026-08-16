@@ -382,13 +382,13 @@ S07 = SwarmDef(
         _a("S07-SP3", "Recovery Sensitivity Modeller", "S07", "specialist",
            apqc="4.2.2 / 11.0.3", persona="P6", branch="processing",
            tables=["mining_data.metallurgical_recovery", "mining_data.crusher_states"],
-           tools=["bq_query"]),
+           tools=["bq_query", "method_lookup", "run_diagnostic", "doc_search"]),
     ),
     critic=_a(
         "S07-CRITIC", "Setpoint Safety Critic", "S07", "critic",
         apqc="4.2.2 / 11.0.3", persona="P6", branch="processing",
         tables=["mining_data.crusher_states", "mining_data.metallurgical_recovery"],
-        tools=["bq_query", "operational_math"],
+        tools=["bq_query", "operational_math", "doc_search"],
     ),
 )
 

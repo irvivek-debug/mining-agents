@@ -9,10 +9,13 @@ from mining_agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_re
 from mining_agents.safety.untrusted import FREE_TEXT_FIELDS, UNTRUSTED_PREFIX
 from mining_agents.tools.bq_query import make_bq_query
 from mining_agents.tools.bqml_predict import make_bqml_predict
+from mining_agents.tools.doc_search import doc_search
 from mining_agents.tools.graph_traverse import make_graph_traverse
+from mining_agents.tools.method_lookup import make_method_lookup
 from mining_agents.tools.ontology_lookup import ontology_lookup
 from mining_agents.tools.operational_math import operational_math
 from mining_agents.tools.request_approval import make_request_approval
+from mining_agents.tools.run_diagnostic import make_run_diagnostic
 
 # Both tables that carry raw biometric readings. The biometric instruction
 # section is triggered if an agent's source_tables intersects this set.
@@ -35,6 +38,9 @@ def bind_tools(agent: AgentDef) -> list:
         "ontology_lookup": lambda: ontology_lookup,
         "operational_math": lambda: operational_math,
         "request_approval": lambda: make_request_approval(agent.agent_id),
+        "doc_search": lambda: doc_search,
+        "method_lookup": lambda: make_method_lookup(agent.persona),
+        "run_diagnostic": lambda: make_run_diagnostic(agent.persona),
     }
     bound = []
     for name in agent.tools:
@@ -101,6 +107,41 @@ def build_instruction(agent: AgentDef) -> str:
         parts += [
             "",
             "SQL — all queries use @parameters. Never interpolate a value into SQL.",
+        ]
+
+    if "method_lookup" in agent.tools:
+        parts += [
+            "",
+            "METHOD — you are not a query service. Before answering a question "
+            "about your governing metric, call method_lookup and work the "
+            "driver tree it returns, in order:",
+            "  1. SIZE the gap — the metric now, against a band the site has "
+            "itself run. Never against the best decile of an outcome; the top "
+            "decile of a noisy series is partly luck and overstates the prize.",
+            "  2. ATTRIBUTE the loss — where the value is physically going.",
+            "  3. Separate CONTROLLABLE drivers from ones you cannot change. An "
+            "orebody is not a lever.",
+            "  4. Ask WHY it is not already happening. The obvious lever is "
+            "usually un-pulled for a reason, and a recommendation that cannot "
+            "answer this is naive advice. Look for the decision in the data.",
+            "  5. GUARD it — retrieve the operating constraint with doc_search "
+            "BEFORE you recommend anything, cite the document, and show from "
+            "the data that this site stays inside it.",
+            "",
+            "For every driver in the tree, use run_diagnostic to execute its "
+            "fixed diagnostic query. Never use bq_query to re-derive or check "
+            "a driver that the pack already computes — doing so produces a "
+            "result that differs silently from the pack's definition and defeats "
+            "the method entirely. bq_query is for sizing the prize in tonnes and "
+            "money, and for questions the driver tree does not cover. It must "
+            "never substitute for run_diagnostic on any driver in the tree.",
+            "",
+            "Rank problems by what they cost the metric, not by how "
+            "interesting they are.",
+            "A driver you cannot evidence is reported as unevidenced, and one "
+            "with no data behind it is reported as not instrumented. Never drop "
+            "a driver from your answer — a missing driver reads as 'no problem "
+            "found', which is a different and false claim.",
         ]
 
     if any(table in FREE_TEXT_FIELDS for table in agent.source_tables):
