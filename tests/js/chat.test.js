@@ -500,3 +500,49 @@ test("an answer with no delegates carries no aside drawer", () => {
   assert.ok(!pane.innerHTML.includes("what each agent reported"),
     "an empty drawer is a control that opens on nothing");
 });
+
+test("the delegates' drawer is not called Technical detail", () => {
+  // Browser verification of the live P6 run caught this. `technicalDrawer`
+  // hardcodes the summary "Technical detail", so routing the asides through it
+  // produced two consequences, both bad. The reader has been taught across
+  // every screen that "Technical detail" means agent ids, tables and model
+  // tiers — plumbing they may safely ignore. The specialists' and critic's
+  // reasoning is the opposite of that: it is the substance of the swarm, and
+  // the whole reason this workstream exists is to show the reader how the
+  // problem was worked rather than what was queried. Filing it under the
+  // ignore-me noun buries the thing it was surfaced to reveal.
+  //
+  // And when a run produces both drawers — a failed step plus delegates, which
+  // is the common case, not the corner — the answer ends with two collapsibles
+  // whose summaries read identically, so the only way to tell them apart is to
+  // open both.
+  const pane = paneAfter([
+    { kind: "aside", author: "s07_critic", text: "SP2 is out of scope." },
+    { kind: "text", text: "Widen the gap." },
+  ]);
+  const summaries = (pane.innerHTML.match(/<summary>/g) || []).length;
+  const technical = pane.innerHTML.split("Technical detail").length - 1;
+  assert.equal(summaries, 1, "expected exactly one drawer here");
+  assert.equal(technical, 0,
+    "the delegates' reasoning was filed under the drawer readers are taught to skip");
+});
+
+test("a failed step and a delegate produce two drawers a reader can tell apart", () => {
+  // The two drawers answer different questions — "which step broke" versus
+  // "what did each agent conclude" — so their summaries must differ. Before
+  // this, both rendered the string "Technical detail" and the reader had to
+  // open each one to find out which was which.
+  const pane = paneAfter([
+    { kind: "aside", author: "s07_critic", text: "SP2 is out of scope." },
+    { kind: "text", text: "Widen the gap.\n\nThe call to `bq_query` failed." },
+  ]);
+  // Assert on the TITLE — the text before the dim hint — not on the whole
+  // summary. Comparing whole summaries passes while the defect is present,
+  // because the two hints differ; the reader still meets two controls both
+  // announcing themselves as "Technical detail".
+  const titles = (pane.innerHTML.match(/<summary>[\s\S]*?<\/summary>/g) || [])
+    .map((s) => s.replace(/<summary>/, "").replace(/<span[\s\S]*/, ""));
+  assert.equal(titles.length, 2, pane.innerHTML);
+  assert.notEqual(titles[0], titles[1],
+    "two drawers on one answer announced themselves with the same title");
+});

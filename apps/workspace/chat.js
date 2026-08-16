@@ -241,7 +241,14 @@ function mountChat(node, personaCode, DATA, deps) {
 
     function asideDrawer() {
       if (!asides.length) return "";
-      return CHAT_SHELL.technicalDrawer(
+      /* Its own noun, not "Technical detail". This is the working record of
+       * how the problem was taken apart — the critic's audit above all — and
+       * "Technical detail" is the label this product uses for material the
+       * reader may skip. Filing the reasoning under the skip-me heading hides
+       * the one thing worth surfacing, and an answer that also has a failed
+       * step would end with two controls announcing the same title. */
+      return CHAT_SHELL.drawer(
+        "How the agents got here",
         asides.map(function (aside) {
           return (
             '<p class="dim">' + CHAT_SHELL.esc(aside.label) + "</p>" +

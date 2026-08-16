@@ -172,15 +172,29 @@ function mountNav(app, current) {
  *  chances for one screen to call it something else and break the pattern the
  *  reader has just learned.
  */
-function technicalDrawer(bodyHtml, hint) {
+function drawer(title, bodyHtml, hint) {
   return (
     '<details class="tbl drawer">' +
-    "<summary>Technical detail" +
+    `<summary>${esc(title)}` +
     (hint ? `<span class="dim">${esc(hint)}</span>` : "") +
     "</summary>" +
     `<div class="drawer-body">${bodyHtml}</div>` +
     "</details>"
   );
+}
+
+/** The drawer for plumbing: agent ids, tables, model tiers.
+ *
+ *  Kept as its own function because the title is a promise. Across every
+ *  screen "Technical detail" has come to mean the same thing to the reader —
+ *  material they may skip without losing the argument — and that promise only
+ *  holds while one name has one meaning. A chat answer briefly filed the
+ *  specialists' and critic's reasoning here, which broke the promise in both
+ *  directions: it hid the substance of the swarm behind the skip-me label, and
+ *  it put two identically-titled controls at the foot of one answer. Anything
+ *  that is not plumbing calls `drawer` with its own noun. */
+function technicalDrawer(bodyHtml, hint) {
+  return drawer("Technical detail", bodyHtml, hint);
 }
 
 /** The footer every screen carries: when the data was generated and from what.
@@ -218,5 +232,5 @@ function el(id) {
  * DOM error instead of an answer. Everything below is a function of its
  * arguments alone, which is what makes it worth pinning from Node. */
 if (typeof module !== "undefined") {
-  module.exports = { esc, num, places, fig, rowPlaces, clientInput, technicalDrawer };
+  module.exports = { esc, num, places, fig, rowPlaces, clientInput, drawer, technicalDrawer };
 }
