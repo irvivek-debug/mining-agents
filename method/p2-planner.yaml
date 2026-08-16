@@ -43,7 +43,7 @@ drivers:
     sql: sql/p2/backlog_aging.sql
     params:
       stale_days: 30
-      exclude_statuses_pattern: "^(COMPLETED|CANCELLED)$"
+      exclude_statuses: ["COMPLETED", "CANCELLED"]
     doc_query: work order open backlog age escalation review threshold MAINT-WOP-002 clause 3
     guard: >-
       Age is elapsed time from work order creation to the dataset's maximum
@@ -51,12 +51,14 @@ drivers:
       IN_PROGRESS for most of its age may not be stale in an operational
       sense; the elapsed age from creation is the only aging signal this table
       supports. The stale threshold is a parameter — @stale_days — rather than
-      a site constant; MAINT-WOP-002 clause 3 specifies the review trigger
+      a site constant; MAINT-WOP-002 clause 3.1 specifies the review-trigger
       periods per priority (30 days for Priority 3, 90 days for Priority 4),
-      which differ from a single uniform threshold. A mean cost difference
-      between fresh and stale bands is consistent with both an escalation
-      effect and a selection effect where older orders belong to lower-priority,
-      lower-cost asset classes.
+      and a work order that has reached the trigger age is banded as stale
+      (the boundary comparison is >=, consistent with the standard's "within
+      the following periods" language). A mean cost difference between fresh and
+      stale bands is consistent with both an escalation effect and a selection
+      effect where older orders belong to lower-priority, lower-cost asset
+      classes.
 
   - id: parts_stockout
     question: Which parts are below their reorder point and what are their lead times?

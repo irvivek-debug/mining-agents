@@ -155,20 +155,22 @@ def test_backlog_aging_covers_only_open_and_in_progress_orders():
 
 
 @pytest.mark.integration
-def test_parts_stockout_returns_fifteen_skus_strictly_below_reorder_point():
-    """15 of 105 SKUs are strictly below their reorder point; one is at zero.
+def test_parts_stockout_returns_seventeen_skus_at_or_below_reorder_point():
+    """17 of 105 SKUs are at or below their reorder point; one is at zero.
 
-    The query uses strict less-than so the two SKUs sitting exactly at their
-    reorder_point_limit are not in scope. Lead times span 3–27 days in this
-    dataset. Pinning the count and the zero-stock case catches a query using <=
-    instead of < or dropping the zero-stock row on a NULL guard.
+    In continuous-review inventory policy a replenishment order is triggered
+    when inventory position falls to or below the reorder point. The query uses
+    <= so that SKUs sitting exactly at their reorder_point_limit are included —
+    they are the trigger event, not a safe condition. Lead times span 3–27 days
+    in the validated dataset. Pinning the count and the zero-stock case catches
+    a query using < or dropping the zero-stock row on a NULL guard.
     """
     driver = next(d for d in load_pack(PACK).drivers if d.id == "parts_stockout")
     rows, _ = run_query(
         (ROOT / "method" / driver.sql).read_text(), driver.params, TABLES
     )
-    assert len(rows) == 15, (
-        f"expected 15 stockout SKUs, got {len(rows)}; query may use <= instead of <"
+    assert len(rows) == 17, (
+        f"expected 17 stockout SKUs, got {len(rows)}; query may use < instead of <="
     )
     # At least one SKU is at zero stock.
     assert any(r["stock_level"] == 0 for r in rows), (
@@ -176,8 +178,8 @@ def test_parts_stockout_returns_fifteen_skus_strictly_below_reorder_point():
     )
     # Lead time range: 3–27 days in the validated dataset.
     lead_times = [r["lead_time_days"] for r in rows]
-    assert min(lead_times) >= 2, (
-        f"minimum lead time {min(lead_times)} is below floor of 2 days"
+    assert min(lead_times) >= 3, (
+        f"minimum lead time {min(lead_times)} is below validated floor of 3 days"
     )
     assert max(lead_times) >= 25, (
         f"maximum lead time {max(lead_times)} is below floor of 25 days"
