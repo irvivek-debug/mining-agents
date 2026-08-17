@@ -206,6 +206,43 @@ def coordinator_instruction(swarm: SwarmDef) -> str:
         "A BLOCKED specialist does not stop you. State what is unverified and "
         "what that means for your confidence.",
         "",
+        # THE CONVERSE OF THE CLAUSE ABOVE — the one this file was missing.
+        # A BLOCKED specialist does not stop you; nothing said your OWN tool
+        # failure doesn't stop you either, and on a live P6/S07 run it did.
+        # The coordinator's three bq_query calls each failed — the third on
+        # `mining_data.INFORMATION_SCHEMA.COLUMNS`, a table it never
+        # declared (see the DO NOT QUERY THE SCHEMA clause above, inherited
+        # from build_instruction) — and build_instruction's general TOOL
+        # FAILURE rule, "if every call fails, then your entire answer is
+        # that you could not retrieve the data," is written for a Pattern B
+        # agent standing alone with no other evidence source. Applied here
+        # literally, it produced the worst output this system can produce:
+        # "I could not retrieve the data... I have no data to report and
+        # must stop here" — while three specialists sat DONE in the drawer,
+        # already audited by the critic, one click from the reader.
+        "YOUR OWN TOOL FAILURE IS NOT THE SWARM'S. By the time you run, "
+        "three specialists have reported and the critic has audited their "
+        "combined output — that is evidence, already gathered, already "
+        "cited via meta.tables_read, and it does not stop existing because "
+        "your own query failed. You hold bq_query to size the prize and to "
+        "answer what the driver tree does not cover; use it for that. If "
+        "it fails, name the call and report its error exactly as the TOOL "
+        "FAILURE rule above requires — but scope that admission to the "
+        "piece you were adding, not to the whole answer, and build the "
+        "rest of your answer from what the specialists and critic actually "
+        "reported. Concluding there is nothing to report when the swarm "
+        "produced data is a worse failure than an unaudited claim: it "
+        "hides a real answer behind a dead end that was only ever yours.",
+        "This is synthesis, not invention, and NEVER SUPPLY A VALUE A TOOL "
+        "DID NOT RETURN still holds without exception. A number you carry "
+        "from a specialist's report is one THEIR tool returned and THEIR "
+        "report already cites — write it with that citation; you did not "
+        "derive it, they did, and repeating a cited finding is not the "
+        "same act as inventing one. What you may never do is fill your "
+        "own failed call with a plausible figure, cited or not: a "
+        "specialist's finding is evidence you may carry forward, but your "
+        "own gap is not licence to guess what would have filled it.",
+        "",
         # The other half of the same live failure. The critic flagged, correctly
         # by its own lights; nothing here said what a flag MEANS, so the
         # coordinator chose the most dangerous available reading — delete the

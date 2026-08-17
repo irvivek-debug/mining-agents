@@ -85,10 +85,22 @@ def build_instruction(agent: AgentDef) -> str:
         # rows_scanned 0. The tool contract was already correct — success=false
         # carried a code and a message — but nothing told the model what to do
         # with it, so it filled the gap with plausible-looking invention.
+        #
+        # "Quote error.code and error.message" was itself misread on a later
+        # live run (P6/S07): the coordinator's answer read "failed with
+        # error.code and error.message ." twice — the field NAMES, empty,
+        # printed at the reader — before it finally substituted real values
+        # on a third failed call. Naming the two fields without saying they
+        # mean their VALUES left "quote" open to being read as "print these
+        # two words." The instruction now says which reading is meant.
         "TOOL FAILURE — a result with success=false carries NO data. So does one "
         "whose meta.rows_scanned is 0. In either case you have nothing to report "
-        "from that call. Say which call failed, quote error.code and "
-        "error.message, and stop.",
+        "from that call. Say which call failed, then report what its error "
+        "actually says — error.code and error.message are the NAMES of two "
+        "fields in the tool result, not text to print; write out the VALUES "
+        "those fields hold, as plain prose (for example: 'the call failed — "
+        "UNDECLARED_TABLE: query reads [...], which this agent has not "
+        "declared'). Then stop.",
         "NEVER supply a value a tool did not return — not an asset id, a "
         "measurement, a date, a count, or a name. Not as an example, not as an "
         "illustration, not hedged with 'typically' or 'would likely be'. A "
@@ -111,6 +123,42 @@ def build_instruction(agent: AgentDef) -> str:
         parts += [
             "",
             "SQL — all queries use @parameters. Never interpolate a value into SQL.",
+            "",
+            # WHY THIS CLAUSE EXISTS. Nothing anywhere in this instruction
+            # ever asks an agent to look up the schema before writing SQL —
+            # it is simply what models reflexively do first. On the live P6
+            # run every agent that held bq_query, specialists and the
+            # coordinator alike, opened with a query against
+            # `mining_data.INFORMATION_SCHEMA.COLUMNS`. That table is not in
+            # any agent's DATA SCOPE, so assert_reads_only_declared_tables in
+            # bq_query.py refused it correctly — the guard is a security
+            # boundary and behaved exactly as designed, and this clause does
+            # not touch it. But the refusal then littered the activity log
+            # on every single run ("query reads
+            # ['mining_data.INFORMATION_SCHEMA.COLUMNS'], which this agent
+            # has not declared"), and in the coordinator's case it was one of
+            # three failed calls that convinced it there was no data to
+            # report at all, even though three specialists had already
+            # succeeded.
+            #
+            # This clause is placed here, in the shared bq_query block of
+            # build_instruction rather than in coordinator_instruction alone,
+            # because the reflex was not the coordinator's alone — it showed
+            # up in specialist output too, on every bq_query holder in the
+            # swarm. Gating it on "bq_query" in agent.tools, the same
+            # condition this block already uses, reaches every agent capable
+            # of triggering it and no agent that is not.
+            "DO NOT QUERY THE SCHEMA. There is no schema-discovery tool "
+            "bound to any agent in this system, and mining_data."
+            "INFORMATION_SCHEMA.* is not a table you or anyone else has "
+            "declared — a query against it will always be refused as an "
+            "undeclared table, the same as a query against any other table "
+            "outside your DATA SCOPE. Do not open with one 'just to check' "
+            "what columns exist; write your SELECT directly against the "
+            "tables listed under DATA SCOPE above. If a column name turns "
+            "out wrong, the dry run's own error names it precisely — fix "
+            "the query from that error, rather than reaching for a lookup "
+            "step that does not exist and only adds a refusal to the log.",
         ]
 
     if "method_lookup" in agent.tools:

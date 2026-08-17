@@ -221,6 +221,39 @@ def test_every_swarm_node_inherits_the_no_fabrication_clause():
     assert missing == []
 
 
+def test_bq_query_holders_in_every_swarm_are_told_not_to_query_the_schema():
+    """The schema-introspection reflex (querying
+    mining_data.INFORMATION_SCHEMA.COLUMNS, refused because it is not in any
+    agent's DATA SCOPE) showed up in specialist output too, on the live
+    P6/S07 run — not just the coordinator's. The clause lives in
+    build_instruction, gated on 'bq_query' in agent.tools, so it must reach
+    every built node (specialist, critic, coordinator) that holds bq_query,
+    and only those nodes.
+
+    Checked at the built-graph level, not the instruction-function level, so
+    a break in the composition (coordinator_instruction or critic_instruction
+    built from hand-written text that dropped the build_instruction() prefix)
+    would be caught here the same way it is for the no-fabrication clause.
+    """
+    for swarm in SWARMS:
+        wf = build_swarm(swarm)
+        agent_by_name = {
+            a.agent_id.lower().replace("-", "_"): a for a in swarm.agents
+        }
+        for node in wf.graph.nodes:
+            if not isinstance(node, LlmAgent):
+                continue
+            agent_def = agent_by_name.get(node.name)
+            if agent_def is None:
+                continue
+            has_bq = "bq_query" in agent_def.tools
+            assert ("DO NOT QUERY THE SCHEMA" in node.instruction) == has_bq, (
+                f"{swarm.swarm_id}/{node.name}: schema clause presence "
+                f"({'present' if 'DO NOT QUERY THE SCHEMA' in node.instruction else 'absent'}) "
+                f"does not match bq_query grant ({has_bq})"
+            )
+
+
 def test_the_critic_instruction_is_injection_aware():
     text = critic_instruction(SWARMS[0])
     assert "steered" in text.lower() or "injection" in text.lower()
@@ -394,6 +427,79 @@ def test_a_flagged_claim_is_never_grounds_to_drop_a_limit_and_keep_the_action():
         assert "flag" in lowered, swarm.swarm_id
         assert "do not act on it" in lowered, swarm.swarm_id
         assert "do not delete it" in lowered, swarm.swarm_id
+
+
+# ---------------------------------------------------------------------------
+# Coordinator's OWN tool failure vs. the swarm's evidence — the live P6/S07
+# defect where the coordinator's three bq_query calls failed and it told the
+# reader "I have no data to report," while three specialists sat DONE in the
+# drawer, already audited by the critic. coordinator_instruction() told the
+# coordinator a BLOCKED specialist does not stop it; nothing told it the
+# converse for its OWN tool failure, so it fell back to build_instruction's
+# general TOOL FAILURE rule ("if every call fails, your entire answer is
+# that you could not retrieve the data") — correct for a lone Pattern B
+# agent, wrong for a coordinator sitting on three specialists' completed
+# reports and a critic's audit of them.
+# ---------------------------------------------------------------------------
+
+def _own_failure_clause(instruction: str) -> str:
+    """The paragraph block stating the coordinator's-own-failure rule.
+
+    Paragraph-scoped like _citation_clause and _injection_clause above, for
+    the same reason: the rule must be self-contained.
+    """
+    clauses = [
+        block for block in instruction.split("\n\n")
+        if "YOUR OWN TOOL FAILURE IS NOT THE SWARM'S" in block
+    ]
+    assert len(clauses) == 1, f"expected one own-failure clause, got {len(clauses)}"
+    return clauses[0]
+
+
+def test_coordinators_own_tool_failure_does_not_stop_it():
+    """A wrong edit that dropped this clause, or reworded it back to 'if
+    every call fails your answer is that you could not retrieve the data'
+    without qualifying it, would reproduce the live defect exactly. Check
+    that the clause both exists and names the specialists/critic as the
+    evidence that survives the coordinator's own failed call."""
+    for swarm in SWARMS:
+        clause = _own_failure_clause(coordinator_instruction(swarm))
+        lowered = clause.lower()
+        assert "specialists" in lowered, swarm.swarm_id
+        assert "critic" in lowered, swarm.swarm_id
+        assert "meta.tables_read" in lowered, swarm.swarm_id
+
+
+def test_coordinator_scopes_its_own_failure_to_what_it_was_adding():
+    """The clause must say the admission is scoped to the piece the
+    coordinator was trying to add, not to the whole answer — otherwise a
+    plausible-sounding edit ('report your failure and stop') reproduces the
+    exact live output: three own-call failures treated as grounds to
+    abandon everything, including work that never touched the coordinator's
+    own tools."""
+    for swarm in SWARMS:
+        clause = _own_failure_clause(coordinator_instruction(swarm))
+        lowered = clause.lower()
+        assert "not to the whole answer" in lowered, swarm.swarm_id
+        assert "worse failure than an unaudited claim" in lowered, swarm.swarm_id
+
+
+def test_coordinator_synthesis_permission_does_not_license_fabrication():
+    """This task's fix must not become a loophole in the honesty rule it
+    sits next to. The instruction must explicitly say carrying a
+    specialist's cited number forward is not the same act as inventing one,
+    AND must explicitly forbid filling the coordinator's own failed call
+    with a plausible figure — a wrong edit that granted 'synthesise freely'
+    without both halves would either re-ban legitimate synthesis or open a
+    fabrication hole the rest of this file works hard to close."""
+    for swarm in SWARMS:
+        text = coordinator_instruction(swarm)
+        assert "NEVER supply a value a tool did not return" in text, swarm.swarm_id
+        lowered = text.lower()
+        assert "this is synthesis, not invention" in lowered, swarm.swarm_id
+        assert "fill your own failed call with a plausible figure" in lowered, (
+            swarm.swarm_id
+        )
 
 
 @pytest.mark.parametrize("swarm_id", ["S05", "S10"])

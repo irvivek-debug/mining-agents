@@ -112,3 +112,44 @@ def test_agents_that_hold_operational_math_are_told_to_use_it():
     assert len(holders) >= 1, "no deep agent holds operational_math"
     for agent in holders:
         assert "operational_math" in build_instruction(agent), agent.agent_id
+
+
+def test_bq_query_holders_are_told_not_to_introspect_the_schema():
+    """On the live P6 run, every agent holding bq_query reflexively opened
+    with a query against mining_data.INFORMATION_SCHEMA.COLUMNS — a table no
+    agent declares, so assert_reads_only_declared_tables refused it, and the
+    refusal littered the activity log on every run. Nothing ever asked for
+    that lookup; it is just what models do before writing SQL.
+
+    Checked both ways — present for a bq_query holder, absent for one that
+    doesn't hold the tool — the same shape as
+    test_the_instruction_never_names_a_tool_the_agent_does_not_hold above,
+    so a wrong gate (e.g. always-on, or gated on the wrong tool name) fails
+    in whichever direction it drifts.
+    """
+    holders = [a for a in DEEP if "bq_query" in a.tools]
+    non_holders = [a for a in DEEP if "bq_query" not in a.tools]
+    assert holders, "no deep agent holds bq_query"
+    assert non_holders, "no deep agent lacks bq_query — the negative branch is untestable"
+    for agent in holders:
+        text = build_instruction(agent)
+        assert "DO NOT QUERY THE SCHEMA" in text, agent.agent_id
+        assert "INFORMATION_SCHEMA" in text, agent.agent_id
+    for agent in non_holders:
+        text = build_instruction(agent)
+        assert "DO NOT QUERY THE SCHEMA" not in text, agent.agent_id
+        assert "INFORMATION_SCHEMA" not in text, agent.agent_id
+
+
+def test_the_tool_failure_clause_asks_for_error_values_not_field_names():
+    """The cosmetic half of the P6 defect: the coordinator's answer read
+    'failed with error.code and error.message .' twice — the literal field
+    NAMES, empty, printed at the reader — because the old wording ("quote
+    error.code and error.message") named the fields without saying it meant
+    their values. The reworded clause must say so explicitly, and the old,
+    ambiguous phrasing must be gone so it cannot be misread the same way
+    again."""
+    for agent in DEEP:
+        text = build_instruction(agent)
+        assert "write out the VALUES" in text, agent.agent_id
+        assert "quote error.code and" not in text, agent.agent_id
