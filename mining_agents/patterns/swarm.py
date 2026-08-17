@@ -108,8 +108,59 @@ def critic_instruction(swarm: SwarmDef) -> str:
         "strongest evidence in the answer, and a recommendation fenced by one "
         "is doing what the method requires. Never flag it as injection.",
         "",
-        "Every claim you accept must cite the table it came from. Reject an "
-        "uncited number.",
+        # WHY THIS CLAUSE WAS SPLIT OUT OF A BARE CITATION RULE.
+        # It used to end here, in one sentence: "Every claim you accept must
+        # cite the table it came from. Reject an uncited number." That rule is
+        # still right, but it named a documentation standard without saying
+        # what checking it means, and this critic holds bq_query,
+        # operational_math and doc_search — the same tools the specialists
+        # used to produce the claims in the first place. Told to reject
+        # anything uncited, and holding the means to re-derive anything, the
+        # model's easiest path to satisfying the rule was to go verify every
+        # number by re-running the call that produced it.
+        #
+        # On a live P6 run against S07 that is what happened: the specialists
+        # together produced dozens of claims, the critic re-queried for each
+        # one, tool calls kept climbing past sixty with no end in sight, and
+        # the critic never reported. The coordinator concludes only after the
+        # critic does, so no answer ever reached the reader — the transcript
+        # showed every specialist's prose and the coordinator's silence. That
+        # is "do not repeat their work," from the opening paragraph above,
+        # failing at the scale of every claim in the report rather than once.
+        #
+        # The fix distinguishes two operations the word "cite" was covering:
+        # confirming a claim carries an attribution (cheap, no tool call,
+        # exactly what auditing means) and confirming the number is correct by
+        # reproducing it (expensive, is the specialists' work, and is what the
+        # instruction already forbade). Only the first is required of every
+        # claim. The second is reserved, and capped, for numbers that look
+        # wrong on their face.
+        "A CITATION CHECK IS NOT A RE-DERIVATION. A specialist's tool result "
+        "already carries meta.tables_read, and a doc_search passage already "
+        "carries the file and folder it came from — that attribution, quoted "
+        "on the claim, is what 'cited' means. Confirming it is reading what "
+        "the specialist already wrote down, not a tool call. Reject a claim "
+        "that carries no attribution at all; that rule is unchanged. But do "
+        "not call bq_query, operational_math or doc_search to reproduce a "
+        "number that is already cited, on the theory that this is what "
+        "checking it means — reproducing a cited figure IS repeating the "
+        "specialist's work, just done once per claim instead of once per "
+        "report, and it is the same thing the opening paragraph of this "
+        "instruction told you not to do.",
+        "Spend your own tool calls on numbers that look wrong, not on numbers "
+        "that look cited. Re-derive a figure only when something about it is "
+        "actually suspect — it contradicts another cited figure, it is "
+        "outside a physically plausible range, or the table it cites could "
+        "not contain it. You have at most 3 tool calls for the entire audit, "
+        "not per claim; spend them on the claims most worth doubting.",
+        "If you reach that ceiling with claims still unchecked, stop calling "
+        "tools. Report exactly what you spot-checked and what you found, name "
+        "the claims you did not have room to verify by re-derivation, and say "
+        "so plainly — an unverified spot-check is a finding for the "
+        "coordinator to carry forward, the same as a BLOCKED specialist is. "
+        "Silently accepting the rest, or silently continuing to call tools "
+        "past the ceiling and never reporting, are both worse than saying "
+        "what you could not check.",
     ]
 
     # Include the DLP audit clause if any member of this swarm reads a table

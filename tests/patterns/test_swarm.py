@@ -1,3 +1,4 @@
+import re
 import warnings
 
 import pytest
@@ -286,6 +287,91 @@ def _injection_clause(instruction: str) -> str:
         if "INJECTION AWARENESS" in block
     ]
     assert len(clauses) == 1, f"expected one injection clause, got {len(clauses)}"
+    return clauses[0]
+
+
+# ---------------------------------------------------------------------------
+# Bounded critic audit — a critic with re-derivation tools and a bare
+# "cite everything" rule has no natural stopping point: it can satisfy the
+# rule by re-running every specialist's tool call, which is unbounded and,
+# on a live P6/S07 run, meant the critic never finished and the coordinator
+# (who only concludes after the critic reports) never wrote an answer.
+# ---------------------------------------------------------------------------
+
+def test_the_citation_clause_distinguishes_checking_from_rederiving():
+    """Checking a citation must mean reading the attribution the specialist
+    already gave (meta.tables_read, or a doc_search passage's file/folder),
+    not re-running the tool that produced the number. A wrong edit that
+    collapses this back to "verify every claim" would drop the explicit
+    'not a tool call' framing while probably keeping the word 'cite' —
+    so we assert the distinguishing language itself, not just the topic."""
+    for swarm in SWARMS:
+        clause = _citation_clause(critic_instruction(swarm))
+        assert "meta.tables_read" in clause, swarm.swarm_id
+        assert "not a tool call" in clause.lower(), swarm.swarm_id
+        assert "reproduce" in clause.lower(), swarm.swarm_id
+
+
+def test_the_critic_may_not_rederive_every_cited_claim():
+    """The clause must actively forbid re-running bq_query/operational_math/
+    doc_search on a number that is already cited — otherwise 'the specialist
+    already wrote it down' is just a suggestion, not a rule, and the model's
+    easiest path to satisfying a bare citation mandate is still to re-check
+    everything."""
+    for swarm in SWARMS:
+        clause = _citation_clause(critic_instruction(swarm))
+        lowered = clause.lower()
+        assert "do not call bq_query" in lowered, swarm.swarm_id
+        assert "already cited" in lowered, swarm.swarm_id
+
+
+def test_the_critics_own_tool_use_is_capped_for_the_whole_audit_not_per_claim():
+    """The bound has to be a small constant applied once per audit. A cap
+    that were instead framed per-claim (e.g. '3 tool calls per claim') would
+    still be unbounded in aggregate and would reproduce the exact failure
+    this fix addresses, so we check both that a small numeric ceiling exists
+    AND that it is explicitly scoped to the whole audit."""
+    for swarm in SWARMS:
+        clause = _citation_clause(critic_instruction(swarm))
+        match = re.search(r"at most (\d+) tool calls", clause)
+        assert match, f"{swarm.swarm_id}: no numeric tool-call ceiling found"
+        cap = int(match.group(1))
+        assert 1 <= cap <= 5, (
+            f"{swarm.swarm_id}: ceiling {cap} is not a small bounded number"
+        )
+        assert "not per claim" in clause.lower(), swarm.swarm_id
+
+
+def test_hitting_the_tool_ceiling_must_be_reported_not_silently_dropped():
+    """A critic that quietly stops auditing once it hits the ceiling is as
+    dangerous as one that never stops: the coordinator would carry forward
+    an audit that looks complete but isn't. The instruction must require the
+    critic to say which claims it could not verify by re-derivation, framed
+    as a finding to report -- mirroring how a BLOCKED specialist is handled
+    elsewhere in this same instruction, not as silent acceptance."""
+    for swarm in SWARMS:
+        clause = _citation_clause(critic_instruction(swarm))
+        lowered = clause.lower()
+        assert "stop calling" in lowered or "stop calling tools" in lowered, (
+            swarm.swarm_id
+        )
+        assert "finding" in lowered, swarm.swarm_id
+        assert "silently" in lowered, swarm.swarm_id
+
+
+def _citation_clause(instruction: str) -> str:
+    """The paragraph block of a critic instruction that states the citation
+    rule and its tool-use bound.
+
+    Paragraph-scoped like _injection_clause, for the same reason: the rule
+    must be self-contained so a critic can apply it without inferring the
+    bound from somewhere else in the instruction.
+    """
+    clauses = [
+        block for block in instruction.split("\n\n")
+        if "CITATION CHECK" in block
+    ]
+    assert len(clauses) == 1, f"expected one citation clause, got {len(clauses)}"
     return clauses[0]
 
 
