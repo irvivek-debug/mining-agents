@@ -311,7 +311,16 @@ def test_agt11_agt13_agt14_cards_match_the_signed_off_decisions():
 
     s03 = by_id["S03"].card
     assert s03.archetype == "Negotiator"
-    assert set(s03.leaks) == {"Blind spot"}
+    # Revised after the cards were first authored, and deliberately. The
+    # dispatch that specified these cards named only "Blind spot" for S03,
+    # which was my error, not the implementer's: warranty and OEM claims
+    # recovery sits in the source portfolio's Asset management row, and that
+    # row's leaks are "Blind spot · Latency". Four cards were corrected the
+    # same way, against the same table, and the reason to care is not
+    # tidiness — with six of seven cards claiming "Blind spot" alone, the
+    # value page's leak band showed Variance and Assurance at zero agents,
+    # which reads as a broken taxonomy rather than an honest portfolio.
+    assert set(s03.leaks) == {"Blind spot", "Latency"}
     assert s03.authority == "L1 — Recommend"
     assert s03.financial_lines[0].evidence_class == "A"
     assert "warranty and OEM claims recovery" in s03.financial_lines[0].line

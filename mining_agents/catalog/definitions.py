@@ -231,7 +231,7 @@ S02 = SwarmDef(
             decision="Which work orders are ready for the shutdown window, "
                      "and whether the parts and lead time on hand actually "
                      "support committing to it.",
-            leaks=["Blind spot"],
+            leaks=["Blind spot", "Latency"],
             archetype="Diagnostician",
             authority="L1 — Recommend",
             financial_lines=[
@@ -296,7 +296,7 @@ S03 = SwarmDef(
         card=AgentCard(
             decision="Which failures are recoverable, and whether the "
                      "evidence supports the claim.",
-            leaks=["Blind spot"],
+            leaks=["Blind spot", "Latency"],
             archetype="Negotiator",
             authority="L1 — Recommend",
             financial_lines=[
@@ -413,7 +413,7 @@ S05 = SwarmDef(
             decision="Whether the evidence in front of an interlock "
                      "decision — proximity history, fatigue signal, and "
                      "radio traffic — actually supports it.",
-            leaks=["Blind spot"],
+            leaks=["Assurance"],
             archetype="Diagnostician",
             authority="L1 — Recommend",
             financial_lines=[
@@ -492,7 +492,7 @@ S06 = SwarmDef(
             decision="Whether the resource model, the grade-control model, "
                      "the pit and the mill agree on contained metal — and "
                      "if not, which one is wrong.",
-            leaks=["Blind spot"],
+            leaks=["Latency", "Variance"],
             archetype="Diagnostician",
             authority="L1 — Recommend",
             financial_lines=[
@@ -557,7 +557,7 @@ S07 = SwarmDef(
         card=AgentCard(
             decision="Whether the crusher setting or feed variability is "
                      "costing recovered contained metal, and by how much.",
-            leaks=["Blind spot"],
+            leaks=["Latency", "Variance"],
             archetype="Diagnostician",
             authority="L1 — Recommend",
             financial_lines=[
