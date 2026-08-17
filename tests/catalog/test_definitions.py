@@ -1,10 +1,47 @@
+import re
+
+import pydantic
 import pytest
-from mining_agents.catalog.definitions import ALL_AGENTS, DEEP, SWARMS
+from mining_agents.catalog.definitions import (
+    ALL_AGENTS,
+    ARCHETYPES,
+    DEEP,
+    EVIDENCE_CLASSES,
+    LEAKS,
+    SWARMS,
+    AgentCard,
+    FinancialLine,
+)
 from mining_agents.tools.bqml_predict import list_models
 from mining_agents.tools.graph_traverse import TRAVERSALS
 
 HITL_COORDINATORS = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S11"}
 HITL_DEEP = {"D07", "D14", "D25", "D30", "D37"}
+
+#: The seven coordinators that carry a card as of this task, and the pack
+#: file each one's card references. Fixed set, not derived — a test that
+#: derives its expectation from the same code it is checking cannot fail.
+CARD_COORDINATORS = {
+    "S01": "p1-reliability.yaml",
+    "S02": "p2-planner.yaml",
+    "S03": "agt13-warranty.yaml",
+    "S05": "p3-hse.yaml",
+    "S06": "p5-geologist.yaml",
+    "S07": "p6-metallurgist.yaml",
+    "S09": "agt14-contract-integrity.yaml",
+}
+
+
+def _minimal_card_kwargs() -> dict:
+    """A valid AgentCard's fields, as a dict, so a single test can drop one."""
+    return dict(
+        decision="Which asset comes down, when, and on what evidence.",
+        leaks=["Blind spot"],
+        archetype="Diagnostician",
+        authority="L1 — Recommend",
+        financial_lines=[FinancialLine(line="x → y", evidence_class="B")],
+        honest_limit="A stated limit.",
+    )
 
 
 @pytest.fixture(scope="module")
@@ -161,3 +198,167 @@ def test_graph_traverse_is_never_granted_without_a_traversal():
     for agent in granted:
         assert len(agent.traversals) >= 1, agent.agent_id
         assert all(t in TRAVERSALS for t in agent.traversals), agent.agent_id
+
+
+# ---------------------------------------------------------------------------
+# Agent cards (value-framing design, §2). Cards live only on the seven
+# coordinators that already hold — or, for the CFO proof-point agents, will
+# hold — a method pack. Every other agent's `card` is None.
+# ---------------------------------------------------------------------------
+
+def test_exactly_the_seven_pack_holding_coordinators_declare_a_card():
+    by_id = {a.agent_id: a for a in ALL_AGENTS}
+    with_card = {a.agent_id for a in ALL_AGENTS if a.card is not None}
+    assert with_card == set(CARD_COORDINATORS)
+    for agent_id in CARD_COORDINATORS:
+        assert by_id[agent_id].swarm_role == "coordinator", agent_id
+
+
+def test_every_other_agent_has_no_card():
+    for agent in ALL_AGENTS:
+        if agent.agent_id not in CARD_COORDINATORS:
+            assert agent.card is None, agent.agent_id
+
+
+def test_card_pack_matches_the_expected_pack_file_per_coordinator():
+    by_id = {a.agent_id: a for a in ALL_AGENTS}
+    for agent_id, expected_pack in CARD_COORDINATORS.items():
+        assert by_id[agent_id].card.pack == expected_pack, agent_id
+
+
+def test_archetype_enumerates_the_prd_six_and_rejects_a_seventh():
+    """A test that only checks 'archetype is a non-empty string' cannot fail
+    on a typo. This test hardcodes the PRD's six archetype names — a typo in
+    definitions.py's Literal (e.g. 'Sentinal') would desynchronise ARCHETYPES
+    from this hardcoded set AND make every card using the correct spelling
+    fail to import, so the mismatch cannot hide.
+    """
+    expected = {"Sentinel", "Diagnostician", "Optimiser", "Negotiator", "Assurer", "Curator"}
+    assert set(ARCHETYPES) == expected
+    assert len(ARCHETYPES) == 6
+
+    # A seventh, invented archetype must be rejected at construction.
+    kwargs = _minimal_card_kwargs()
+    kwargs["archetype"] = "Strategist"  # not one of the six
+    with pytest.raises(pydantic.ValidationError):
+        AgentCard(**kwargs)
+
+
+def test_evidence_class_is_a_b_or_c_and_rejects_a_fourth():
+    assert set(EVIDENCE_CLASSES) == {"A", "B", "C"}
+    with pytest.raises(pydantic.ValidationError):
+        FinancialLine(line="x → y", evidence_class="D")
+
+
+def test_every_card_financial_line_carries_a_valid_evidence_class():
+    for agent in ALL_AGENTS:
+        if agent.card is None:
+            continue
+        for fl in agent.card.financial_lines:
+            assert fl.evidence_class in EVIDENCE_CLASSES, agent.agent_id
+
+
+def test_every_card_leak_is_in_the_prd_taxonomy():
+    for agent in ALL_AGENTS:
+        if agent.card is None:
+            continue
+        for leak in agent.card.leaks:
+            assert leak in LEAKS, agent.agent_id
+
+
+@pytest.mark.parametrize("missing_field", [
+    "decision", "leaks", "archetype", "authority", "financial_lines", "honest_limit",
+])
+def test_card_missing_a_required_field_raises_at_construction(missing_field):
+    """A missing field must raise when the AgentCard is built (at module
+    import time, since every card is constructed inline in definitions.py),
+    not silently render blank on a screen later.
+    """
+    kwargs = _minimal_card_kwargs()
+    del kwargs[missing_field]
+    with pytest.raises(pydantic.ValidationError):
+        AgentCard(**kwargs)
+
+
+def test_card_leaks_must_be_non_empty():
+    kwargs = _minimal_card_kwargs()
+    kwargs["leaks"] = []
+    with pytest.raises(pydantic.ValidationError):
+        AgentCard(**kwargs)
+
+
+def test_card_financial_lines_must_be_non_empty():
+    kwargs = _minimal_card_kwargs()
+    kwargs["financial_lines"] = []
+    with pytest.raises(pydantic.ValidationError):
+        AgentCard(**kwargs)
+
+
+def test_agt11_agt13_agt14_cards_match_the_signed_off_decisions():
+    """Locks in the specific field values the plan owner signed off on for
+    S01 (AGT-11), S03 (AGT-13) and S09 (AGT-14), so a later edit that quietly
+    drifts one of them off-spec is caught here rather than downstream.
+    """
+    by_id = {a.agent_id: a for a in ALL_AGENTS}
+
+    s01 = by_id["S01"].card
+    assert s01.archetype == "Diagnostician"
+    assert set(s01.leaks) == {"Blind spot", "Latency"}
+    assert s01.authority == "L1 — Recommend"
+    assert len(s01.financial_lines) == 1
+    assert s01.financial_lines[0].line == "unplanned repair cost → C1 cash cost"
+    assert s01.financial_lines[0].evidence_class == "B"
+
+    s03 = by_id["S03"].card
+    assert s03.archetype == "Negotiator"
+    assert set(s03.leaks) == {"Blind spot"}
+    assert s03.authority == "L1 — Recommend"
+    assert s03.financial_lines[0].evidence_class == "A"
+    assert "warranty and OEM claims recovery" in s03.financial_lines[0].line
+
+    s09 = by_id["S09"].card
+    assert s09.archetype == "Negotiator"
+    assert set(s09.leaks) == {"Coordination"}
+    assert s09.authority == "L1 — Recommend"
+    assert s09.financial_lines[0].evidence_class == "A"
+    assert "post-signature contract leakage recovered" in s09.financial_lines[0].line
+
+
+def test_no_currency_figure_appears_in_any_card():
+    """Binding constraint: money is expressed as a range, never a point
+    figure, and no absolute currency amount belongs on a card at all.
+    """
+    currency_pattern = re.compile(r"[$£€]\s*\d")
+    for agent in ALL_AGENTS:
+        if agent.card is None:
+            continue
+        text = " ".join([
+            agent.card.decision,
+            agent.card.honest_limit,
+            *(fl.line for fl in agent.card.financial_lines),
+        ])
+        assert not currency_pattern.search(text), agent.agent_id
+
+
+def test_no_named_commodity_appears_in_any_card():
+    """Binding constraint: commodity-neutral. Cards say 'contained metal',
+    never a specific metal or mineral.
+    """
+    named_commodities = (
+        "copper", "gold", "iron ore", "coal", "nickel", "zinc", "lithium",
+        "bauxite", "silver", "cobalt", "uranium", "potash", "lead",
+    )
+    for agent in ALL_AGENTS:
+        if agent.card is None:
+            continue
+        text = " ".join([
+            agent.card.decision,
+            agent.card.honest_limit,
+            *(fl.line for fl in agent.card.financial_lines),
+        ]).lower()
+        for commodity in named_commodities:
+            # \b word boundaries plus a "lead time" exclusion — "lead" is a
+            # real commodity name AND an ordinary English word this codebase
+            # legitimately uses ("lead time"); only the metal usage counts.
+            pattern = rf"\b{commodity}\b" if commodity != "lead" else r"\blead\b(?!\s+time)"
+            assert not re.search(pattern, text), (agent.agent_id, commodity)

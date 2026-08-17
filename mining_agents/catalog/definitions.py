@@ -4,9 +4,81 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Role = Literal["coordinator", "specialist", "critic"]
+
+#: The PRD's six agent archetypes (Agentic-Mining-PRD.md §9-10 archetype tags).
+#: A card's `archetype` must be one of exactly these six — Pydantic enforces
+#: membership at construction time via the `Archetype` Literal below, so a
+#: typo (or a made-up seventh archetype) raises when the module is imported,
+#: not when a screen tries to render it.
+ARCHETYPES: tuple[str, ...] = (
+    "Sentinel", "Diagnostician", "Optimiser", "Negotiator", "Assurer", "Curator",
+)
+Archetype = Literal["Sentinel", "Diagnostician", "Optimiser", "Negotiator", "Assurer", "Curator"]
+
+#: The PRD's five leaks in the job map (§5.1): where the five-stage job
+#: — Notice, Diagnose, Decide, Act, Prove — breaks today.
+LEAKS: tuple[str, ...] = ("Latency", "Blind spot", "Variance", "Coordination", "Assurance")
+Leak = Literal["Latency", "Blind spot", "Variance", "Coordination", "Assurance"]
+
+#: The PRD's value-confidence classes (§7.1). Class A is cash-verifiable,
+#: Class B is metric-verifiable against a signed baseline, Class C is
+#: risk-adjusted and funds nothing (report only, never booked).
+EVIDENCE_CLASSES: tuple[str, ...] = ("A", "B", "C")
+EvidenceClass = Literal["A", "B", "C"]
+
+
+class FinancialLine(BaseModel):
+    """One line an agent's work can move, at one evidence class.
+
+    Evidence class is modelled per line, not per agent: PRD §7 is explicit
+    that a single agent can carry a Class A line (a cash-verifiable recovery)
+    alongside a Class B line (a metric moving against a signed baseline) —
+    collapsing evidence class onto the agent would force one class to speak
+    for both.
+    """
+    line: str
+    evidence_class: EvidenceClass
+
+
+class AgentCard(BaseModel):
+    """The business-framing card rendered on a persona page (design §2).
+
+    AUTHORITY IS DECLARED, NOT ENFORCED. This build has no authority engine.
+    `authority` is a label the card displays to a reader — it is never read
+    by any tool, gate, or approval path in this codebase, and nothing here
+    should be taken to mean a future reader can look up "L1" and expect the
+    platform to have actually restricted what the agent did. If an authority
+    engine is ever built, this field becomes its input; today it is prose.
+
+    Coverage (how many of a pack's drivers are instrumented) deliberately
+    does NOT live here — it is computed from the pack file at export time
+    (see design §2, "Coverage is the load-bearing row"), never authored by
+    hand, so a card cannot silently overclaim what its pack actually covers.
+    """
+    decision: str
+    leaks: list[Leak]
+    archetype: Archetype
+    authority: str
+    financial_lines: list[FinancialLine]
+    honest_limit: str
+    pack: str | None = None
+
+    @field_validator("leaks")
+    @classmethod
+    def _at_least_one_leak(cls, v: list[str]) -> list[str]:
+        if not v:
+            raise ValueError("a card must name at least one leak")
+        return v
+
+    @field_validator("financial_lines")
+    @classmethod
+    def _at_least_one_financial_line(cls, v: list[FinancialLine]) -> list[FinancialLine]:
+        if not v:
+            raise ValueError("a card must name at least one financial line")
+        return v
 
 
 class AgentDef(BaseModel):
@@ -24,6 +96,7 @@ class AgentDef(BaseModel):
     tools: list[str] = Field(default_factory=list)
     traversals: list[str] = Field(default_factory=list)
     models: list[str] = Field(default_factory=list)
+    card: AgentCard | None = None
 
 
 @dataclass(frozen=True)
@@ -46,13 +119,13 @@ def _tier(role: Role | None) -> str:
 def _a(agent_id: str, display_name: str, swarm_id: str, role: Role, *,
        apqc: str, persona: str, branch: str, hitl: bool = False,
        tables: list[str], tools: list[str] = (), traversals: list[str] = (),
-       models: list[str] = ()) -> AgentDef:
+       models: list[str] = (), card: AgentCard | None = None) -> AgentDef:
     return AgentDef(
         agent_id=agent_id, display_name=display_name, pattern="A",
         swarm_id=swarm_id, swarm_role=role, apqc_code=apqc, persona=persona,
         value_branch=branch, model_tier=_tier(role), hitl_required=hitl,
         source_tables=tables, tools=list(tools), traversals=list(traversals),
-        models=list(models),
+        models=list(models), card=card,
     )
 
 
@@ -88,6 +161,23 @@ S01 = SwarmDef(
         ],
         tools=["bq_query", "graph_traverse", "request_approval"],
         traversals=["blast_radius"],
+        card=AgentCard(
+            decision="What fails next, when to take it, and exactly what the "
+                     "work order should say.",
+            leaks=["Blind spot", "Latency"],
+            archetype="Diagnostician",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(line="unplanned repair cost → C1 cash cost",
+                               evidence_class="B"),
+            ],
+            honest_limit="Data-driven remaining-useful-life estimation needs "
+                          "run-to-failure data, and well-maintained machines "
+                          "are protected from failing by definition — this "
+                          "starts physics- and rule-based, and earns the "
+                          "data over time.",
+            pack="p1-reliability.yaml",
+        ),
     ),
     specialists=(
         _a("S01-SP1", "Telemetry Anomaly Detector", "S01", "specialist",
@@ -137,6 +227,26 @@ S02 = SwarmDef(
         ],
         tools=["bq_query", "graph_traverse", "request_approval"],
         traversals=["stockout_exposure"],
+        card=AgentCard(
+            decision="Which work orders are ready for the shutdown window, "
+                     "and whether the parts and lead time on hand actually "
+                     "support committing to it.",
+            leaks=["Blind spot"],
+            archetype="Diagnostician",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="maintenance cost per completed work order → "
+                         "maintenance cost as % of opex",
+                    evidence_class="B",
+                ),
+            ],
+            honest_limit="Work order records carry no planned date or due "
+                          "date field, so schedule compliance against a plan "
+                          "cannot be evidenced from them — only realised "
+                          "cost against priority and backlog age can be.",
+            pack="p2-planner.yaml",
+        ),
     ),
     specialists=(
         _a("S02-SP1", "Work Order Bundler", "S02", "specialist",
@@ -183,6 +293,25 @@ S03 = SwarmDef(
             "mining_data.erp_work_orders",
         ],
         tools=["bq_query"],
+        card=AgentCard(
+            decision="Which failures are recoverable, and whether the "
+                     "evidence supports the claim.",
+            leaks=["Blind spot"],
+            archetype="Negotiator",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="warranty and OEM claims recovery → other income "
+                         "/ cost recovery",
+                    evidence_class="A",
+                ),
+            ],
+            honest_limit="There is no published data on unclaimed warranty "
+                          "value in heavy industry; the baseline must come "
+                          "from the site's own claims history, and any "
+                          "vendor-quoted figure is unsourceable.",
+            pack="agt13-warranty.yaml",
+        ),
     ),
     specialists=(
         _a("S03-SP1", "Vehicle Health Screener", "S03", "specialist",
@@ -280,6 +409,28 @@ S05 = SwarmDef(
         ],
         tools=["bq_query", "graph_traverse", "request_approval"],
         traversals=["fatigue_to_incident"],
+        card=AgentCard(
+            decision="Whether the evidence in front of an interlock "
+                     "decision — proximity history, fatigue signal, and "
+                     "radio traffic — actually supports it.",
+            leaks=["Blind spot"],
+            archetype="Diagnostician",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="severity-weighted incident exposure → risk "
+                         "position (avoided loss)",
+                    evidence_class="C",
+                ),
+            ],
+            honest_limit="Attributing an incident to a fatigue signal "
+                          "requires both an operator link and sub-day "
+                          "timestamp resolution across the incident and "
+                          "biometric records; where either is missing, the "
+                          "correlation is reported as not instrumented "
+                          "rather than inferred.",
+            pack="p3-hse.yaml",
+        ),
     ),
     specialists=(
         _a("S05-SP1", "Proximity & Incident History Screener", "S05", "specialist",
@@ -337,6 +488,27 @@ S06 = SwarmDef(
             "mining_data.metallurgical_recovery",
         ],
         tools=["bq_query"],
+        card=AgentCard(
+            decision="Whether the resource model, the grade-control model, "
+                     "the pit and the mill agree on contained metal — and "
+                     "if not, which one is wrong.",
+            leaks=["Blind spot"],
+            archetype="Diagnostician",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="contained-metal variance between block model and "
+                         "realised grade → reserve confidence",
+                    evidence_class="B",
+                ),
+            ],
+            honest_limit="The assay-to-block pairing is a spatial "
+                          "approximation at a declared search radius; the "
+                          "reconciliation is evidence about the paired "
+                          "subset only, and the unpaired population may "
+                          "differ systematically from it.",
+            pack="p5-geologist.yaml",
+        ),
     ),
     specialists=(
         _a("S06-SP1", "Assay-to-Block Variance Analyst", "S06", "specialist",
@@ -382,6 +554,25 @@ S07 = SwarmDef(
             "mining_data.metallurgical_recovery",
         ],
         tools=["bq_query", "operational_math", "request_approval"],
+        card=AgentCard(
+            decision="Whether the crusher setting or feed variability is "
+                     "costing recovered contained metal, and by how much.",
+            leaks=["Blind spot"],
+            archetype="Diagnostician",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="unit cost per tonne of contained metal → C1 cash "
+                         "cost",
+                    evidence_class="B",
+                ),
+            ],
+            honest_limit="Torque and throughput figures bound the daily "
+                          "mean only; a recommended setting change must "
+                          "still be checked against the instantaneous alarm "
+                          "limit before it is applied.",
+            pack="p6-metallurgist.yaml",
+        ),
     ),
     specialists=(
         _a("S07-SP1", "Crusher Setting Analyst", "S07", "specialist",
@@ -475,6 +666,27 @@ S09 = SwarmDef(
             "mining_data.inventory_levels",
         ],
         tools=["bq_query", "request_approval"],
+        card=AgentCard(
+            decision="Whether this transaction matches the terms of its "
+                     "governing contract.",
+            leaks=["Coordination"],
+            archetype="Negotiator",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="post-signature contract leakage recovered → C1 "
+                         "cash cost",
+                    evidence_class="A",
+                ),
+            ],
+            honest_limit="The widely quoted \"9.2% contract value leakage\" "
+                          "figure is a misattribution: the source study "
+                          "found that good contract management could "
+                          "improve profitability by roughly 9% of annual "
+                          "revenue — an opportunity figure, not a leakage "
+                          "rate — and it is not used here.",
+            pack="agt14-contract-integrity.yaml",
+        ),
     ),
     specialists=(
         _a("S09-SP1", "Bid Compliance Checker", "S09", "specialist",
