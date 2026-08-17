@@ -1,11 +1,33 @@
-"""Shared stochastic primitives used by all ten table-regeneration tasks.
+"""Shared stochastic primitives used by all table-regeneration tasks.
 
 Every function takes an explicit seed or rng so callers get full reproducibility
 without relying on any global RNG state.
 """
 
 import math
+from hashlib import blake2b
+
 import numpy as np
+
+
+def stable_hash(key: str) -> int:
+    """Process-stable 32-bit hash.
+
+    Python's built-in hash() is salted per interpreter by PYTHONHASHSEED, so it
+    must never appear in a seed derivation (this exact bug shipped in an early
+    generator task and produced a different row count on every process).
+    blake2b is keyed only by its input. Shared here rather than copied per
+    module because ``contracts.py``, ``warranty.py`` and ``capital.py`` (Task
+    2b) all need the identical derivation to compose seeds across tables that
+    join to one another (e.g. a contract's transactions must derive from the
+    same root as the contract itself).
+    """
+    return int.from_bytes(blake2b(key.encode(), digest_size=4).digest(), "big")
+
+
+def rng_for(seed: int, *parts: str) -> np.random.Generator:
+    """A deterministic RNG keyed by ``seed`` and an arbitrary tuple of parts."""
+    return np.random.default_rng((seed + stable_hash("|".join(parts))) & 0xFFFFFFFF)
 
 
 def ou_process(

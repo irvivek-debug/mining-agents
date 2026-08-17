@@ -379,11 +379,36 @@ class TestDeleteSafety:
 # ---------------------------------------------------------------------------
 
 
+#: The ten Task 2b tables (contracts.py/warranty.py/capital.py) are registered
+#: in run_all.GENERATORS so a full `regenerate()` produces their parquet too,
+#: but they are deliberately NOT in REWRITE_TABLES: that list drives the
+#: backup/rollback contract in load.py, and these tables have no
+#: `_original_20260810` backup because they never existed before Task 2b —
+#: there is nothing to roll back to. See data/generator/contracts.py's module
+#: docstring and load.py's `load_new_tables_2b`.
+TASK_2B_TABLES = frozenset(
+    {
+        "contracts", "contract_transactions", "rebate_claims", "invoices",
+        "warranty_entitlements", "warranty_claims",
+        "plan_versions", "plan_assumptions", "plan_scenarios", "capital_options",
+    }
+)
+
+
 class TestRunAll:
-    def test_generators_produce_exactly_the_rewritten_tables(self):
+    def test_generators_produce_the_rewritten_tables_plus_task_2b(self):
+        """generated_tables() is REWRITE_TABLES plus the Task 2b tables above,
+        with no overlap and no duplicate — not a bare superset check, which
+        would pass even if a REWRITE_TABLES entry silently went missing.
+        """
         produced = run_all.generated_tables()
-        assert sorted(produced) == sorted(REWRITE_TABLES)
-        assert len(produced) == len(set(produced))
+        assert len(produced) == len(set(produced)), "a table is generated twice"
+        assert set(produced) == set(REWRITE_TABLES) | TASK_2B_TABLES
+        assert not (TASK_2B_TABLES & set(REWRITE_TABLES)), (
+            "a Task 2b table leaked into REWRITE_TABLES — it would then be "
+            "dragged into load.py's backup/rollback contract, which has "
+            "nothing to back it up against"
+        )
 
     def test_every_entry_point_exists_and_needs_no_arguments(self):
         """The generators are not uniform: maintenance's log builder takes no seed."""

@@ -72,6 +72,17 @@ GENERATORS: list[tuple[str, str, list[str]]] = [
     ("fatigue", "write_parquet", ["biometric_fatigue_logs", "fatigue_logs_node"]),
     ("geology", "write_parquet", ["drill_assay_logs", "geological_block_models"]),
     ("supply_chain", "write_parquet", ["inventory_levels"]),
+    # Task 2b — new tables for AGT-14/AGT-13/AGT-19, not REWRITE_TABLES (they
+    # have no pre-existing profiled state to back up or roll back to; see
+    # data/generator/contracts.py's module docstring). Registered here so a
+    # full `regenerate()` produces their parquet alongside the other ten, but
+    # loader.dry_run()/apply() do not load them — that is a one-off call to
+    # load.load_table() per table, documented in the Task 2b report.
+    ("contracts", "write_parquet",
+     ["contracts", "contract_transactions", "rebate_claims", "invoices"]),
+    ("warranty", "write_parquet", ["warranty_entitlements", "warranty_claims"]),
+    ("capital", "write_parquet",
+     ["plan_versions", "plan_assumptions", "plan_scenarios", "capital_options"]),
 ]
 
 

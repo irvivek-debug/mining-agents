@@ -640,6 +640,50 @@ def apply(client: bigquery.Client | None = None) -> list[TableCheck]:
     return checks
 
 
+# ---------------------------------------------------------------------------
+# Task 2b — brand-new tables (contracts, warranty, capital/plan)
+#
+# These ten tables have no `*_original_20260810` backup because they never
+# existed before Task 2b: there is nothing to roll back to except "the table
+# is empty," which is not what REWRITE_TABLES / LOAD_ORDER / apply() /
+# dry_run() mean by "rewrite." Rather than force them through that pipeline
+# (which would need a fabricated zero-row backup and profiled partition specs
+# that were never real), they get their own straight load using the exact
+# same primitives (`write_schema_file`, `bq_load_command`, `load_table`) —
+# "the existing loader," just without the backup/rollback contract that does
+# not apply to a table with no prior state.
+# ---------------------------------------------------------------------------
+
+NEW_TABLES_2B: list[str] = [
+    "contracts",
+    "contract_transactions",
+    "rebate_claims",
+    "invoices",
+    "warranty_entitlements",
+    "warranty_claims",
+    "plan_versions",
+    "plan_assumptions",
+    "plan_scenarios",
+    "capital_options",
+]
+
+
+def load_new_tables_2b(client: bigquery.Client | None = None) -> dict[str, int]:
+    """Load every Task 2b table straight into its live name; return row counts."""
+    if client is None:
+        client = bigquery.Client(project=PROJECT_ID)
+    counts: dict[str, int] = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        schema_dir = Path(tmp)
+        for table in NEW_TABLES_2B:
+            load_table(table, table, schema_dir)
+            counts[table] = row_count(client, table)
+            expected = parquet_row_count(table)
+            tag = "OK   " if counts[table] == expected else "ERROR"
+            print(f"[{tag}] {table:<24} {counts[table]}/{expected} rows")
+    return counts
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Roll the ten regenerated tables back to their frozen backups."

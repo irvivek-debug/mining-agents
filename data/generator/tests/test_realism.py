@@ -24,6 +24,28 @@ are indistinguishable, and a property graph over unmatched tables succeeds
 silently with zero rows.
 
 Nothing here writes.  The suite reads live tables and backups and asserts.
+
+Task 2b adds five more, over the brand-new contract/warranty/plan tables that
+have no `_original_20260810` backup to discriminate against (they never
+existed before). Each instead carries its own mutation-tested negative
+control: the generator constant that produces the property is forced to a
+value that should break it, the same measurement is re-run, and the test
+requires it to fall outside the band:
+
+  R9   contract leakage is a minority of on-contract transactions, in
+       [0.10, 0.32] — forcing LEAKAGE_PROB to 0.0 or 1.0 must fall outside it
+  R10  contract coverage is incomplete, in [0.20, 0.60] of all transactions —
+       forcing the gap sources (spot parts, renewal gap) to zero must not
+  R11  warranty coverage produces a real cliff, not a coin flip — a >=0.85
+       eligible-repair spread across assets, and a >=0.85 before/after
+       differential at each cliff asset's own measured median repair date —
+       forcing every entitlement into the same coverage group collapses both
+  R12  the contained-metal reference price has lag-1 autocorrelation in
+       [0.55, 0.95] — a shuffle of the same values, and phi=0 (independent
+       draws), must both fall outside it
+  R13  plan assumptions go stale at differing rates — max minus min
+       supersede-count across the 6 plan versions is >= 4 of 7 metrics —
+       forcing every metric's hazard to 0 collapses the spread to exactly 0
 """
 
 import os
@@ -43,6 +65,10 @@ import pytest
 from google.cloud import bigquery
 
 from config import BACKUP_SUFFIX, DATASET, PROJECT_ID
+
+import capital as CAP
+import contracts as CTR
+import warranty as WTY
 
 # --- Bands, verbatim from the Task 9 brief ----------------------------------
 
@@ -879,4 +905,266 @@ def test_r8_prd_summary_statistics_still_hold(client, prd_text):
     assert old, (
         "R8 does not discriminate: every PRD figure is equally true of the "
         "pre-regeneration tables"
+    )
+
+
+# ===========================================================================
+# R9 — contract leakage is a minority of on-contract transactions
+# ===========================================================================
+
+LEAKAGE_BAND = (0.10, 0.32)
+
+
+def _leak_rate(leakage_prob: float | None = None) -> tuple[float, int]:
+    """(fraction of on-contract transactions paid above agreed price, n)."""
+    contracts = CTR.build_contracts()
+    if leakage_prob is None:
+        tx = CTR.build_contract_transactions(contracts)
+    else:
+        original = CTR.LEAKAGE_PROB
+        CTR.LEAKAGE_PROB = leakage_prob
+        try:
+            tx = CTR.build_contract_transactions(contracts)
+        finally:
+            CTR.LEAKAGE_PROB = original
+    on = tx.dropna(subset=["contract_id"]).copy()
+    assert not on.empty, "no on-contract transactions generated"
+    agreed = contracts.set_index("contract_id").agreed_unit_price
+    on["agreed"] = on.contract_id.map(agreed)
+    return float((on.paid_unit_price > on.agreed).mean()), len(on)
+
+
+def test_r9_contract_leakage_is_a_minority_not_all_and_not_none():
+    """R9: leakage rate over on-contract transactions sits in [0.10, 0.32].
+
+    An agent that reports 100% of transactions leaking has found a generator
+    artefact, not a finding — and 0% would mean the whole driver is inert.
+    Both extremes are checked as explicit mutations below, not asserted by
+    argument: forcing every transaction to leak, and forcing none to, must
+    each independently fall outside the band this test polices.
+    """
+    low, high = LEAKAGE_BAND
+    rate, n = _leak_rate()
+    assert low <= rate <= high, (
+        f"leakage rate {rate:.4f} over {n} on-contract transactions outside "
+        f"[{low}, {high}]"
+    )
+
+    zero_rate, _ = _leak_rate(leakage_prob=0.0)
+    assert not (low <= zero_rate <= high), (
+        f"R9 does not discriminate: forcing LEAKAGE_PROB=0.0 still gives a "
+        f"rate ({zero_rate:.4f}) inside the band"
+    )
+    all_rate, _ = _leak_rate(leakage_prob=1.0)
+    assert not (low <= all_rate <= high), (
+        f"R9 does not discriminate: forcing LEAKAGE_PROB=1.0 still gives a "
+        f"rate ({all_rate:.4f}) inside the band"
+    )
+
+
+# ===========================================================================
+# R10 — contract coverage is incomplete
+# ===========================================================================
+
+COVERAGE_GAP_BAND = (0.20, 0.60)
+
+
+def _coverage_gap(n_spot_parts: int | None = None,
+                   renewal_gap_days: int | None = None) -> tuple[float, int]:
+    """(fraction of ALL contract_transactions with contract_id NULL, n)."""
+    orig_spot, orig_gap = CTR.N_SPOT_PARTS, CTR.RENEWAL_GAP_DAYS
+    if n_spot_parts is not None:
+        CTR.N_SPOT_PARTS = n_spot_parts
+    if renewal_gap_days is not None:
+        CTR.RENEWAL_GAP_DAYS = renewal_gap_days
+    try:
+        contracts = CTR.build_contracts()
+        tx = CTR.build_contract_transactions(contracts)
+    finally:
+        CTR.N_SPOT_PARTS, CTR.RENEWAL_GAP_DAYS = orig_spot, orig_gap
+    return float(tx.contract_id.isna().mean()), len(tx)
+
+
+def test_r10_contract_coverage_is_incomplete():
+    """R10: the fraction of transactions with no live contract is in [0.20, 0.60].
+
+    Two independent sources feed this gap (uncontracted spot parts, and the
+    renewal gap between a lapsing contract and its replacement) — see
+    contracts.py's module docstring. Removing both must collapse the gap
+    below the band.
+    """
+    low, high = COVERAGE_GAP_BAND
+    gap, n = _coverage_gap()
+    assert low <= gap <= high, (
+        f"contract coverage gap {gap:.4f} over {n} transactions outside "
+        f"[{low}, {high}]"
+    )
+
+    collapsed, _ = _coverage_gap(n_spot_parts=0, renewal_gap_days=0)
+    assert not (low <= collapsed <= high), (
+        f"R10 does not discriminate: removing both gap sources still gives a "
+        f"gap ({collapsed:.4f}) inside the band"
+    )
+
+
+# ===========================================================================
+# R11 — warranty expiry produces a real cliff, not a uniform distribution
+# ===========================================================================
+
+ELIGIBILITY_SPREAD_MIN = 0.85
+CLIFF_DIFFERENTIAL_MIN = 0.85
+CLIFF_ASSETS = ("CRUSHER-03", "MILL-01", "PUMP-104A")
+
+
+def _eligibility(plan=None):
+    repairs = WTY.load_completed_repairs()
+    cliff_dates = WTY.median_repair_date_by_asset(repairs)
+    entitlements = WTY.build_entitlements(cliff_dates, plan=plan or WTY.ENTITLEMENT_PLAN)
+    repairs = repairs.assign(
+        eligible=[
+            WTY._active_entitlement(entitlements, r.asset_id, r.created_at) is not None
+            for r in repairs.itertuples()
+        ]
+    )
+    return repairs, entitlements, cliff_dates
+
+
+def test_r11_warranty_expiry_produces_a_real_cliff():
+    """R11: coverage eligibility swings sharply, both across assets and across
+    a single cliff asset's own expiry date — never a smooth, coin-flip spread.
+    """
+    repairs, entitlements, cliff_dates = _eligibility()
+    by_asset = repairs.groupby("asset_id").eligible.mean()
+    spread = float(by_asset.max() - by_asset.min())
+    assert spread >= ELIGIBILITY_SPREAD_MIN, (
+        f"eligible-repair fraction spread across assets is only {spread:.4f} "
+        f"(< {ELIGIBILITY_SPREAD_MIN}): {by_asset.to_dict()}"
+    )
+
+    weak = []
+    for asset in CLIFF_ASSETS:
+        cutoff = cliff_dates[asset]
+        sub = repairs[repairs.asset_id == asset]
+        before = sub[sub.created_at <= cutoff]
+        after = sub[sub.created_at > cutoff]
+        assert len(before) > 0 and len(after) > 0, (
+            f"{asset}: cliff cutoff does not split its repairs into both sides"
+        )
+        differential = float(before.eligible.mean() - after.eligible.mean())
+        if differential < CLIFF_DIFFERENTIAL_MIN:
+            weak.append(f"{asset}: {differential:.4f}")
+    assert not weak, (
+        f"before/after eligibility differential below {CLIFF_DIFFERENTIAL_MIN} "
+        "for: " + "; ".join(weak)
+    )
+
+    # Discrimination: collapse every entitlement into the same ("full")
+    # coverage group and confirm the asset-spread assertion above now fails.
+    uniform_plan = [dict(spec, group="full") for spec in WTY.ENTITLEMENT_PLAN]
+    repairs2, _, _ = _eligibility(plan=uniform_plan)
+    spread2 = float(
+        repairs2.groupby("asset_id").eligible.mean().max()
+        - repairs2.groupby("asset_id").eligible.mean().min()
+    )
+    assert spread2 < ELIGIBILITY_SPREAD_MIN, (
+        f"R11 does not discriminate: a uniform coverage plan still gives a "
+        f"spread of {spread2:.4f} across assets"
+    )
+
+
+# ===========================================================================
+# R12 — the contained-metal reference price is a persistent series, not noise
+# ===========================================================================
+
+LAG1_PRICE_BAND = (0.55, 0.95)
+
+
+def _price_lag1(phi: float | None = None) -> float:
+    if phi is None:
+        series = CAP.build_price_series().price_usd_per_tonne.to_numpy()
+    else:
+        original = CAP.PRICE_OU_PHI
+        CAP.PRICE_OU_PHI = phi
+        try:
+            series = CAP.build_price_series().price_usd_per_tonne.to_numpy()
+        finally:
+            CAP.PRICE_OU_PHI = original
+    return float(np.corrcoef(series[:-1], series[1:])[0, 1])
+
+
+def test_r12_contained_metal_price_autocorrelation_in_band():
+    """R12: lag-1 autocorrelation of the weekly contained-metal price series
+    is in [0.55, 0.95] — a plausible mean-reverting random walk, not white
+    noise. Never tied to a named metal anywhere in this measurement.
+    """
+    low, high = LAG1_PRICE_BAND
+    live = _price_lag1()
+    assert low <= live <= high, (
+        f"contained-metal price lag-1 autocorrelation {live:.4f} outside "
+        f"[{low}, {high}]"
+    )
+
+    # Discrimination 1: an i.i.d. shuffle of the exact same values.
+    series = CAP.build_price_series().price_usd_per_tonne.to_numpy()
+    shuffled = series.copy()
+    np.random.default_rng(0).shuffle(shuffled)
+    shuffled_lag1 = float(np.corrcoef(shuffled[:-1], shuffled[1:])[0, 1])
+    assert not (low <= shuffled_lag1 <= high), (
+        f"R12 does not discriminate: a shuffled version of the same values "
+        f"still autocorrelates at {shuffled_lag1:.4f}"
+    )
+
+    # Discrimination 2: phi=0 means independent draws, not a random walk.
+    independent = _price_lag1(phi=0.0)
+    assert not (low <= independent <= high), (
+        f"R12 does not discriminate: PRICE_OU_PHI=0.0 still autocorrelates "
+        f"at {independent:.4f}"
+    )
+
+
+# ===========================================================================
+# R13 — plan assumptions go stale at differing rates
+# ===========================================================================
+
+STALENESS_SPREAD_MIN = 4  # of 6 plan versions
+STALENESS_SPREAD_METRIC_COUNT = len(CAP.ASSUMPTION_METRICS)
+
+
+def _supersede_counts(hazard_override: float | None = None) -> pd.Series:
+    plan_versions = CAP.build_plan_versions()
+    if hazard_override is None:
+        pa = CAP.build_plan_assumptions(plan_versions)
+    else:
+        original = CAP.ASSUMPTION_METRICS
+        CAP.ASSUMPTION_METRICS = {
+            name: (spec[0], spec[1], spec[2], spec[3], hazard_override, spec[5], spec[6])
+            for name, spec in original.items()
+        }
+        try:
+            pa = CAP.build_plan_assumptions(plan_versions)
+        finally:
+            CAP.ASSUMPTION_METRICS = original
+    return pa.groupby("metric_name").apply(lambda g: int(g.superseded_date.notna().sum()))
+
+
+def test_r13_assumption_staleness_differs_by_metric():
+    """R13: how often an assumption goes stale before the next scheduled
+    review differs sharply by metric — a volatile one (contained-metal price)
+    supersedes almost every cycle, a stable one (discount rate) almost never.
+    """
+    counts = _supersede_counts()
+    assert len(counts) == STALENESS_SPREAD_METRIC_COUNT
+    spread = int(counts.max() - counts.min())
+    assert spread >= STALENESS_SPREAD_MIN, (
+        f"supersede-count spread across metrics is only {spread} "
+        f"(< {STALENESS_SPREAD_MIN}): {counts.to_dict()}"
+    )
+
+    # Discrimination: force every metric's hazard to 0 — a deterministic
+    # collapse to zero supersessions everywhere, spread == 0.
+    collapsed = _supersede_counts(hazard_override=0.0)
+    collapsed_spread = int(collapsed.max() - collapsed.min())
+    assert collapsed_spread < STALENESS_SPREAD_MIN, (
+        f"R13 does not discriminate: a zero hazard for every metric still "
+        f"gives a spread of {collapsed_spread}"
     )
