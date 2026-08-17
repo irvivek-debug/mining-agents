@@ -18,9 +18,10 @@ BLOCKED to an exception.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from google.adk.agents import LlmAgent
+from google.adk.tools import BaseTool, ToolContext
 from google.adk.workflow import JoinNode, Workflow, START
 
 from mining_agents.catalog.definitions import AgentDef, SwarmDef
@@ -28,6 +29,15 @@ from mining_agents.config import llm_for_tier
 from mining_agents.patterns.deep import BIOMETRIC_TABLES, bind_tools, build_instruction
 from mining_agents.safety.output_filter import BIOMETRIC_FIELDS, redact_model_response
 from mining_agents.safety.untrusted import UNTRUSTED_PREFIX
+
+# The critic's audit-wide tool-call ceiling. Defined once and read by both
+# critic_instruction() (the prompt-level ask) and critic_tool_budget_callback
+# (the enforcement backstop below), so the two cannot silently drift apart —
+# an edit to one is an edit to the number the other one enforces. Before this
+# was a shared constant it would have been easy to bump the prose ("at most 5
+# tool calls") without touching the callback, leaving the model told one
+# ceiling while a different one is actually enforced, or vice versa.
+CRITIC_TOOL_CALL_CEILING = 3
 
 
 @dataclass(frozen=True)
@@ -151,8 +161,9 @@ def critic_instruction(swarm: SwarmDef) -> str:
         "that look cited. Re-derive a figure only when something about it is "
         "actually suspect — it contradicts another cited figure, it is "
         "outside a physically plausible range, or the table it cites could "
-        "not contain it. You have at most 3 tool calls for the entire audit, "
-        "not per claim; spend them on the claims most worth doubting.",
+        f"not contain it. You have at most {CRITIC_TOOL_CALL_CEILING} tool "
+        "calls for the entire audit, not per claim; spend them on the claims "
+        "most worth doubting.",
         "If you reach that ceiling with claims still unchecked, stop calling "
         "tools. Report exactly what you spot-checked and what you found, name "
         "the claims you did not have room to verify by re-derivation, and say "
@@ -213,7 +224,86 @@ def coordinator_instruction(swarm: SwarmDef) -> str:
     ])
 
 
-def _llm(agent: AgentDef, instruction: str) -> LlmAgent:
+def critic_tool_budget_callback(
+    tool: BaseTool, args: dict[str, Any], tool_context: ToolContext
+) -> dict | None:
+    """ADK before_tool_callback: hard-stop the critic at CRITIC_TOOL_CALL_CEILING.
+
+    critic_instruction() already tells the critic it "has at most
+    CRITIC_TOOL_CALL_CEILING tool calls for the entire audit" and what to do
+    when it runs out — report what it checked, what it found, and which
+    claims it had no budget left to spot-check. That is a prompt-level ask,
+    and on a live P6/S07 run the critic ignored it: it made 60+ tool calls
+    and never reported, so the coordinator — who concludes only after the
+    critic does — never produced an answer. This callback is the same fix
+    this file already applies to biometric leakage (see redact_model_response
+    and its docstring's reasoning): enforce in code what the instruction only
+    asks for, because by the time a raw value or a runaway critic reaches the
+    coordinator it is too late.
+
+    Bound to the critic only (see build_swarm), never to the specialists or
+    coordinator, so it does not touch the tool budgets of the two roles this
+    task was explicitly told not to change.
+
+    WHERE THE COUNT LIVES, AND WHY. `tool_context` is ADK's per-invocation
+    Context; `tool_context.state` is backed by the running session's state
+    dict, and `tool_context.invocation_id` is unique per top-level run (one
+    per swarm execution — a fresh id every time a user's query starts this
+    graph). A module-level Python counter would be shared by every concurrent
+    request this process happens to be serving on a Cloud Run instance,
+    letting one user's audit exhaust another's budget — a worse bug than the
+    unbounded critic this callback fixes. Keying the counter by
+    invocation_id, under the `temp:` state prefix, avoids that: ADK's own
+    session-service code (google/adk/tools/skill_toolset.py, same idiom —
+    `f"temp:..._count_{tool_context.invocation_id}"`) documents `temp:` as
+    living only "for the duration of the current invocation" and never
+    reaching durable storage, and a fresh invocation_id per run means two
+    audits — concurrent, on different requests, or sequential turns in the
+    same conversation — can never share a counter or inherit one from a run
+    that already spent it.
+
+    COUNTS EVERY TOOL CALL THE CRITIC MAKES, not just bq_query /
+    operational_math / doc_search by name. critic_instruction() states the
+    ceiling as unqualified — "at most N tool calls for the entire audit," not
+    "N re-derivation calls" — and different swarms hand the critic different
+    subsets of those three tools (compare S01's critic, which holds only
+    bq_query, to S07's, which holds all three). Counting by tool identity
+    would need a hardcoded tool-name list here that has to be kept in sync
+    with the catalog by hand; counting every call the critic makes needs no
+    such list and can never fall behind it.
+
+    Returns None (tool proceeds normally) under the ceiling. At the ceiling,
+    short-circuits the call and returns a dict standing in for the tool's
+    result — never a bare error. An error return invites the model to retry
+    the same tool or treat it as broken; this text is written as the next
+    thing for the critic to read and act on, in its own instruction's terms,
+    so it reads as "stop and report" rather than "something failed."
+    """
+    key = f"temp:critic_tool_calls_{tool_context.invocation_id}"
+    used = tool_context.state.get(key, 0)
+    if used >= CRITIC_TOOL_CALL_CEILING:
+        return {
+            "status": "AUDIT_BUDGET_EXHAUSTED",
+            "instruction": (
+                f"Your verification budget of {CRITIC_TOOL_CALL_CEILING} tool "
+                "calls for this audit is spent — this tool call did not run. "
+                "Do not call another tool. Conclude your audit now: report "
+                "exactly what you spot-checked and what you found, name the "
+                "claims you did not have room to verify by re-derivation, and "
+                "say so plainly as a finding for the coordinator to carry "
+                "forward — the same as you would report a BLOCKED specialist."
+            ),
+        }
+    tool_context.state[key] = used + 1
+    return None
+
+
+def _llm(
+    agent: AgentDef,
+    instruction: str,
+    *,
+    before_tool_callback=None,  # noqa: ANN001
+) -> LlmAgent:
     """Build one LlmAgent from a catalog AgentDef."""
     return LlmAgent(
         name=agent.agent_id.lower().replace("-", "_"),
@@ -225,6 +315,10 @@ def _llm(agent: AgentDef, instruction: str) -> LlmAgent:
         # output is read by the coordinator and the critic, so a raw value it
         # emits has already leaked by the time the swarm concludes.
         after_model_callback=redact_model_response,
+        # None for the specialists and coordinator (build_swarm never passes
+        # one), so this is a no-op for them. Set to critic_tool_budget_callback
+        # for the critic only — see that function's docstring.
+        before_tool_callback=before_tool_callback,
     )
 
 
@@ -249,7 +343,14 @@ def build_swarm(swarm: SwarmDef) -> Workflow:
     spec1_llm, spec2_llm, spec3_llm = (
         _llm(s, build_instruction(s)) for s in swarm.specialists
     )
-    critic_llm = _llm(swarm.critic, critic_instruction(swarm))
+    # before_tool_callback is the critic's alone. The specialists and
+    # coordinator get none (their calls to _llm above omit the argument),
+    # matching this task's constraint to leave their tool budgets untouched.
+    critic_llm = _llm(
+        swarm.critic,
+        critic_instruction(swarm),
+        before_tool_callback=critic_tool_budget_callback,
+    )
     coordinator_llm = _llm(swarm.coordinator, coordinator_instruction(swarm))
 
     join = JoinNode(name=f"{swarm.swarm_id.lower()}_barrier")

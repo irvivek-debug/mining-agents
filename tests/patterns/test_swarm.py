@@ -7,8 +7,8 @@ from google.adk.workflow import JoinNode, Workflow
 
 from mining_agents.catalog.definitions import SWARMS
 from mining_agents.patterns.swarm import (
-    SpecialistResult, barrier, build_swarm, coordinator_instruction,
-    critic_instruction,
+    CRITIC_TOOL_CALL_CEILING, SpecialistResult, barrier, build_swarm,
+    coordinator_instruction, critic_instruction, critic_tool_budget_callback,
 )
 from mining_agents.safety.untrusted import UNTRUSTED_PREFIX
 
@@ -507,3 +507,133 @@ def test_no_deprecation_warning_from_build_swarm():
         f"DeprecationWarnings from swarm.py: "
         f"{[(str(w.message), w.filename) for w in swarm_deprecations]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# critic_tool_budget_callback() — the enforcement backstop.
+#
+# critic_instruction() tells the critic it has a ceiling; these tests check
+# that a critic which ignores the instruction is stopped anyway. Unlike the
+# clause tests above (necessarily string assertions on prompt text, since
+# there is no other way to check an instruction), critic_tool_budget_callback
+# is executable behaviour, so it is exercised directly rather than inferred
+# from its docstring. A fake ToolContext stand-in is used deliberately: the
+# callback only ever touches `.state` (dict-like get/__setitem__) and
+# `.invocation_id` on the object ADK hands it, so a real ToolContext would
+# exercise plumbing this test has no interest in and cannot easily construct
+# outside a live ADK run.
+# ---------------------------------------------------------------------------
+
+class _FakeToolContext:
+    """Stand-in for ADK's ToolContext exposing only what the callback reads."""
+
+    def __init__(self, invocation_id: str, state: dict | None = None):
+        self.invocation_id = invocation_id
+        self.state = state if state is not None else {}
+
+
+def test_the_budget_callback_permits_exactly_the_ceiling_then_blocks():
+    """The Nth call must be allowed (return None, meaning 'run the tool');
+    the (N+1)th must be blocked (return a non-None short-circuit result).
+    A callback that is off by one in either direction — blocking the Nth or
+    permitting the (N+1)th — would fail this."""
+    ctx = _FakeToolContext("run-1")
+    for i in range(CRITIC_TOOL_CALL_CEILING):
+        result = critic_tool_budget_callback(None, {}, ctx)
+        assert result is None, (
+            f"call {i + 1} of {CRITIC_TOOL_CALL_CEILING} should be permitted, "
+            f"got {result!r}"
+        )
+    blocked = critic_tool_budget_callback(None, {}, ctx)
+    assert blocked is not None, "the call past the ceiling must be blocked"
+    assert isinstance(blocked, dict)
+
+
+def test_the_callback_keeps_blocking_past_the_ceiling_not_just_once():
+    """A callback that blocks the (N+1)th call but resets or forgets on the
+    (N+2)th would let the critic grind indefinitely one call at a time —
+    exactly the failure this backstop exists to prevent."""
+    ctx = _FakeToolContext("run-keeps-blocking")
+    for _ in range(CRITIC_TOOL_CALL_CEILING):
+        critic_tool_budget_callback(None, {}, ctx)
+    for _ in range(5):
+        assert critic_tool_budget_callback(None, {}, ctx) is not None
+
+
+def test_two_separate_audit_runs_each_get_a_full_budget():
+    """Two invocations sharing the same underlying session state dict — the
+    realistic case for two turns in one conversation, or two concurrent
+    requests that happen to land on the same Cloud Run instance — must not
+    share a counter. A module-level or bare-key counter would fail this: the
+    second run would start already exhausted by the first."""
+    shared_state: dict = {}
+    run_a = _FakeToolContext("invocation-a", shared_state)
+    run_b = _FakeToolContext("invocation-b", shared_state)
+
+    for _ in range(CRITIC_TOOL_CALL_CEILING):
+        assert critic_tool_budget_callback(None, {}, run_a) is None
+    assert critic_tool_budget_callback(None, {}, run_a) is not None
+
+    for i in range(CRITIC_TOOL_CALL_CEILING):
+        result = critic_tool_budget_callback(None, {}, run_b)
+        assert result is None, (
+            f"run_b call {i + 1} was blocked by run_a's already-spent budget: "
+            f"{result!r}"
+        )
+    assert critic_tool_budget_callback(None, {}, run_b) is not None
+
+
+def test_the_blocked_response_instructs_the_critic_to_conclude_not_retry():
+    """A bare error return would invite a model to retry the same tool or
+    treat it as broken. The short-circuit result must read as an instruction
+    to stop and report, in the same terms critic_instruction() already uses
+    for running out of budget: what was checked, what was found, what there
+    was no room to verify."""
+    ctx = _FakeToolContext("run-conclude")
+    for _ in range(CRITIC_TOOL_CALL_CEILING):
+        critic_tool_budget_callback(None, {}, ctx)
+    blocked = critic_tool_budget_callback(None, {}, ctx)
+
+    text = " ".join(str(v) for v in blocked.values()).lower()
+    assert "conclude" in text
+    assert "report" in text
+    assert "do not call another tool" in text
+
+
+def test_the_instruction_ceiling_matches_the_enforced_constant():
+    """critic_instruction() states the ceiling in prose; this callback
+    enforces CRITIC_TOOL_CALL_CEILING in code. They are two different pieces
+    of source (an f-string in a list literal vs. an integer read in a
+    callback) that a hand edit to one could silently leave inconsistent with
+    the other — e.g. bumping the prose to 'at most 5' without touching the
+    constant the callback reads. This fails if that happens."""
+    clause = _citation_clause(critic_instruction(SWARMS[0]))
+    match = re.search(r"at most (\d+) tool calls", clause)
+    assert match
+    assert int(match.group(1)) == CRITIC_TOOL_CALL_CEILING
+
+
+def test_the_budget_callback_is_bound_to_the_critic_only():
+    """The callback must reach the critic's built LlmAgent node and no other
+    role's. Binding it to every node (like redact_model_response) would cap
+    the specialists' and coordinator's tool use too, which this task
+    explicitly forbids changing."""
+    for swarm in SWARMS:
+        wf = build_swarm(swarm)
+        node_map = {n.name: n for n in wf.graph.nodes if isinstance(n, LlmAgent)}
+        critic_name = swarm.critic.agent_id.lower().replace("-", "_")
+        other_names = [
+            swarm.coordinator.agent_id.lower().replace("-", "_"),
+            *(s.agent_id.lower().replace("-", "_") for s in swarm.specialists),
+        ]
+
+        critic_callbacks = node_map[critic_name].canonical_before_tool_callbacks
+        assert critic_tool_budget_callback in critic_callbacks, (
+            f"{swarm.swarm_id}: critic must carry critic_tool_budget_callback"
+        )
+        for name in other_names:
+            other_callbacks = node_map[name].canonical_before_tool_callbacks
+            assert critic_tool_budget_callback not in other_callbacks, (
+                f"{swarm.swarm_id}: {name!r} must not carry the critic's "
+                "tool-call budget"
+            )
