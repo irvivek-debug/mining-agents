@@ -136,6 +136,28 @@ var METHOD_DRIVERS = {
   bypass: "whether the crusher's divert valve is costing recovery",
   reagent_regime: "whether the reagent regime is costing recovery",
   grind_size_p80: "whether grind size is costing recovery",
+
+  /* AGT-13 — Warranty & OEM Claims (recovered value from warranty and OEM claims) */
+  entitlement_coverage: "whether the assets on site have their warranty terms recorded at all",
+  expired_unclaimed: "whether cover lapsed on failures that were never claimed",
+  own_cost_repairs: "whether repairs still under cover were paid for out of the site's own budget",
+  evidence_completeness: "whether a claim carries the evidence a manufacturer will accept",
+  claim_cycle_time: "whether claims take so long to assemble that the window closes first",
+
+  /* AGT-14 — Procurement & Contract Integrity (recovered value from post-signature leakage) */
+  price_variance: "whether the price paid matches the price the contract agreed",
+  contract_coverage: "whether purchases are being raised against a live contract at all",
+  bid_to_contract_terms: "whether the signed terms are the ones the winning bid offered",
+  rebate_entitlement: "whether volume rebates the site is entitled to were ever claimed",
+  duplicate_payment: "whether the same invoice has been paid more than once",
+  clause_attribution: "which clause a breach falls under, and what it is worth",
+
+  /* AGT-19 — Strategic Planning Advisor (value lost to a plan re-tested on the calendar) */
+  assumption_staleness: "whether the assumptions the group plan was approved on still hold",
+  reversal_cost: "what it would cost to reverse a commitment the plan has already made",
+  local_vs_group_divergence: "whether the site plans and the group plan still describe the same year",
+  capital_option_dominance: "whether one capital option now clearly beats another on the current outlook",
+  plan_output_completeness: "whether the plan states the trigger that would make it change",
 };
 
 /* A search term is the model's own text, so its length is not ours to trust:
