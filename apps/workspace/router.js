@@ -213,8 +213,20 @@ function _tableQuestion(phrase) {
  * thing the export carried, so a page about working a problem could only ask
  * to see a table. This one is derived from the persona's METHOD instead: the
  * pack names the metric the role is trying to move, and the question asks for
- * the problems dragging it down, which is the shape of work the driver tree
- * does. A persona with no pack has no such question and keeps what it had.
+ * the problems driving it, which is the shape of work the driver tree does. A
+ * persona with no pack has no such question and keeps what it had.
+ *
+ * The frame is deliberately direction-neutral, and that cost a rewrite. It
+ * read "I want to improve X … the top problems dragging it down", which was
+ * written against a cost metric and is wrong twice over on the others. You do
+ * not improve severity-weighted incident exposure — on a safety role's own
+ * page, that sentence asks for more incidents. You do not improve
+ * contained-metal variance either; you close it. And "dragging it down" is
+ * backwards for the cost metrics it WAS written for, since a problem drives
+ * cost up. "I'm accountable for X … the problems driving it" makes no claim
+ * about which way good lies, so it survives a metric where higher is better,
+ * and it echoes the heading the reader has just passed on this same page —
+ * "What you're answerable for".
  *
  * It is not checked by routing it back to an agent the way the derived
  * starters are, because it was not derived from one: the method belongs to the
@@ -225,8 +237,8 @@ function _tableQuestion(phrase) {
 function _methodQuestion(persona) {
   var metric = persona && persona.method && persona.method.metric;
   if (!metric) return null;
-  return "I want to improve " + metric + ". What are the top problems " +
-    "dragging it down right now, and how do I resolve each one?";
+  return "I'm accountable for " + metric + ". What are the top problems " +
+    "driving it right now, and how do I resolve each one?";
 }
 
 /* Cold start. No example questions exist anywhere in the catalogue, so these are

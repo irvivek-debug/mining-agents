@@ -253,6 +253,49 @@ test("the governing starter routes into the persona that owns the metric", () =>
     "the governing question no longer reaches the swarm that holds the method");
 });
 
+test("the governing starter claims no direction for any persona's metric", () => {
+  /* Found in a browser, not here, which is why this test exists.
+   *
+   * The frame was "I want to improve X … the top problems dragging it down".
+   * Against P6's unit cost that passes a reading; against the four metrics
+   * added since, it does not. The HSE Lead's page rendered "I want to improve
+   * severity-weighted incident exposure" — on the one role whose subject is
+   * people getting hurt, a sentence asking for more of it. The Geologist's
+   * rendered "improve contained-metal variance", which you close, not grow.
+   * And "dragging it down" was backwards even for the cost metrics it was
+   * written for, since a problem drives cost up.
+   *
+   * Every test above passed throughout, because they check that the starter
+   * names the metric and asks about problems — never that the sentence means
+   * what it says. A metric-shaped hole: the frame is written once and read
+   * against whichever metric a fork adds, so it must assert nothing about
+   * which way good lies.
+   */
+  const directional = [
+    "improve", "increase", "reduce", "raise", "lower",
+    "dragging it down", "pushing it up", "maximise", "minimise",
+  ];
+  let checked = 0;
+  for (const code of CODES) {
+    const method = DATA.personas.personas[code].method;
+    if (!method) continue;
+    checked += 1;
+    const first = R.starterQuestions(code, DATA)[0];
+    assert.ok(first.includes(method.metric),
+      `${code}'s governing starter does not name its metric: ${first}`);
+    for (const word of directional) {
+      assert.ok(!first.toLowerCase().includes(word),
+        `${code}: the governing starter says "${word}", which asserts which ` +
+        `way good lies for "${method.metric}" — a claim the frame cannot ` +
+        `make, because it is written once for every metric: ${first}`);
+    }
+  }
+  // Without this the loop is vacuous the moment the export drops its packs,
+  // and a green suite would mean nothing was checked at all.
+  assert.ok(checked >= 5,
+    `expected at least 5 personas carrying a method pack, saw ${checked}`);
+});
+
 test("a persona with no method pack keeps exactly the starters it had", () => {
   // The metric is the only thing that changes this, so a persona without one
   // must be untouched — including the three the reader has already seen.
