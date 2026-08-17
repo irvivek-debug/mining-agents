@@ -150,6 +150,54 @@ test("a successful response repeats the call's own line, not a generic one", () 
   assert.equal(steps[0].text, "Reading the machine register");
 });
 
+test("a not-instrumented driver reads as a declared gap, not a failure", () => {
+  // run_diagnostic returns success: true with data.status ==
+  // "not_instrumented" for a driver the pack declares but has no diagnostic
+  // behind it. Before the fix this was success: false, and it rendered as
+  // "step-failed" / "that lookup failed" — the exact defect this test guards
+  // against regressing. A wrong fix that left this branch alone (e.g. only
+  // changing the Python side) would still fail this test, because the JS
+  // would keep treating success: true as an ordinary call and never mention
+  // the gap at all.
+  const calls = {};
+  S.eventToSteps({
+    content: { parts: [{ functionCall: { id: "5", name: "run_diagnostic",
+      args: { driver_id: "reagent_regime" } } }] },
+  }, calls);
+  const steps = S.eventToSteps({
+    content: { parts: [{ functionResponse: { id: "5", name: "run_diagnostic",
+      response: {
+        success: true,
+        data: { driver: "reagent_regime", status: "not_instrumented", rows: [] },
+      } } }] },
+  }, calls);
+  assert.equal(steps.length, 1);
+  // Not a failure step: the call succeeded.
+  assert.equal(steps[0].kind, "step");
+  assert.match(steps[0].text, /declared in the tree, not instrumented/);
+  assert.doesNotMatch(steps[0].text, /failed/);
+});
+
+test("an instrumented driver's success is unaffected by the gap check", () => {
+  // The gap branch keys on data.status === "not_instrumented" specifically,
+  // so an ordinary instrumented result — which carries status: "instrumented"
+  // — must still render as the plain call line, not the gap line.
+  const calls = {};
+  S.eventToSteps({
+    content: { parts: [{ functionCall: { id: "6", name: "run_diagnostic",
+      args: { driver_id: "liberation" } } }] },
+  }, calls);
+  const steps = S.eventToSteps({
+    content: { parts: [{ functionResponse: { id: "6", name: "run_diagnostic",
+      response: {
+        success: true,
+        data: { driver: "liberation", status: "instrumented", rows: [{ band: "tight" }] },
+      } } }] },
+  }, calls);
+  assert.equal(steps[0].kind, "step");
+  assert.equal(steps[0].text, "Checking whether the crusher setting is costing recovery");
+});
+
 test("a thoughtSignature is not a step", () => {
   const steps = S.eventToSteps({
     content: { parts: [{ thoughtSignature: "abc" }, { text: "Right." }] },

@@ -355,6 +355,37 @@ test("a failed method step says which cause or query it was on", () => {
     "Couldn't search the site's documents for “torque limit” — that lookup failed.");
 });
 
+/* run_diagnostic returns success: true for a driver the pack declares but has
+ * no diagnostic behind it — see mining_agents/tools/run_diagnostic.py. Before
+ * that fix it returned a failure envelope, and the activity log rendered
+ * failLine's "that lookup failed" for a call that had not failed at all. The
+ * new gapLine() must read as neither a failure nor an ordinary success: it has
+ * to say plainly that the driver is declared and uninstrumented. */
+test("a not-instrumented driver reads as a declared gap, not a failure", () => {
+  const line = P.gapLine("run_diagnostic", { driver_id: "reagent_regime" });
+  assert.equal(
+    line,
+    "Checking whether the reagent regime is costing recovery — no diagnostic " +
+    "covers this driver; it is declared in the tree, not instrumented."
+  );
+  assert.ok(!line.includes("failed"), `gapLine must not say "failed": ${line}`);
+  assert.ok(!line.includes("Couldn't"), `gapLine must not open like a failure: ${line}`);
+});
+
+test("gapLine names the driver the same way callLine does", () => {
+  // Both success-with-rows and success-with-a-gap name the driver through the
+  // same noun/verb machinery, so a reader sees the same driver name whichever
+  // path the call took.
+  const ids = ["liberation", "feed_variability", "bypass", "reagent_regime",
+               "grind_size_p80"];
+  for (const id of ids) {
+    const called = P.callLine("run_diagnostic", { driver_id: id });
+    const gapped = P.gapLine("run_diagnostic", { driver_id: id });
+    assert.ok(gapped.startsWith(called),
+      `gapLine for ${id} does not build on callLine's own phrasing: ${gapped}`);
+  }
+});
+
 test("an unknown driver id renders the tool's own line rather than the id", () => {
   // Same rule as everywhere else in this file: an id with no phrase is not
   // guessed at. A fork's new driver reads as the generic headline until

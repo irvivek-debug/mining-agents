@@ -94,10 +94,20 @@ function eventToSteps(adkEvent, calls, options) {
       var reply = part.functionResponse.response || {};
       var recalled = seen[part.functionResponse.id] || {};
       var failed = reply.success === false;
+      // run_diagnostic succeeds (success: true) on a driver with no
+      // diagnostic behind it — see mining_agents/tools/run_diagnostic.py.
+      // That is a declared gap, not a failure, and it must read as neither:
+      // not "that lookup failed" (it is success: true) and not silence (the
+      // reader learns nothing). reply.data carries status on this one shape;
+      // every other tool's success payload has no such field, so this check
+      // only ever fires for run_diagnostic's not_instrumented result.
+      var gap = !failed && reply.data && reply.data.status === "not_instrumented";
       steps.push({
         kind: failed ? "step-failed" : "step",
         text: failed
           ? PLAIN.failLine(part.functionResponse.name, recalled)
+          : gap
+          ? PLAIN.gapLine(part.functionResponse.name, recalled)
           : PLAIN.callLine(part.functionResponse.name, recalled),
       });
     }

@@ -110,14 +110,48 @@ def make_run_diagnostic(persona: str, source_tables: list[str]):
 
         driver = driver_by_id[driver_id]
         if not driver.sql:
-            # DRIVER_NOT_INSTRUMENTED is a first-class answer: the agent can
-            # report the driver exists and the data is not available, rather
-            # than silence, which would imply the tree was fully explored.
-            return fail(
-                "DRIVER_NOT_INSTRUMENTED",
-                f"driver {driver_id!r} has no diagnostic query",
-                {"status": driver.status, "question": driver.question},
+            # A driver with no diagnostic is a SUCCESSFUL call, not a failure.
+            # The tool did exactly what it was asked: it looked up the driver
+            # and reported, truthfully, that the method has no query for it.
+            # Nothing errored.
+            #
+            # This used to be `fail("DRIVER_NOT_INSTRUMENTED", ...)`. That was
+            # wrong: the workspace UI renders every success:false identically,
+            # so a real run rendered "that lookup failed" in the activity log
+            # for a driver the pack deliberately DECLARES rather than drops
+            # (see tests/method/test_p6_pack.py::
+            # test_the_uninstrumented_drivers_are_declared_not_omitted). Worse,
+            # an agent reading success:false has every reason to drop the
+            # driver from its answer rather than report the gap — the inverse
+            # of what the pack means, and it defeats the declared-not-omitted
+            # mechanism from the tool's own output.
+            #
+            # The payload shape below matches the instrumented path on purpose
+            # — driver, status, guard, rows — so a caller branches on `status`
+            # rather than on the presence of an error. `rows` is `[]` because
+            # no query ran, not because one ran and found nothing; `guard` is
+            # whatever the pack declares for this driver (never set for a
+            # not_instrumented one today, but nothing here assumes that).
+            # `question` and `note` carry the two things the agent needs to
+            # report the gap instead of silently omitting the driver.
+            return ok(
+                {
+                    "driver": driver_id,
+                    "status": driver.status,
+                    "guard": driver.guard,
+                    "rows": [],
+                    "question": driver.question,
+                    "note": (
+                        f"Driver {driver_id!r} exists in the method pack but "
+                        "no diagnostic query covers it yet. This is a "
+                        "declared gap, not an error: report this driver as "
+                        "part of the tree with no diagnostic behind it. Do "
+                        "not omit it, and do not report this call as "
+                        "unsuccessful — it succeeded."
+                    ),
+                },
                 [],
+                0,
             )
 
         try:

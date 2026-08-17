@@ -45,17 +45,53 @@ def test_an_unknown_driver_id_fails_with_the_valid_ids_listed():
         )
 
 
-def test_a_not_instrumented_driver_fails_with_driver_status_and_question():
-    # The agent must be able to report that a driver exists but is not
-    # instrumented.  DRIVER_NOT_INSTRUMENTED is a first-class answer: the agent
-    # says "the driver exists; the data is not available", not "no driver found".
+def test_a_not_instrumented_driver_succeeds_with_driver_status_and_question():
+    # A driver with no diagnostic behind it is a SUCCESSFUL call: the tool did
+    # what it was asked and truthfully reported that no query covers this
+    # driver. It must NOT be a failure envelope — the workspace UI renders
+    # every success:false identically as "that lookup failed", which is the
+    # inverse of what the pack means (nothing failed) and gives an agent every
+    # reason to drop the driver instead of reporting the gap. That defeats the
+    # declared-not-dropped mechanism pinned in
+    # tests/method/test_p6_pack.py::test_the_uninstrumented_drivers_are_declared_not_omitted.
     run = make_run_diagnostic("P6", S07_SP3_TABLES)
     env = run("reagent_regime")
-    assert env["success"] is False
-    assert env["error"]["code"] == "DRIVER_NOT_INSTRUMENTED"
-    details = env["error"]["details"]
-    assert details["status"] == "not_instrumented"
-    assert details["question"]  # non-empty; proves the driver's context travels
+    assert env["success"] is True, env.get("error")
+    assert env["error"] is None
+    data = env["data"]
+    # Shape matches the instrumented success path — driver, status, guard,
+    # rows — so a caller can branch on `status` instead of on error presence.
+    assert data["driver"] == "reagent_regime"
+    assert data["status"] == "not_instrumented"
+    assert data["rows"] == []
+    assert data["question"]  # non-empty; proves the driver's context travels
+    # The agent must be told this is a gap to report, not a call to drop.
+    note = data["note"].lower()
+    assert "not" in note and ("omit" in note or "drop" in note)
+    assert "fail" not in note, (
+        "the not_instrumented note must not describe this call as a failure"
+    )
+
+
+def test_a_genuine_error_still_fails_unknown_driver_persona_and_undeclared_table():
+    # The fix above must not weaken any real error path. A wrong
+    # implementation that made everything succeed — e.g. by returning `ok()`
+    # unconditionally — would slip past every other test in this module if
+    # they were not re-checked here in one place, pinned against `success`.
+    run = make_run_diagnostic("P6", S07_SP3_TABLES)
+    unknown_driver = run("no_such_driver")
+    assert unknown_driver["success"] is False
+    assert unknown_driver["error"]["code"] == "NO_SUCH_DRIVER"
+
+    unknown_persona = make_run_diagnostic("P4", S07_SP3_TABLES)("liberation")
+    assert unknown_persona["success"] is False
+    assert unknown_persona["error"]["code"] == "NO_METHOD_PACK"
+
+    undeclared_table = make_run_diagnostic(
+        "P6", ["mining_data.metallurgical_recovery"]
+    )("liberation")
+    assert undeclared_table["success"] is False
+    assert undeclared_table["error"]["code"] == "UNDECLARED_TABLE"
 
 
 def test_a_persona_with_no_pack_fails_with_no_method_pack():
@@ -66,10 +102,13 @@ def test_a_persona_with_no_pack_fails_with_no_method_pack():
     assert env["error"]["code"] == "NO_METHOD_PACK"
 
 
-def test_no_failure_envelope_carries_the_sql_text_or_a_sql_path():
+def test_no_envelope_carries_the_sql_text_or_a_sql_path():
     # Returning the SQL text would undo the withholding that method_lookup
     # enforces.  Assert against the full JSON dump so a field added anywhere
-    # in the envelope is caught, not just in the obvious places.
+    # in the envelope is caught, not just in the obvious places. Covers a
+    # genuine failure (no_such_driver) and the not_instrumented success path
+    # (reagent_regime) — the latter never touches a .sql file, but the guard
+    # is worth keeping now that it is a success envelope too.
     run = make_run_diagnostic("P6", S07_SP3_TABLES)
     for driver_id in ("no_such_driver", "reagent_regime"):
         dumped = json.dumps(run(driver_id))

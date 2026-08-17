@@ -154,6 +154,14 @@ def build_instruction(agent: AgentDef) -> str:
             "with no data behind it is reported as not instrumented. Never drop "
             "a driver from your answer — a missing driver reads as 'no problem "
             "found', which is a different and false claim.",
+            "",
+            "run_diagnostic on a driver with no diagnostic query returns "
+            "success: true with data.status == 'not_instrumented' — this is "
+            "NOT the TOOL FAILURE case above; nothing failed, and data.rows is "
+            "empty because no query exists, not because one ran and found "
+            "nothing. Read data.question and data.note and report them: this "
+            "driver exists in the tree and no diagnostic covers it yet. Never "
+            "describe that call as failed, and never drop the driver.",
         ]
 
     if any(table in FREE_TEXT_FIELDS for table in agent.source_tables):

@@ -484,6 +484,18 @@ function failLine(name, args) {
   return head + " — that lookup failed.";
 }
 
+/* A driver the method pack declares but has no diagnostic behind it. This is
+ * NOT a failure: the call succeeded, and the method truthfully reported a gap
+ * in its own coverage. Saying so plainly — "declared in the tree, not
+ * instrumented" — is the point: silence here would read as "no problem
+ * found", and the ordinary success line would read as if a diagnostic had
+ * actually run. Built on callLine's own verb/noun so the driver is named the
+ * same way whether the call succeeded with rows or succeeded with a gap. */
+function gapLine(name, args) {
+  return callLine(name, args) +
+    " — no diagnostic covers this driver; it is declared in the tree, not instrumented.";
+}
+
 /* The honesty check. Every tool, traversal and table the catalogue declares
  * must have a plain phrase, or the activity log will print an identifier at a
  * reader who came here to avoid identifiers. */
@@ -827,6 +839,6 @@ if (typeof module !== "undefined") {
     TOOL_VERB, TOOL_FAILED, METHOD_DRIVERS,
     bareTable, plainTable, plainTool, plainToolAbility, plainTraversal, plainJargon,
     plainType, plainLink, plainScope, plainProse,
-    articleFor, tableFromSql, callLine, failLine, plainAnswer, unmapped,
+    articleFor, tableFromSql, callLine, failLine, gapLine, plainAnswer, unmapped,
   };
 }

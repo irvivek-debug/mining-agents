@@ -108,6 +108,32 @@ def test_the_instruction_distinguishes_run_diagnostic_from_bq_query():
         "already computes" in said.replace("\n", " ")
 
 
+def test_the_agent_is_told_a_not_instrumented_result_is_a_success_not_a_failure():
+    # run_diagnostic used to return a failure envelope for a driver with no
+    # diagnostic behind it. That was wrong: nothing failed, the tool correctly
+    # reported the pack has no query for this driver. The fix makes that call
+    # succeed (success: true, data.status == "not_instrumented"), but the
+    # earlier TOOL FAILURE clause in this same instruction says "a result with
+    # success=false carries NO data ... say which call failed ... and stop" —
+    # a model that has internalised that clause and nothing more would still
+    # be primed to read ANY run_diagnostic result defensively unless it is
+    # told explicitly that this particular shape is not that case. Without
+    # this clause an agent could reasonably ignore the empty `rows` list on a
+    # not_instrumented result as if the call had failed, silently reproducing
+    # the exact bug the fix closes.
+    said = build_instruction(BY_ID["S07-SP3"])
+    assert "not_instrumented" in said
+    assert "success: true" in said
+    # It must positively distinguish this from the TOOL FAILURE clause above,
+    # not merely mention both words somewhere in the instruction.
+    assert "NOT the TOOL FAILURE case" in said
+    # And it must tell the agent what to do with the result: read the
+    # driver's question/note and report the gap, never call it a failure.
+    assert "data.question" in said
+    assert "data.note" in said
+    assert "Never describe that call as failed" in said
+
+
 def test_an_agent_without_the_tool_gets_no_method_block():
     # Naming a tool an agent does not hold invites a call that cannot resolve.
     # D22 is a P6 agent that does not carry method_lookup; it must not receive
