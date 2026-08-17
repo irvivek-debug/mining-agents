@@ -24,7 +24,7 @@ import re
 
 import yaml
 
-from mining_agents.catalog.definitions import ALL_AGENTS
+from mining_agents.catalog.definitions import ALL_AGENTS, LEAKS
 from mining_agents.method.pack import load_pack
 from mining_agents.tools.graph_traverse import TRAVERSALS
 from mining_agents.tools.method_lookup import PACK_DIR, PACKS
@@ -51,6 +51,123 @@ APQC_NAMES = {
     "9.1.2": "Manage health, safety and environment",
     "11.0.3": "Manage plant and asset maintenance",
 }
+
+
+# --------------------------------------------------------------------------
+# Agent cards (design doc §2, §3) -- decision, leak, archetype, authority,
+# financial line and evidence class come from AgentDef.card and are written
+# through unchanged. Coverage is the one field on a card this module computes
+# rather than copies: it is a live count of a pack's own drivers, read fresh
+# every build, so a card can never claim more (or less) coverage than its pack
+# currently has. See docs/superpowers/specs/2026-08-17-value-framing-and-
+# agent-cards-design.md section 2, "Coverage is the load-bearing row".
+# --------------------------------------------------------------------------
+
+def _coverage(pack_path: pathlib.Path) -> dict:
+    """Count a pack's drivers by status, read from the file on every call.
+
+    Never memoised, never typed by hand: the whole point is that this number
+    tracks whatever the pack on disk says right now, including while another
+    workstream is instrumenting it. `total` is always > 0 -- load_pack itself
+    refuses to accept a pack with no drivers -- so a fully-uninstrumented pack
+    still exports {"instrumented": 0, "total": N}, not an absent or null
+    field, which would read on a card as full coverage.
+    """
+    pack = load_pack(pack_path)
+    instrumented = sum(1 for d in pack.drivers if d.status == "instrumented")
+    return {"instrumented": instrumented, "total": len(pack.drivers)}
+
+
+def _card_record(agent) -> dict:
+    """One agent's card, transcribed from AgentDef.card plus its live coverage."""
+    card = agent.card
+    record = {
+        "agent_id": agent.agent_id,
+        "display_name": agent.display_name,
+        "decision": card.decision,
+        "leaks": list(card.leaks),
+        "archetype": card.archetype,
+        "authority": card.authority,
+        "financial_lines": [
+            {"line": fl.line, "evidence_class": fl.evidence_class}
+            for fl in card.financial_lines
+        ],
+        "honest_limit": card.honest_limit,
+    }
+    if card.pack:
+        record["pack"] = card.pack
+        record["coverage"] = _coverage(PACK_DIR / card.pack)
+    return record
+
+
+def _cards_by_persona() -> dict:
+    """Every catalog agent's card, grouped by the persona it is filed under.
+
+    Only agents with an AgentDef carry a persona; AGT-19 (design §3) has none
+    and is handled separately by _group_agent_cards().
+    """
+    grouped: dict[str, list[dict]] = collections.defaultdict(list)
+    for agent in ALL_AGENTS:
+        if agent.card is not None:
+            grouped[agent.persona].append(_card_record(agent))
+    return grouped
+
+
+# AGT-19 Strategic Planning Advisor has no AgentDef and so never appears in
+# ALL_AGENTS or in any persona's roster (design §3: "group-level and has no
+# persona in this build"). Its authored fields are hand-transcribed here from
+# the same source every other card's fields come from -- the PRD's own agent
+# specification and financial-impact framework -- because there is no catalog
+# entry to read them off. Its coverage is NOT hand-authored: _group_agent_cards
+# computes it from the pack file exactly like every other card's, below.
+_AGT19_CARD = {
+    "agent_id": "AGT-19",
+    "display_name": "Strategic Planning Advisor",
+    "decision": "How the group plan should change when a price, cost or "
+                "capital assumption moves, and which asset absorbs it.",
+    "leaks": ["Latency"],
+    "archetype": "Optimiser",
+    "authority": "L1 — Recommend (permanent; no promotion path)",
+    "financial_lines": [
+        {
+            "line": "group plan re-tested against a moved assumption → "
+                     "capital allocation quality",
+            "evidence_class": "C",
+        },
+    ],
+    "honest_limit": "The least measurable agent in the portfolio, and the "
+                     "easiest to oversell: it inherits every weakness of the "
+                     "assumption set it is given, and a committee price deck "
+                     "can be optimised very precisely while still being "
+                     "wrong. It contributes nothing to a funding case and "
+                     "must not be added to one.",
+    "pack": "agt19-strategic-planning.yaml",
+}
+
+
+def _group_agent_cards() -> dict:
+    """Cards for agents with no persona in this build -- today, just AGT-19."""
+    card = dict(_AGT19_CARD)
+    card["coverage"] = _coverage(PACK_DIR / card["pack"])
+    return {card["agent_id"]: card}
+
+
+def _all_cards() -> list[dict]:
+    """Every card in the build, persona-holding and group-level alike."""
+    cards = [_card_record(a) for a in ALL_AGENTS if a.card is not None]
+    cards.extend(_group_agent_cards().values())
+    return cards
+
+
+def _leak_counts(cards: list[dict]) -> dict:
+    """How many cards claim each leak, keyed on LEAKS so a count of zero still
+    appears rather than being absent (design §1, band 1: every leak counted,
+    never omitted)."""
+    counts = {leak: 0 for leak in LEAKS}
+    for card in cards:
+        for leak in card["leaks"]:
+            counts[leak] += 1
+    return counts
 
 
 def _traversal_holders(traversal: str) -> dict:
@@ -203,6 +320,15 @@ def build_catalog() -> dict:
         "apqc_names": APQC_NAMES,
         "swarms": swarms,
         "agents": [_agent_record(a) for a in ALL_AGENTS],
+        # The value screen's leak taxonomy band (design §1) reads leaks and
+        # their counts from here rather than carrying its own list, so a
+        # leak added or renamed in mining_agents.catalog.definitions moves
+        # with the build instead of being retyped on the screen.
+        "leaks": list(LEAKS),
+        "leak_counts": _leak_counts(_all_cards()),
+        # AGT-19 has no AgentDef and so never appears in "agents" above; its
+        # card is exported here for the value screen (design §3, §4 step 4).
+        "group_agents": _group_agent_cards(),
     }
 
 
@@ -257,6 +383,7 @@ def build_personas(catalog: dict) -> dict:
     """
     profiles = yaml.safe_load(PERSONA_PROFILES.read_text())
     by_persona = catalog["by_persona"]
+    cards_by_persona = _cards_by_persona()
 
     out = {}
     for code, profile in sorted(profiles.items()):
@@ -278,6 +405,13 @@ def build_personas(catalog: dict) -> dict:
         method = _persona_method(code)
         if method:
             entry["method"] = method
+        # Business-framing cards (design §2), one per agent of this persona
+        # that declares one. Absent entirely for a persona with none, rather
+        # than an empty list -- the same "say nothing rather than invent a
+        # shape" rule build_personas already follows for `method` above.
+        cards = cards_by_persona.get(code)
+        if cards:
+            entry["cards"] = cards
         out[code] = entry
     return {"generated_at": _now(), "source": str(PERSONA_PROFILES.relative_to(REPO)),
             "personas": out}
@@ -1349,6 +1483,13 @@ def main() -> None:
           f"swarms {catalog['counts']['swarms']}, "
           f"HITL {catalog['counts']['hitl_entrypoints']}")
     print(f"personas {len(personas['personas'])}")
+    print("leak counts " + ", ".join(
+        f"{leak} {n}" for leak, n in catalog["leak_counts"].items()
+    ))
+    for card in _all_cards():
+        cov = card.get("coverage")
+        cov_txt = f"{cov['instrumented']} of {cov['total']}" if cov else "no pack"
+        print(f"card {card['agent_id']:<8} {card['archetype']:<13} coverage {cov_txt}")
     print(f"formulas {len(workspace['formulas']['registry'])}, "
           f"traversals {len(workspace['traversals'])}, "
           f"models {len(workspace['models'])}, "

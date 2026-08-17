@@ -31,10 +31,16 @@ const CASE_NAV = [
   { href: "graph.html", label: "5 · The graph" },
 ];
 
-/* Application 2. The four destinations are the four standing screens; the
+/* Application 2. The five destinations are the five standing screens; the
    approval sheet is deliberately absent because it is a modal raised from an
-   agent team or a role page and never a place you navigate to on its own. */
+   agent team or a role page and never a place you navigate to on its own.
+   Value is first, before Cockpit: the user asked for "both audiences,
+   sequenced", and sequenced means the value argument is the surface a CEO
+   meets first (design doc, section 1). index.html remains the default entry
+   point this nav is rendered on top of; Value is a destination, not a new
+   landing page. */
 const WORK_NAV = [
+  { href: "value.html", label: "Value" },
   { href: "index.html", label: "Cockpit" },
   { href: "swarm.html", label: "Agent teams" },
   { href: "persona.html", label: "My role" },

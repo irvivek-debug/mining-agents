@@ -459,6 +459,75 @@ table.audit td.t { white-space: nowrap; }
   .chat .transcript { max-height: none; flex: 1 1 auto; }
 }
 
+/* ---------- the agent card (design doc section 2) ---------- */
+
+/* Shared by persona.html (one card per agent that carries one, beneath the
+   role's governing question) and value.html (AGT-19's card). One block of
+   rules for one renderer -- apps/workspace/agent-card.js -- so the two
+   screens cannot drift into drawing the same field two different ways. */
+.agent-card {
+  border: 1px solid var(--border); background: var(--surface);
+  padding: 16px; margin-bottom: 14px;
+}
+.agent-card + .agent-card { margin-top: 0; }
+.ac-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 8px; }
+.ac-id { font-size: 11px; font-weight: 700; color: var(--accent); }
+.ac-name { font-size: 14.5px; }
+.ac-decision { font-size: 13.5px; color: var(--fg); margin: 0 0 12px; max-width: 74ch; }
+.ac-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 7px 0; border-top: 1px solid var(--border-soft); font-size: 12.5px; }
+.ac-row:first-of-type { border-top: none; }
+.ac-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--fg-muted); min-width: 92px; flex-shrink: 0; }
+/* Declared, never enforced -- said beside the authority value itself, not as
+   a footnote, so a reader who reads only this row still meets the caveat. */
+.ac-caveat { color: var(--fg-dim); font-size: 11.5px; }
+.ac-lines ul { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0; }
+.ac-lines li { padding: 3px 0; }
+.ac-lines .badge { margin-left: 6px; }
+.ac-coverage-body { flex: 1; min-width: 160px; }
+.ac-coverage-body .share-bar { margin-bottom: 5px; }
+.ac-coverage-label { margin: 0; font-size: 12px; color: var(--fg-muted); }
+/* Not styled as a warning or an error -- a coverage of zero is a stated fact,
+   the same kind of fact a coverage of five-of-seven is, and dressing it in
+   the critical colour would be exactly the "reads as an error" failure this
+   row exists to avoid. Weight is the only signal: it earns the reader's eye
+   without borrowing the vocabulary this system uses for a fault. */
+.ac-coverage-zero { color: var(--fg); font-weight: 500; }
+.ac-limit { font-size: 12px; color: var(--fg-muted); margin: 10px 0 0; max-width: 78ch; }
+.ac-limit .ac-label { display: block; margin-bottom: 3px; }
+
+/* ---------- the value screen ---------- */
+
+.leak-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.leak-card { border: 1px solid var(--border); background: var(--surface); padding: 14px; }
+.leak-card .lk-name { font-size: 14px; margin: 0 0 6px; }
+.leak-card .lk-def { font-size: 12.5px; color: var(--fg-muted); margin: 0 0 12px; min-height: 48px; }
+.leak-card .lk-count { font-family: var(--display); font-size: 24px; font-weight: 700; color: var(--fg); }
+.leak-card .lk-count-sub { font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--fg-muted); margin-left: 6px; }
+
+.money-range { margin: 16px 0; }
+.money-range-bar { height: 10px; background: var(--surface-high); border: 1px solid var(--border);
+  position: relative; }
+.money-range-bar > span { position: absolute; top: -1px; bottom: -1px;
+  background: var(--accent); opacity: 0.5; border: 1px solid var(--accent); }
+.money-range-labels { display: flex; justify-content: space-between; margin-top: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--fg-muted); }
+.money-denominator { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--border); }
+.money-denominator .ac-label { min-width: 0; }
+
+.evidence-ladder { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-bottom: 16px; }
+.evidence-ladder .ev-class { border: 1px solid var(--border); background: var(--surface); padding: 14px; }
+.evidence-ladder .ev-class.fundable { border-left: 2px solid var(--success); }
+.evidence-ladder .ev-class.not-fundable { border-left: 2px solid var(--fg-dim); }
+.evidence-ladder .ev-letter { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.evidence-ladder .ev-name { font-size: 12.5px; color: var(--fg-muted); margin: 2px 0 8px; }
+.evidence-ladder .ev-def { font-size: 12.5px; color: var(--fg); margin: 0; }
+
 /* ---------- print: SC-5 leaves the building on paper ---------- */
 
 /* P8 hands over at shift change and the brief has to survive the walk. Print

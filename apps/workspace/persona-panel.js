@@ -13,15 +13,18 @@
  */
 
 /* esc/fig/num/places/rowPlaces come from shell.js, branchEvidenceFor/gapRowsFor
- * from persona-data.js, and plainProse from plain.js. In the browser those are
+ * from persona-data.js, starterQuestions from router.js, renderAgentCard from
+ * agent-card.js, and plainProse from plain.js. In the browser those are
  * globals, because classic script tags share one scope and persona.html loads
- * all three files first. Node gives every module its own scope, so the same
- * names are resolved through require and published where the function bodies
- * below already look for them. Guarded on the absence of a window so the
- * browser path is untouched. */
+ * all of them before this file. Node gives every module its own scope, so the
+ * same names are resolved through require and published where the function
+ * bodies below already look for them. Guarded on the absence of a window so
+ * the browser path is untouched. */
 if (typeof require !== "undefined" && typeof window === "undefined") {
   Object.assign(globalThis, require("../shared/shell.js"));
+  Object.assign(globalThis, require("./router.js"));
   Object.assign(globalThis, require("./persona-data.js"));
+  Object.assign(globalThis, require("./agent-card.js"));
   Object.assign(globalThis, require("../shared/plain.js"));
 }
 
@@ -235,11 +238,56 @@ function _blockJobs(persona) {
   );
 }
 
+/* The same sentence the chat sidecar's first starter button asks, read the
+ * same way it builds it: starterQuestions() always puts the method-derived
+ * question first when the persona has one (see router.js's _starterItems),
+ * so its first element IS the governing question whenever one exists. Reusing
+ * that function rather than re-deriving the sentence here is what keeps the
+ * panel and the sidecar from ever disagreeing about what the question is. */
+function _governingQuestion(code, DATA) {
+  var persona = DATA.personas.personas[code];
+  if (!persona || !persona.method || !persona.method.metric) return null;
+  var starters = starterQuestions(code, DATA);
+  return starters.length ? starters[0] : null;
+}
+
+/* The agent card block (design doc section 2), rendered beneath the role's
+ * governing question -- one card per agent of this persona that carries one.
+ *
+ * A persona with no cards at all (P7, P8 in this build) still gets the
+ * governing-question paragraph when it has a method, and says plainly that no
+ * agent here carries a card yet, rather than rendering nothing: the same
+ * "declared, not silently dropped" rule the rest of this codebase already
+ * applies to a driver with no diagnostic behind it.
+ */
+function _blockCards(code, DATA) {
+  var persona = DATA.personas.personas[code];
+  var cards = (persona && persona.cards) || [];
+  var question = _governingQuestion(code, DATA);
+  // Nothing to say: no method (so no governing question) and no card. Most
+  // roles never get one and a block asserting the absence on every page
+  // would be noise -- P4 is the one persona in this build with a card
+  // (AGT-14) but no method pack of its own, so the heading has to hold up
+  // without a question underneath it.
+  if (!question && !cards.length) return "";
+  var heading = question ? "Your governing question" : "What your agents can already prove";
+  return (
+    '<section class="pblock"><h2>' + heading + "</h2>" +
+    (question ? '<p class="lede">' + esc(question) + "</p>" : "") +
+    (cards.length
+      ? cards.map(function (c) { return renderAgentCard(c); }).join("")
+      : '<p class="pnote">No agent answering to this role carries a ' +
+        "business-framing card yet.</p>") +
+    "</section>"
+  );
+}
+
 function renderPanel(code, DATA) {
   var persona = DATA.personas.personas[code];
   return (
     '<section class="pblock"><h2>What you\'re answerable for</h2>' +
     '<p class="lede">' + esc(plainProse(persona.accountable_for)) + "</p></section>" +
+    _blockCards(code, DATA) +
     _blockBranch(code, DATA) +
     _blockGap(code, DATA) +
     _blockAssets(DATA) +
@@ -249,5 +297,5 @@ function renderPanel(code, DATA) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderPanel, _evidence, _gapTable };
+  module.exports = { renderPanel, _evidence, _gapTable, _blockCards, _governingQuestion };
 }

@@ -56,6 +56,10 @@ SCREENS = {
         "apps/workspace/workspace.js",
         "apps/workspace/cockpit.js",
     ],
+    "apps/workspace/value.html": [
+        "apps/workspace/agent-card.js",
+        "apps/workspace/value.js",
+    ],
     "apps/workspace/swarm.html": [
         "apps/workspace/workspace.js",
         "apps/workspace/hitl.js",
@@ -66,6 +70,7 @@ SCREENS = {
     "apps/workspace/persona.html": [
         "apps/workspace/router.js",
         "apps/workspace/persona-data.js",
+        "apps/workspace/agent-card.js",
         "apps/workspace/persona-panel.js",
         "apps/workspace/agent-stream.js",
         "apps/workspace/chat.js",

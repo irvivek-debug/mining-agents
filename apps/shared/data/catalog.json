@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-16T16:47:22+00:00",
+  "generated_at": "2026-08-17T14:37:03+00:00",
   "source": "mining_agents.catalog.definitions",
   "counts": {
     "agent_nodes": 100,
@@ -3214,5 +3214,43 @@
       "models": [],
       "is_entrypoint": true
     }
-  ]
+  ],
+  "leaks": [
+    "Latency",
+    "Blind spot",
+    "Variance",
+    "Coordination",
+    "Assurance"
+  ],
+  "leak_counts": {
+    "Latency": 6,
+    "Blind spot": 3,
+    "Variance": 2,
+    "Coordination": 1,
+    "Assurance": 1
+  },
+  "group_agents": {
+    "AGT-19": {
+      "agent_id": "AGT-19",
+      "display_name": "Strategic Planning Advisor",
+      "decision": "How the group plan should change when a price, cost or capital assumption moves, and which asset absorbs it.",
+      "leaks": [
+        "Latency"
+      ],
+      "archetype": "Optimiser",
+      "authority": "L1 \u2014 Recommend (permanent; no promotion path)",
+      "financial_lines": [
+        {
+          "line": "group plan re-tested against a moved assumption \u2192 capital allocation quality",
+          "evidence_class": "C"
+        }
+      ],
+      "honest_limit": "The least measurable agent in the portfolio, and the easiest to oversell: it inherits every weakness of the assumption set it is given, and a committee price deck can be optimised very precisely while still being wrong. It contributes nothing to a funding case and must not be added to one.",
+      "pack": "agt19-strategic-planning.yaml",
+      "coverage": {
+        "instrumented": 2,
+        "total": 5
+      }
+    }
+  }
 }

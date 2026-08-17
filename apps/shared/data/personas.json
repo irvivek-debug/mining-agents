@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-16T16:47:23+00:00",
+  "generated_at": "2026-08-17T14:37:03+00:00",
   "source": "docs/persona-profiles.yaml",
   "personas": {
     "P1": {
@@ -52,7 +52,55 @@
       ],
       "method": {
         "metric": "unplanned repair cost per asset"
-      }
+      },
+      "cards": [
+        {
+          "agent_id": "S01",
+          "display_name": "Cascading Failure Impact & Recovery Coordinator",
+          "decision": "What fails next, when to take it, and exactly what the work order should say.",
+          "leaks": [
+            "Blind spot",
+            "Latency"
+          ],
+          "archetype": "Diagnostician",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "unplanned repair cost \u2192 C1 cash cost",
+              "evidence_class": "B"
+            }
+          ],
+          "honest_limit": "Data-driven remaining-useful-life estimation needs run-to-failure data, and well-maintained machines are protected from failing by definition \u2014 this starts physics- and rule-based, and earns the data over time.",
+          "pack": "p1-reliability.yaml",
+          "coverage": {
+            "instrumented": 5,
+            "total": 7
+          }
+        },
+        {
+          "agent_id": "S03",
+          "display_name": "Fleet Reliability & Availability Coordinator",
+          "decision": "Which failures are recoverable, and whether the evidence supports the claim.",
+          "leaks": [
+            "Blind spot",
+            "Latency"
+          ],
+          "archetype": "Negotiator",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "warranty and OEM claims recovery \u2192 other income / cost recovery",
+              "evidence_class": "A"
+            }
+          ],
+          "honest_limit": "There is no published data on unclaimed warranty value in heavy industry; the baseline must come from the site's own claims history, and any vendor-quoted figure is unsourceable.",
+          "pack": "agt13-warranty.yaml",
+          "coverage": {
+            "instrumented": 4,
+            "total": 5
+          }
+        }
+      ]
     },
     "P2": {
       "code": "P2",
@@ -102,7 +150,32 @@
       ],
       "method": {
         "metric": "maintenance cost per completed work order"
-      }
+      },
+      "cards": [
+        {
+          "agent_id": "S02",
+          "display_name": "Planned Shutdown Readiness Coordinator",
+          "decision": "Which work orders are ready for the shutdown window, and whether the parts and lead time on hand actually support committing to it.",
+          "leaks": [
+            "Blind spot",
+            "Latency"
+          ],
+          "archetype": "Diagnostician",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "maintenance cost per completed work order \u2192 maintenance cost as % of opex",
+              "evidence_class": "B"
+            }
+          ],
+          "honest_limit": "Work order records carry no planned date or due date field, so schedule compliance against a plan cannot be evidenced from them \u2014 only realised cost against priority and backlog age can be.",
+          "pack": "p2-planner.yaml",
+          "coverage": {
+            "instrumented": 4,
+            "total": 6
+          }
+        }
+      ]
     },
     "P3": {
       "code": "P3",
@@ -158,7 +231,31 @@
       ],
       "method": {
         "metric": "severity-weighted incident exposure"
-      }
+      },
+      "cards": [
+        {
+          "agent_id": "S05",
+          "display_name": "Autonomous Haulage Safety Interlock Coordinator",
+          "decision": "Whether the evidence in front of an interlock decision \u2014 proximity history, fatigue signal, and radio traffic \u2014 actually supports it.",
+          "leaks": [
+            "Assurance"
+          ],
+          "archetype": "Diagnostician",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "severity-weighted incident exposure \u2192 risk position (avoided loss)",
+              "evidence_class": "C"
+            }
+          ],
+          "honest_limit": "Attributing an incident to a fatigue signal requires both an operator link and sub-day timestamp resolution across the incident and biometric records; where either is missing, the correlation is reported as not instrumented rather than inferred.",
+          "pack": "p3-hse.yaml",
+          "coverage": {
+            "instrumented": 4,
+            "total": 6
+          }
+        }
+      ]
     },
     "P4": {
       "code": "P4",
@@ -229,6 +326,30 @@
         "D30",
         "S08",
         "S09"
+      ],
+      "cards": [
+        {
+          "agent_id": "S09",
+          "display_name": "RFP & Bid Award Evaluation Coordinator",
+          "decision": "Whether this transaction matches the terms of its governing contract.",
+          "leaks": [
+            "Coordination"
+          ],
+          "archetype": "Negotiator",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "post-signature contract leakage recovered \u2192 C1 cash cost",
+              "evidence_class": "A"
+            }
+          ],
+          "honest_limit": "The widely quoted \"9.2% contract value leakage\" figure is a misattribution: the source study found that good contract management could improve profitability by roughly 9% of annual revenue \u2014 an opportunity figure, not a leakage rate \u2014 and it is not used here.",
+          "pack": "agt14-contract-integrity.yaml",
+          "coverage": {
+            "instrumented": 4,
+            "total": 6
+          }
+        }
       ]
     },
     "P5": {
@@ -273,7 +394,32 @@
       "hitl_agents": [],
       "method": {
         "metric": "contained-metal variance between the block model and realised grade"
-      }
+      },
+      "cards": [
+        {
+          "agent_id": "S06",
+          "display_name": "Grade-to-Recovery Reconciliation Coordinator",
+          "decision": "Whether the resource model, the grade-control model, the pit and the mill agree on contained metal \u2014 and if not, which one is wrong.",
+          "leaks": [
+            "Latency",
+            "Variance"
+          ],
+          "archetype": "Diagnostician",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "contained-metal variance between block model and realised grade \u2192 reserve confidence",
+              "evidence_class": "B"
+            }
+          ],
+          "honest_limit": "The assay-to-block pairing is a spatial approximation at a declared search radius; the reconciliation is evidence about the paired subset only, and the unpaired population may differ systematically from it.",
+          "pack": "p5-geologist.yaml",
+          "coverage": {
+            "instrumented": 5,
+            "total": 7
+          }
+        }
+      ]
     },
     "P6": {
       "code": "P6",
@@ -321,7 +467,32 @@
       ],
       "method": {
         "metric": "unit cost per tonne of contained metal"
-      }
+      },
+      "cards": [
+        {
+          "agent_id": "S07",
+          "display_name": "Crusher\u2013Mill Throughput Balance Coordinator",
+          "decision": "Whether the crusher setting or feed variability is costing recovered contained metal, and by how much.",
+          "leaks": [
+            "Latency",
+            "Variance"
+          ],
+          "archetype": "Diagnostician",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "unit cost per tonne of contained metal \u2192 C1 cash cost",
+              "evidence_class": "B"
+            }
+          ],
+          "honest_limit": "Torque and throughput figures bound the daily mean only; a recommended setting change must still be checked against the instantaneous alarm limit before it is applied.",
+          "pack": "p6-metallurgist.yaml",
+          "coverage": {
+            "instrumented": 3,
+            "total": 5
+          }
+        }
+      ]
     },
     "P7": {
       "code": "P7",

@@ -170,6 +170,86 @@ test("a persona with no sign-offs says so rather than rendering an empty list", 
   assert.ok(!/<ul class="signoffs">/.test(html));
 });
 
+// ---------------------------------------------------------------- Task 5:
+// agent cards beneath the governing question.
+
+test("P1 renders both of its agent cards, beneath the governing question", () => {
+  const html = PANEL.renderPanel("P1", DATA);
+  const cards = DATA.personas.personas.P1.cards;
+  assert.equal(cards.length, 2, "fixture assumption broke: P1 no longer carries two cards");
+  const questionAt = html.indexOf("Your governing question");
+  assert.ok(questionAt !== -1, "the governing-question heading is missing on P1");
+  for (const card of cards) {
+    const cardAt = html.indexOf(card.decision);
+    assert.ok(cardAt !== -1, `${card.agent_id}'s card did not render at all`);
+    assert.ok(cardAt > questionAt, `${card.agent_id}'s card renders above the governing question, not beneath it`);
+  }
+});
+
+// The single most important assertion in this file (Task 5): a card at 0 of
+// N drivers instrumented must render as a visible fact, not as a blank and
+// not as an error -- the same distinction this build already draws for a
+// single not_instrumented driver.
+//
+// Proved end to end through renderPanel() against a synthetic card, not
+// against S03 (agt13-warranty.yaml): that pack is under active instrumentation
+// by a parallel workstream while this suite runs and is not a stable "always
+// zero" fixture. Cloning DATA and injecting one card is the same technique
+// this file already uses below to test escaping.
+test("a zero-coverage card renders visibly on the persona page, not blank and not as an error", () => {
+  const synthetic = JSON.parse(JSON.stringify(DATA));
+  synthetic.personas.personas.P1.cards = [{
+    agent_id: "TEST-0",
+    display_name: "Test Agent",
+    decision: "test decision",
+    leaks: ["Latency"],
+    archetype: "Optimiser",
+    authority: "L1 — Recommend",
+    financial_lines: [{ line: "test line", evidence_class: "C" }],
+    honest_limit: "test limit",
+    pack: "_test.yaml",
+    coverage: { instrumented: 0, total: 5 },
+  }];
+  const html = PANEL.renderPanel("P1", synthetic);
+  assert.match(html, /0 of 5 drivers instrumented/, "the zero coverage did not render");
+  assert.ok(!/b-crit/.test(html), "the zero coverage renders as a critical badge");
+});
+
+test("a persona with a card but no method pack of its own still gets its card", () => {
+  // P4 carries AGT-14's card (S09) but no persona.method entry: PACKS in
+  // mining_agents/tools/method_lookup.py has no P4 pack. The heading has to
+  // hold up without a governing question underneath it.
+  const p4 = DATA.personas.personas.P4;
+  assert.ok(!p4.method, "fixture assumption broke: P4 now has a method pack");
+  assert.ok((p4.cards || []).length > 0, "fixture assumption broke: P4 no longer carries a card");
+  const html = PANEL.renderPanel("P4", DATA);
+  assert.ok(html.includes(p4.cards[0].decision), "P4's card did not render");
+  assert.ok(!html.includes("Your governing question"), "P4 has no method, so no governing question exists to head the block");
+});
+
+test("a persona with neither a method nor a card renders no card block at all", () => {
+  for (const code of ["P7", "P8"]) {
+    const persona = DATA.personas.personas[code];
+    assert.ok(!persona.method, `fixture assumption broke: ${code} now has a method`);
+    assert.ok(!(persona.cards || []).length, `fixture assumption broke: ${code} now has a card`);
+    const html = PANEL.renderPanel(code, DATA);
+    assert.ok(!html.includes("business-framing card"), `${code} renders the no-card note it has no reason to render`);
+  }
+});
+
+test("nothing on the persona page implies authority is enforced", () => {
+  for (const code of ["P1", "P2", "P3", "P4", "P5", "P6"]) {
+    const html = PANEL.renderPanel(code, DATA);
+    const cards = DATA.personas.personas[code].cards || [];
+    if (!cards.length) continue;
+    assert.match(
+      html,
+      /a label this card carries, not a limit the platform enforces/,
+      `${code}'s card does not carry the authority-is-declared caveat`
+    );
+  }
+});
+
 test("each sign-off carries the agent id the sidecar will need", () => {
   const withSignoffs = CODES.filter(
     (c) => (DATA.personas.personas[c].hitl_agents || []).length > 0
