@@ -107,6 +107,86 @@ globals, no bundler), `node --test`, pytest.
 
 ---
 
+### Task 2b: Generate the contract, warranty and capital data
+
+**Added mid-execution.** The user's instruction: "if there is no data then you
+need to create realistic data." This supersedes the spec's out-of-scope note
+that generation was the next piece of work — it is now in this workstream, and
+the three packs from Task 2 become instrumented rather than shipping at zero
+coverage.
+
+**Files:**
+- Create: `data/generator/contracts.py`
+- Create: `data/generator/warranty.py`
+- Create: `data/generator/capital.py`
+- Modify: `data/generator/run_all.py` (`GENERATORS` list)
+- Modify: `data/generator/config.py` (`REWRITE_TABLES`)
+- Test: `data/generator/tests/test_contracts.py`, `test_warranty.py`, `test_capital.py`
+- Test: `data/generator/tests/test_realism.py` (new realism properties)
+
+**Interfaces:**
+- Consumes: the table and column names written into the Task 2 packs' driver
+  questions. Those questions are the specification — read them, do not invent a
+  schema.
+- Consumes existing tables it must join to: `procurement_bids`, `rfp_items`,
+  `inventory_levels`, `maintenance_logs`, `erp_work_orders`, `assets`,
+  `fleet_vehicles`.
+- Produces: new BigQuery tables in `mining_data`, loaded by the existing loader.
+
+**Conventions to follow exactly** (read `data/generator/supply_chain.py` first):
+seeded deterministic RNG via `_rng(*parts)` off `config.SEED`, a `write_parquet()`
+entry point, registration in `run_all.py::GENERATORS` in dependency order, and
+`_stable_hash` rather than the salted built-in `hash()`.
+
+- [ ] **Step 1:** Contracts. Terms a transaction can be checked against —
+      vendor, part, agreed unit price, volume-break tiers, rebate entitlement,
+      validity window — plus the transactions themselves so a discrepancy is
+      computable. Some transactions must reference no live contract at all;
+      that absence is one of AGT-14's drivers.
+- [ ] **Step 2:** Warranty. Coverage per asset or component with an OEM,
+      a period, and claim state, joinable to `maintenance_logs` so a repair
+      inside a warranty window that was paid for out of own cost is derivable.
+- [ ] **Step 3:** Capital and price. A contained-metal price series with
+      scenarios, and a capital project set carrying the assumptions a plan was
+      approved against. **Commodity-neutral: the series is "contained metal",
+      never a named metal.**
+- [ ] **Step 4:** Realism properties, in the style of `test_realism.py`'s
+      R1–R8. Not row counts — statistical properties. At minimum: leakage exists
+      but is not trivially visible (a minority of transactions priced above
+      their contract, not all and not none); warranty expiry produces a real
+      cliff rather than a uniform distribution; the price series has plausible
+      autocorrelation rather than white noise. **Each property must state the
+      band it asserts and fail outside it.**
+- [ ] **Step 5:** Load to BigQuery, confirm row counts and that every join the
+      packs need actually resolves.
+- [ ] **Step 6:** Commit.
+
+Per the user's standing preference, generator work ships on passing tests and
+thresholds — no review/fix/re-review loop on the generators themselves.
+
+---
+
+### Task 2c: Instrument the three packs
+
+**Files:**
+- Modify: `method/agt13-warranty.yaml`, `method/agt14-contract-integrity.yaml`, `method/agt19-strategic-planning.yaml`
+- Create: `method/sql/agt13/`, `method/sql/agt14/`, `method/sql/agt19/`
+- Modify: `mining_agents/tools/method_lookup.py` (`PACKS`)
+- Test: `tests/method/test_declared_packs.py` (extend to integration)
+
+- [ ] **Step 1:** For each driver whose data now exists, write the fixed
+      diagnostic SQL, flip `status` to `instrumented`, and add the `guard`.
+- [ ] **Step 2:** Validate every query against live BigQuery and pin the
+      measured magnitudes in the tests, as `test_p6_pack.py` does with its
+      `[23, 116, 28]` day counts. A test that only checks the query runs is not
+      a reproduction.
+- [ ] **Step 3:** Any driver whose data still does not exist stays
+      `not_instrumented`. Do not force a diagnostic that the data cannot
+      support — that is the failure this whole product exists to avoid.
+- [ ] **Step 4:** Commit.
+
+---
+
 ### Task 3: Coverage computed from the pack
 
 **Files:**
