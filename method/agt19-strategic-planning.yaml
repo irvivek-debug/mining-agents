@@ -1,0 +1,84 @@
+# AGT-19 Strategic Planning Advisor's driver tree (Optimiser), group level.
+# Skeleton only: no resolution prose lives here. Resolution content is
+# retrieved from the document corpus so that a recommendation is the
+# customer's own standard rather than ours.
+#
+# Authority: permanently L1 — Recommend, with no promotion path. Every other
+# agent in this build can earn a higher authority tier on demonstrated
+# accuracy; this one cannot, by design, at any point. It advises the
+# Executive Committee and Board and holds write access to no system of
+# record. An agent that could move capital across a group plan is a decision
+# this product declines to make, and that ceiling is a property of the
+# agent, not of its coverage — instrumenting every driver below would not
+# change it.
+#
+# `status` says whether a diagnostic exists and nothing else. Every driver
+# below is `not_instrumented` for a measured reason, not a shortcut: this
+# agent's job is to re-run the group plan against a moved assumption, and
+# there is no price deck, capital pipeline, simulation output or NPV model of
+# any kind in the data this build has today. Each driver's question names the
+# table and columns a diagnostic would need, so this pack is the
+# specification for the data work that comes next, not a placeholder for it.
+metric: value lost to a group plan re-tested on the calendar rather than on the world
+root: assumptions moving faster than the review cadence that re-tests them
+
+drivers:
+  - id: assumption_staleness
+    question: >-
+      How many days has the group plan run against an assumption that has
+      since moved, before the next scheduled review re-tests it? Requires a
+      `plan_assumptions` table (assumption_id, plan_version_id, metric_name,
+      assumed_value, effective_date, superseded_date) and a `plan_versions`
+      table (plan_version_id, published_date, next_review_date), so the gap
+      between an assumption moving and the plan being re-run can be measured.
+      Neither table exists.
+    status: not_instrumented
+    controllable: false
+
+  - id: reversal_cost
+    question: >-
+      For each material assumption move, what is the reversal trigger and
+      what does reversing the resulting capital or operating decision cost?
+      Requires a `plan_scenarios` table (scenario_id, plan_version_id,
+      assumption_delta, reversal_trigger, reversal_cost) capturing the
+      sensitivity and the cost of reversing a decision made under the
+      superseded assumption. No such table, and no capital pipeline of any
+      kind, exists.
+    status: not_instrumented
+    controllable: false
+
+  - id: local_vs_group_divergence
+    question: >-
+      Where does the sum of locally optimal site plans diverge from the
+      group-optimal plan? Requires a `site_plans` table (site_id,
+      plan_version_id, site_objective_value) and a `group_plan` table
+      (plan_version_id, group_objective_value) computed under the same
+      assumption set, so a site-level optimum can be compared against the
+      group optimum it feeds into. Neither table, nor the simulation
+      capability that would produce them, exists.
+    status: not_instrumented
+    controllable: false
+
+  - id: capital_option_dominance
+    question: >-
+      Which candidate capital options are stochastically dominated by another
+      option once the full outcome distribution is considered, not just its
+      expected value? Requires a `capital_options` table (option_id,
+      plan_version_id, description) and an `option_outcomes` table (option_id,
+      simulation_run_id, outcome_value) holding a distribution of outcomes per
+      option under scenario or Monte Carlo simulation. No capital option
+      registry or simulation output exists.
+    status: not_instrumented
+    controllable: false
+
+  - id: plan_output_completeness
+    question: >-
+      For a given group plan output, are the assumption set, the sensitivity,
+      the dissenting scenario and the reversal trigger with its cost all
+      actually stated, or is one of the four missing? Requires the
+      `plan_versions`, `plan_assumptions` and `plan_scenarios` tables above,
+      plus a `plan_output_checklist` table (plan_version_id, element_name,
+      is_present) recording which of the four required elements a given
+      output actually carries. None of the source tables exist yet.
+    status: not_instrumented
+    controllable: true

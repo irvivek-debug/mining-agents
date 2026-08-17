@@ -1,0 +1,78 @@
+# AGT-13 Warranty & OEM Claims's driver tree (Negotiator).
+# Skeleton only: no resolution prose lives here. Resolution content is
+# retrieved from the document corpus so that a recommendation is the
+# customer's own standard rather than ours.
+#
+# `status` says whether a diagnostic exists and nothing else. Every driver
+# below is `not_instrumented` for a measured reason, not a shortcut: this
+# agent's job is to link a failure to the entitlement that covers it and
+# assemble the evidence a claim needs, and there is no warranty table of any
+# kind in the data this build has today — no entitlement, no coverage window,
+# no claim state, no OEM attribution. `maintenance_logs` (152 rows:
+# log_entry_id, work_order_id, asset_id, actual_duration_hours,
+# parts_replaced, technician_notes) records that a repair happened; it does
+# not record whether that repair was, or should have been, covered. Each
+# driver's question names the table and columns a diagnostic would need, so
+# this pack is the specification for the data work that comes next, not a
+# placeholder for it.
+metric: recovered value from warranty and OEM claims
+root: entitled claims abandoned before the window closes
+
+drivers:
+  - id: entitlement_coverage
+    question: >-
+      Which failures, on which assets, are covered by an active OEM warranty
+      or service entitlement, and which entitlement covers them? Requires a
+      `warranty_entitlements` table (entitlement_id, asset_id, oem_vendor,
+      component, coverage_start, coverage_end, source_clause) linking a
+      component on an asset to the clause that covers it. No such table
+      exists; `maintenance_logs` carries no entitlement, coverage, or OEM
+      field of any kind.
+    status: not_instrumented
+    controllable: true
+
+  - id: expired_unclaimed
+    question: >-
+      How much recoverable value sat inside an entitlement window that
+      expired before a claim was ever filed against it? Requires the
+      `warranty_entitlements` table above joined to a `warranty_claims` table
+      (claim_id, entitlement_id, work_order_id, filed_date, status,
+      amount_claimed), so an entitlement whose coverage_end has passed can be
+      tested against whether a claim exists for the failures it covered.
+      Neither table exists.
+    status: not_instrumented
+    controllable: true
+
+  - id: own_cost_repairs
+    question: >-
+      Of the failures repaired inside an active warranty window, how many
+      were paid out of the site's own maintenance budget instead of claimed
+      against the OEM? Requires the `warranty_entitlements` and
+      `warranty_claims` tables above joined to erp_work_orders.repair_cost, so
+      a repair that falls inside a coverage window with no matching claim can
+      be isolated and its cost separated from ordinary maintenance spend.
+    status: not_instrumented
+    controllable: true
+
+  - id: evidence_completeness
+    question: >-
+      For each failure eligible for a claim, does the evidence pack an OEM
+      would demand actually exist — failure mode, condition data, and the
+      parts consumed? Requires a `warranty_claims` table carrying an
+      evidence_pack_id or equivalent field, plus a defined mapping from each
+      OEM's stated evidence requirements to the fields `maintenance_logs` and
+      the condition-monitoring tables already carry. That mapping does not
+      exist today, so no claim's completeness can be evaluated.
+    status: not_instrumented
+    controllable: true
+
+  - id: claim_cycle_time
+    question: >-
+      From the day a covered failure is repaired to the day a claim reaches
+      the OEM, how much of the entitlement window is consumed before filing?
+      Requires the `warranty_claims` table above (filed_date) and the
+      `warranty_entitlements` table's coverage_end, so cycle time can be
+      measured against the time actually remaining on the window at the
+      moment of filing.
+    status: not_instrumented
+    controllable: false

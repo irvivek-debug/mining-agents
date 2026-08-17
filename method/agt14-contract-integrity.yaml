@@ -1,0 +1,90 @@
+# AGT-14 Procurement & Contract Integrity's driver tree (Negotiator).
+# Skeleton only: no resolution prose lives here. Resolution content is
+# retrieved from the document corpus so that a recommendation is the
+# customer's own standard rather than ours.
+#
+# `status` says whether a diagnostic exists and nothing else. Every driver
+# below is `not_instrumented` for a measured reason, not a shortcut: this
+# agent's job is to check a transaction against the contract it was raised
+# against, and no contract — no terms, no clause text, no agreed price
+# schedule — exists anywhere in the data this build has today.
+# `procurement_bids` (300 rows: bid_id, rfp_id, vendor_name, proposed_cost,
+# bid_status, technical_rating_score, compliance_checked) holds bids, not
+# contracts; `rfp_items` (3 rows: rfp_id, part_number) names what was bid on,
+# not what was signed. Each driver's question names the table and columns a
+# diagnostic would need, so this pack is the specification for the data work
+# that comes next, not a placeholder for it.
+metric: recovered value from post-signature contract leakage
+root: transactions raised against terms nobody has read
+
+drivers:
+  - id: price_variance
+    question: >-
+      Does the unit price actually paid on a transaction match the price
+      schedule in its governing contract? Requires a `contracts` table
+      (contract_id, vendor_name, part_number, agreed_unit_price,
+      effective_from, effective_to) and a transaction-grain table such as
+      `contract_transactions` (transaction_id, contract_id, vendor_name,
+      part_number, paid_unit_price, transaction_date) linking each purchase
+      to the contract it settles against. `procurement_bids.proposed_cost` is
+      a bid-stage figure, not a price paid, and no field anywhere links a
+      transaction to a signed agreement.
+    status: not_instrumented
+    controllable: true
+
+  - id: contract_coverage
+    question: >-
+      Was a given transaction raised against a live, signed contract, or
+      against no contract at all? Requires the `contract_transactions` table
+      above with a nullable contract_id, and the `contracts` table's
+      effective_from/effective_to so a transaction date can be tested against
+      contract validity. Neither table exists; nothing in `procurement_bids`
+      or `rfp_items` records what, if anything, a downstream transaction was
+      raised against.
+    status: not_instrumented
+    controllable: true
+
+  - id: bid_to_contract_terms
+    question: >-
+      Does the price and scope written into the signed contract match the
+      terms of the bid that won the RFP? Requires the `contracts` table to
+      carry a bid_id column joining back to `procurement_bids`
+      (bid_id, vendor_name, proposed_cost, technical_rating_score), plus a
+      structured record of the scope actually signed — today `contracts`
+      does not exist at all, so neither does the join.
+    status: not_instrumented
+    controllable: true
+
+  - id: rebate_entitlement
+    question: >-
+      Has cumulative purchase volume with a vendor crossed a rebate or
+      volume-break tier the contract entitles the site to, and was the
+      rebate ever claimed? Requires the `contracts` table to carry a
+      rebate_schedule (tier thresholds and rates), the `contract_transactions`
+      table above summed by vendor and period, and a `rebate_claims` table
+      (claim_id, contract_id, period, amount_claimed, amount_entitled)
+      recording whether the entitlement was actually invoiced. None of the
+      three exist.
+    status: not_instrumented
+    controllable: true
+
+  - id: duplicate_payment
+    question: >-
+      Do two or more payments match the same vendor, invoice number, amount
+      and date, exactly or on a fuzzy match? Requires an `invoices` or
+      `payments` table (invoice_id, vendor_name, invoice_number, amount,
+      payment_date) at one-row-per-payment grain. `procurement_bids` is one
+      row per bid and carries no invoice or payment field of any kind.
+    status: not_instrumented
+    controllable: true
+
+  - id: clause_attribution
+    question: >-
+      When a transaction breaches its contract, which specific clause was
+      breached and what is the recoverable amount tied to that clause?
+      Requires the `contracts` table to carry structured clause identifiers
+      (clause_id, clause_text, clause_type, recoverable_basis) rather than a
+      single agreed_unit_price field, so a flagged transaction can cite the
+      clause it violates instead of a bare price mismatch.
+    status: not_instrumented
+    controllable: false
