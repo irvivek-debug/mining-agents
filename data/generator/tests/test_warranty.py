@@ -3,8 +3,9 @@
 Verifies schema, that entitlement_id / work_order_id foreign keys resolve
 (the latter against the live 152-row COMPLETED join, not a fabricated id),
 and the coverage design described in the module docstring: one asset fully
-covered, three with a clean median-dated cliff, one never covered. The banded
-cliff statistic itself is R11 in ``test_realism.py``.
+covered, three with a clean quantile-dated cliff, one never covered. The
+banded cliff statistic and the fleet-wide minority-coverage statistic are
+R11 / R11b in ``test_realism.py``.
 """
 
 import os
@@ -27,7 +28,7 @@ def repairs():
 
 @pytest.fixture(scope="module")
 def cliff_dates(repairs):
-    return W.median_repair_date_by_asset(repairs)
+    return W.cliff_cutoff_date_by_asset(repairs)
 
 
 @pytest.fixture(scope="module")
@@ -97,7 +98,7 @@ class TestCoverageDesign:
         sub = entitlements[entitlements.asset_id == "TRUCK-08"]
         assert (pd.to_datetime(sub.coverage_end, utc=True) < W.WINDOW_START).all()
 
-    def test_cliff_assets_expire_on_their_own_measured_median_repair_date(
+    def test_cliff_assets_expire_on_their_own_measured_quantile_repair_date(
         self, entitlements, cliff_dates
     ):
         for asset in ("CRUSHER-03", "MILL-01", "PUMP-104A"):
@@ -105,8 +106,37 @@ class TestCoverageDesign:
             ends = pd.to_datetime(sub.coverage_end, utc=True)
             assert (ends == cliff_dates[asset]).all(), (
                 f"{asset} entitlement coverage_end does not match its own "
-                "measured median repair date"
+                "measured cliff-quantile repair date"
             )
+
+    def test_cliff_assets_have_a_minority_of_repairs_before_their_cutoff(
+        self, repairs, cliff_dates
+    ):
+        for asset in ("CRUSHER-03", "MILL-01", "PUMP-104A"):
+            sub = repairs[repairs.asset_id == asset]
+            before = (sub.created_at <= cliff_dates[asset]).mean()
+            assert before < 0.5, (
+                f"{asset}: {before:.2%} of its repairs fall before its own "
+                "coverage cutoff — expected a minority (CLIFF_QUANTILE < 0.5), "
+                "not a median split"
+            )
+
+    def test_repairs_inside_cover_are_a_fleet_wide_minority(self, entitlements, repairs):
+        """A mixed-age fleet has a minority of repairs inside any live OEM
+        coverage window at a given moment, not the near-total coverage a too-
+        broad synthetic window produces. Banded precisely in
+        tests/test_realism.py R11b, against the shipped BigQuery tables; this
+        is a loose sanity check on the same in-memory generator output.
+        """
+        eligible = [
+            W._active_entitlement(entitlements, r.asset_id, r.created_at) is not None
+            for r in repairs.itertuples()
+        ]
+        fraction = sum(eligible) / len(eligible)
+        assert fraction < 0.5, (
+            f"{fraction:.2%} of all repairs are inside warranty cover — "
+            "expected a genuine minority"
+        )
 
     def test_own_cost_repairs_exist_a_genuine_minority_never_claimed(
         self, entitlements, repairs, claims

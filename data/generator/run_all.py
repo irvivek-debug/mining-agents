@@ -82,7 +82,8 @@ GENERATORS: list[tuple[str, str, list[str]]] = [
      ["contracts", "contract_transactions", "rebate_claims", "invoices"]),
     ("warranty", "write_parquet", ["warranty_entitlements", "warranty_claims"]),
     ("capital", "write_parquet",
-     ["plan_versions", "plan_assumptions", "plan_scenarios", "capital_options"]),
+     ["plan_versions", "plan_assumptions", "plan_scenarios", "capital_options",
+      "contained_metal_price_deck"]),
 ]
 
 

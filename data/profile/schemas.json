@@ -5,6 +5,7 @@
   "bid_parts_edge",
   "biometric_fatigue_logs",
   "capital_options",
+  "contained_metal_price_deck",
   "contract_transactions",
   "contracts",
   "crusher_states",
@@ -1423,6 +1424,25 @@
     {
      "name": "description",
      "type": "STRING",
+     "mode": "NULLABLE"
+    }
+   ]
+  },
+  "contained_metal_price_deck": {
+   "num_rows": 61,
+   "type": "TABLE",
+   "partitioning": null,
+   "partition_type": null,
+   "clustering": null,
+   "columns": [
+    {
+     "name": "price_date",
+     "type": "DATE",
+     "mode": "NULLABLE"
+    },
+    {
+     "name": "contained_metal_price_usd_per_tonne",
+     "type": "FLOAT",
      "mode": "NULLABLE"
     }
    ]

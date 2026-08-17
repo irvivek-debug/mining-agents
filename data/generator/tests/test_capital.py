@@ -3,10 +3,10 @@
 Verifies schema, that every `plan_version_id` foreign key resolves, and the
 design invariants the module docstring states: the capital option pipeline
 grows rather than being a fixed list, and the contained-metal price
-assumption is sampled from the same dense series R12 measures autocorrelation
-on (not an independent number that happens to share a name). The banded
-staleness-distribution and autocorrelation statistics are R13/R12 in
-``test_realism.py``.
+assumption is sampled from `contained_metal_price_deck`, the same shipped
+table R12 measures autocorrelation on (not an independent number that
+happens to share a name). The banded staleness-distribution and
+autocorrelation statistics are R13/R12 in ``test_realism.py``.
 """
 
 import os
@@ -41,6 +41,11 @@ def capital_options(plan_versions):
     return CAP.build_capital_options(plan_versions)
 
 
+@pytest.fixture(scope="module")
+def price_deck():
+    return CAP.build_price_deck()
+
+
 class TestSchema:
     def test_plan_versions_columns(self, plan_versions):
         assert list(plan_versions.columns) == [
@@ -62,6 +67,11 @@ class TestSchema:
     def test_capital_options_columns(self, capital_options):
         assert list(capital_options.columns) == [
             "option_id", "plan_version_id", "description",
+        ]
+
+    def test_price_deck_columns(self, price_deck):
+        assert list(price_deck.columns) == [
+            "price_date", "contained_metal_price_usd_per_tonne",
         ]
 
     def test_six_quarterly_plan_versions_in_order(self, plan_versions):
@@ -130,14 +140,27 @@ class TestInvariants:
             "fleet count"
         )
 
-    def test_price_series_is_dense_enough_for_a_lag1_measurement(self):
-        series = CAP.build_price_series()
-        assert len(series) >= 50, "price series too short for a meaningful autocorrelation test"
+    def test_price_deck_is_dense_enough_for_a_lag1_measurement(self):
+        deck = CAP.build_price_deck()
+        assert len(deck) >= 50, "price deck too short for a meaningful autocorrelation test"
 
-    def test_price_metric_assumed_value_is_sampled_from_the_dense_series(
+    def test_price_deck_spans_a_multi_year_horizon_bracketing_the_work_order_window(self):
+        deck = CAP.build_price_deck()
+        dates = pd.to_datetime(deck.price_date, utc=True)
+        assert dates.min() <= pd.Timestamp("2026-01-01", tz="UTC")
+        assert dates.max() >= pd.Timestamp("2026-06-17", tz="UTC")
+        assert (dates.max() - dates.min()).days >= 365 * 2, (
+            "price deck horizon is not multi-year"
+        )
+
+    def test_price_metric_assumed_value_is_sampled_from_the_shipped_deck(
         self, plan_versions, plan_assumptions
     ):
-        series = CAP.build_price_series().set_index("date").price_usd_per_tonne
+        deck = CAP.build_price_deck()
+        series = pd.Series(
+            deck.contained_metal_price_usd_per_tonne.to_numpy(),
+            index=pd.to_datetime(deck.price_date, utc=True),
+        )
         price_rows = plan_assumptions[plan_assumptions.metric_name == CAP.PRICE_METRIC]
         for row in price_rows.itertuples():
             target = pd.Timestamp(row.effective_date, tz="UTC")

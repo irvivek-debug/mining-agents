@@ -379,18 +379,21 @@ class TestDeleteSafety:
 # ---------------------------------------------------------------------------
 
 
-#: The ten Task 2b tables (contracts.py/warranty.py/capital.py) are registered
+#: The Task 2b tables (contracts.py/warranty.py/capital.py) are registered
 #: in run_all.GENERATORS so a full `regenerate()` produces their parquet too,
 #: but they are deliberately NOT in REWRITE_TABLES: that list drives the
 #: backup/rollback contract in load.py, and these tables have no
 #: `_original_20260810` backup because they never existed before Task 2b —
 #: there is nothing to roll back to. See data/generator/contracts.py's module
-#: docstring and load.py's `load_new_tables_2b`.
+#: docstring and load.py's `load_new_tables_2b`. `contained_metal_price_deck`
+#: was added after the fact (a realism-defect fix, not part of the original
+#: ten) but follows the exact same no-backup pattern.
 TASK_2B_TABLES = frozenset(
     {
         "contracts", "contract_transactions", "rebate_claims", "invoices",
         "warranty_entitlements", "warranty_claims",
         "plan_versions", "plan_assumptions", "plan_scenarios", "capital_options",
+        "contained_metal_price_deck",
     }
 )
 

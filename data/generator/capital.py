@@ -19,13 +19,23 @@ no connection to anything else in this dataset.
 
 Realism, by design (measured and banded in `tests/test_realism.py` R12/R13)
 -----------------------------------------------------------------------------
-* **The contained-metal price assumption is a persistent series, not
-  independent draws.** Each metric's `assumed_value` across the six plan
-  versions is an Ornstein-Uhlenbeck path (`common.ou_process`), so consecutive
-  values are correlated the way a real commodity reference price is — a
-  reasonable random walk with mean reversion, not white noise. Never named as
-  a specific metal anywhere in this module: it is "contained metal," priced
-  per tonne, matching the project's commodity-neutral constraint.
+* **The contained-metal price assumption is sampled from a real price deck,
+  not conjured at each plan version independently.** `contained_metal_price_
+  deck` is a standalone shipped table — a monthly reference-price curve,
+  2023-01 to 2028-01, an Ornstein-Uhlenbeck path (`common.ou_process`)
+  bracketing the 2026 operational window every other table uses. It is the
+  data a group finance team's "price deck" (the standard term for a
+  treasury/planning function's forward commodity and FX curve) actually
+  looks like: dense enough, over a long enough horizon, that a lag-1
+  autocorrelation is a real, measurable property of the *shipped* table
+  rather than of the six sparse quarterly points `plan_assumptions` alone
+  could ever carry — six points give five lag-1 pairs, which is not a
+  measurable autocorrelation at all. `plan_assumptions.assumed_value` for
+  `contained_metal_price_usd_per_tonne` is sampled from this deck at each
+  plan version's `published_date`, so the two are the same data, not two
+  numbers that happen to share a name. Never named as a specific metal
+  anywhere in this module: it is "contained metal," priced per tonne,
+  matching the project's commodity-neutral constraint.
 * **Assumptions go stale at differing rates by design, not by chance.** Each
   metric carries its own hazard: `contained_metal_price_usd_per_tonne` and
   `fx_rate_usd_per_local` supersede early in almost every quarter (a plan
@@ -101,41 +111,58 @@ ASSUMPTION_METRICS: dict[str, tuple] = {
     "discount_rate_pct": (8.5, 0.15, 0.6, 2, 0.10, 75, 10),
 }
 
-#: The metric whose value is sampled from a dense weekly series rather than
-#: an independent per-plan-version draw — see build_price_series() below.
+#: The metric whose value is sampled from the dense contained_metal_price_deck
+#: table rather than an independent per-plan-version draw — see
+#: build_price_deck() below.
 PRICE_METRIC = "contained_metal_price_usd_per_tonne"
-PRICE_SERIES_START = pd.Timestamp("2025-01-15", tz="UTC")
-PRICE_SERIES_END = pd.Timestamp("2026-07-15", tz="UTC")
-#: phi is higher than the telemetry OU processes (0.6): a weekly commodity
-#: reference price persists strongly week to week, unlike a 2-hourly sensor
-#: reading. Tuned so R12's measured lag-1 autocorrelation sits mid-band.
-PRICE_OU_PHI = 0.88
+
+#: contained_metal_price_deck horizon: a multi-year monthly curve bracketing
+#: the 2026-01-01..2026-06-17 operational window every other table uses, the
+#: way a real group finance "price deck" spans several years of a life-of-
+#: mine plan rather than just the current operating window.
+PRICE_DECK_START = pd.Timestamp("2023-01-01", tz="UTC")
+PRICE_DECK_END = pd.Timestamp("2028-01-01", tz="UTC")
+PRICE_DECK_FREQ = "MS"  # month start: a price deck is refreshed monthly, not daily
+
+#: phi is the AR(1)/OU process's theoretical lag-1 autocorrelation. 0.80
+#: lands mid tests/test_realism.py R12's [0.55, 0.95] band on the *shipped*
+#: contained_metal_price_deck table itself (measured directly from BigQuery,
+#: not an in-memory intermediate) — high enough that a monthly commodity
+#: reference price persists the way a real one does, well short of a
+#: literal random walk (phi=1, non-stationary).
+PRICE_DECK_OU_PHI = 0.80
 
 
-def build_price_series() -> pd.DataFrame:
-    """Weekly contained-metal reference price, an OU (mean-reverting random
-    walk) path — not a specific metal, per the project's commodity-neutral
-    constraint. This is the dense series R12 measures lag-1 autocorrelation
-    on; `plan_assumptions.assumed_value` for `PRICE_METRIC` is sampled from
-    it at each plan version's `published_date`, so the quarterly snapshot in
-    the table and the continuous series behind it are the same data, not two
-    independent numbers that happen to share a name.
+def build_price_deck() -> pd.DataFrame:
+    """Monthly contained-metal reference price curve, an OU (mean-reverting
+    random walk) path — not a specific metal, per the project's commodity-
+    neutral constraint. This is the table R12 measures lag-1 autocorrelation
+    on directly in BigQuery; `plan_assumptions.assumed_value` for
+    `PRICE_METRIC` is sampled from it at each plan version's `published_date`,
+    so the quarterly snapshot in that table and the deck behind it are the
+    same data, not two independent numbers that happen to share a name.
     """
     mu, sigma, _, _, *_ = ASSUMPTION_METRICS[PRICE_METRIC]
-    dates = pd.date_range(PRICE_SERIES_START, PRICE_SERIES_END, freq="W", tz="UTC")
-    seed = (SEED + stable_hash("contained-metal-price-series")) & 0xFFFFFFFF
-    values = ou_process(len(dates), mu, sigma, PRICE_OU_PHI, seed)
-    return pd.DataFrame({"date": dates, "price_usd_per_tonne": np.round(values, 1)})
+    dates = pd.date_range(PRICE_DECK_START, PRICE_DECK_END, freq=PRICE_DECK_FREQ, tz="UTC")
+    seed = (SEED + stable_hash("contained-metal-price-deck")) & 0xFFFFFFFF
+    values = ou_process(len(dates), mu, sigma, PRICE_DECK_OU_PHI, seed)
+    return pd.DataFrame(
+        {
+            "price_date": [d.date() for d in dates],
+            "contained_metal_price_usd_per_tonne": np.round(values, 1),
+        }
+    )
 
 
 def _assumed_values(metric: str, plan_versions: pd.DataFrame) -> np.ndarray:
     if metric == PRICE_METRIC:
-        series = build_price_series()
+        deck = build_price_deck()
+        deck_dates = pd.to_datetime(deck.price_date, utc=True)
         out = []
         for d in plan_versions.published_date:
             target = pd.Timestamp(d, tz="UTC")
-            idx = int((series.date - target).abs().idxmin())
-            out.append(series.price_usd_per_tonne.iloc[idx])
+            idx = int((deck_dates - target).abs().idxmin())
+            out.append(deck.contained_metal_price_usd_per_tonne.iloc[idx])
         return np.array(out)
 
     mu, sigma, phi, decimals, *_ = ASSUMPTION_METRICS[metric]
@@ -300,12 +327,14 @@ def write_parquet() -> dict[str, pd.DataFrame]:
     plan_assumptions = build_plan_assumptions(plan_versions)
     plan_scenarios = build_plan_scenarios(plan_versions)
     capital_options = build_capital_options(plan_versions)
+    contained_metal_price_deck = build_price_deck()
 
     tables = {
         "plan_versions": plan_versions,
         "plan_assumptions": plan_assumptions,
         "plan_scenarios": plan_scenarios,
         "capital_options": capital_options,
+        "contained_metal_price_deck": contained_metal_price_deck,
     }
     for name, df in tables.items():
         df.to_parquet(os.path.join(_GENERATED_DIR, f"{name}.parquet"), index=False)

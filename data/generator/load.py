@@ -665,6 +665,12 @@ NEW_TABLES_2B: list[str] = [
     "plan_assumptions",
     "plan_scenarios",
     "capital_options",
+    # Added post-launch (Task 2b defect fix): the dense multi-year price curve
+    # plan_assumptions.assumed_value samples from for the contained-metal
+    # metric. See capital.py's module docstring — six quarterly points alone
+    # cannot carry a measurable autocorrelation, so the deck ships as its own
+    # table and R12 in tests/test_realism.py measures it directly.
+    "contained_metal_price_deck",
 ]
 
 

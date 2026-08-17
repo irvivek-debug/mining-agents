@@ -25,7 +25,7 @@ silently with zero rows.
 
 Nothing here writes.  The suite reads live tables and backups and asserts.
 
-Task 2b adds five more, over the brand-new contract/warranty/plan tables that
+Task 2b adds six more, over the brand-new contract/warranty/plan tables that
 have no `_original_20260810` backup to discriminate against (they never
 existed before). Each instead carries its own mutation-tested negative
 control: the generator constant that produces the property is forced to a
@@ -38,11 +38,15 @@ requires it to fall outside the band:
        forcing the gap sources (spot parts, renewal gap) to zero must not
   R11  warranty coverage produces a real cliff, not a coin flip — a >=0.85
        eligible-repair spread across assets, and a >=0.85 before/after
-       differential at each cliff asset's own measured median repair date —
+       differential at each cliff asset's own measured coverage-cutoff date —
        forcing every entitlement into the same coverage group collapses both
-  R12  the contained-metal reference price has lag-1 autocorrelation in
-       [0.55, 0.95] — a shuffle of the same values, and phi=0 (independent
-       draws), must both fall outside it
+  R11b repairs inside warranty cover are a genuine minority of all shipped
+       repairs, in [0.15, 0.35] — not the ~everything an over-broad coverage
+       window produces and not zero; the same uniform-coverage mutation as
+       R11 must push it out of band
+  R12  the shipped `contained_metal_price_deck` table has lag-1
+       autocorrelation in [0.55, 0.95] — a shuffle of the same shipped
+       values, and phi=0 (independent draws), must both fall outside it
   R13  plan assumptions go stale at differing rates — max minus min
        supersede-count across the 6 plan versions is >= 4 of 7 metrics —
        forcing every metric's hazard to 0 collapses the spread to exactly 0
@@ -1018,7 +1022,7 @@ CLIFF_ASSETS = ("CRUSHER-03", "MILL-01", "PUMP-104A")
 
 def _eligibility(plan=None):
     repairs = WTY.load_completed_repairs()
-    cliff_dates = WTY.median_repair_date_by_asset(repairs)
+    cliff_dates = WTY.cliff_cutoff_date_by_asset(repairs)
     entitlements = WTY.build_entitlements(cliff_dates, plan=plan or WTY.ENTITLEMENT_PLAN)
     repairs = repairs.assign(
         eligible=[
@@ -1073,52 +1077,162 @@ def test_r11_warranty_expiry_produces_a_real_cliff():
 
 
 # ===========================================================================
+# R11b — repairs inside warranty cover are a genuine minority, not ~everything
+# ===========================================================================
+
+#: A producing mine's fleet is mostly past its OEM warranty window at any
+#: given moment: heavy mining equipment typically carries 12-24 months of
+#: manufacturer cover from commissioning, so a mixed-age fleet has a minority
+#: of assets -- and their repairs -- inside any live coverage window, not the
+#: near-total coverage a too-broad synthetic window produces. Not zero either:
+#: an own-cost-repair finding needs a real, non-trivial population of covered
+#: repairs to draw from.
+COVERAGE_MINORITY_BAND = (0.15, 0.35)
+
+
+def _shipped_coverage_fraction(client) -> tuple[float, int]:
+    """(fraction of distinct completed repairs matched by >=1 live
+    `warranty_entitlements` row, total distinct repairs) -- measured directly
+    against the tables that actually shipped to BigQuery, joined and DE-
+    DUPLICATED on work_order_id so a repair matched by both of an asset's two
+    entitlements is counted once, not twice.
+    """
+    df = _frame(
+        client,
+        f"""
+        SELECT
+          COUNT(DISTINCT wo.work_order_id) AS total,
+          COUNT(DISTINCT IF(we.entitlement_id IS NOT NULL, wo.work_order_id, NULL))
+            AS inside
+        FROM {_t('erp_work_orders')} wo
+        JOIN {_t('maintenance_logs')} ml USING (work_order_id)
+        LEFT JOIN {_t('warranty_entitlements')} we
+          ON we.asset_id = wo.asset_id
+         AND DATE(wo.created_at) BETWEEN we.coverage_start AND we.coverage_end
+        """,
+    )
+    row = df.iloc[0]
+    total = int(row.total)
+    assert total > 0, "the shipped work-order/maintenance-log join is empty"
+    return float(row.inside) / total, total
+
+
+def test_r11b_repairs_inside_cover_are_a_genuine_minority(client):
+    """R11b: the fraction of shipped repairs an active warranty entitlement
+    actually covers is a minority, in [0.15, 0.35] -- not the ~everything a
+    coverage window spanning the whole work-order window would produce (a
+    naive analyst join measured 150 of 152 "inside cover" against an earlier
+    version of this data, before the coverage windows were narrowed to
+    straddle the work-order window instead of enclosing it), and not zero,
+    which would make AGT-13's own-cost-repair finding trivial by
+    construction.
+
+    Measured against the live `warranty_entitlements` / `erp_work_orders` /
+    `maintenance_logs` tables in BigQuery -- the tables that actually ship --
+    not an in-memory recomputation.
+    """
+    low, high = COVERAGE_MINORITY_BAND
+    fraction, n = _shipped_coverage_fraction(client)
+    assert low <= fraction <= high, (
+        f"fraction of shipped repairs inside warranty cover = {fraction:.4f} "
+        f"over {n} distinct repairs, outside [{low}, {high}]"
+    )
+
+    # Discrimination: the same "collapse every entitlement into 'full'"
+    # mutation R11 uses -- every repair becomes eligible, which must land
+    # far outside a minority band.
+    uniform_plan = [dict(spec, group="full") for spec in WTY.ENTITLEMENT_PLAN]
+    repairs2, _, _ = _eligibility(plan=uniform_plan)
+    collapsed = float(repairs2.eligible.mean())
+    assert not (low <= collapsed <= high), (
+        f"R11b does not discriminate: a uniform 'full' coverage plan still "
+        f"gives a fraction ({collapsed:.4f}) inside the minority band"
+    )
+
+
+# ===========================================================================
 # R12 — the contained-metal reference price is a persistent series, not noise
 # ===========================================================================
 
 LAG1_PRICE_BAND = (0.55, 0.95)
 
 
-def _price_lag1(phi: float | None = None) -> float:
+def _shipped_price_deck_lag1(client) -> tuple[float, int]:
+    """Lag-1 autocorrelation of `contained_metal_price_deck`, measured
+    directly against the table live in BigQuery -- not
+    `capital.build_price_deck()` called in-memory, and specifically not the
+    old `plan_assumptions.assumed_value` column, whose 6 quarterly points per
+    metric give only 5 lag-1 pairs: not a measurable autocorrelation at all.
+    An earlier version of this test measured an in-memory series that was
+    never shipped as its own table; the actual `plan_assumptions` table's
+    lag-1 correlation on its sparse quarterly points was ~0.07 -- the
+    contained-metal price deck below is what makes this property real.
+    """
+    df = _frame(
+        client,
+        f"""
+        SELECT contained_metal_price_usd_per_tonne
+        FROM {_t('contained_metal_price_deck')}
+        ORDER BY price_date
+        """,
+    )
+    series = df.contained_metal_price_usd_per_tonne.to_numpy(dtype=float)
+    assert len(series) >= 50, (
+        f"contained_metal_price_deck has only {len(series)} rows — too few "
+        "for a meaningful lag-1 measurement"
+    )
+    return float(np.corrcoef(series[:-1], series[1:])[0, 1]), len(series)
+
+
+def _generator_price_deck_lag1(phi: float | None = None) -> float:
+    """Same measurement, recomputed in-memory from the generator function —
+    used only for the mutation-testing discrimination checks below, which
+    perturb a generator constant rather than reload BigQuery.
+    """
     if phi is None:
-        series = CAP.build_price_series().price_usd_per_tonne.to_numpy()
+        series = CAP.build_price_deck().contained_metal_price_usd_per_tonne.to_numpy()
     else:
-        original = CAP.PRICE_OU_PHI
-        CAP.PRICE_OU_PHI = phi
+        original = CAP.PRICE_DECK_OU_PHI
+        CAP.PRICE_DECK_OU_PHI = phi
         try:
-            series = CAP.build_price_series().price_usd_per_tonne.to_numpy()
+            series = CAP.build_price_deck().contained_metal_price_usd_per_tonne.to_numpy()
         finally:
-            CAP.PRICE_OU_PHI = original
+            CAP.PRICE_DECK_OU_PHI = original
     return float(np.corrcoef(series[:-1], series[1:])[0, 1])
 
 
-def test_r12_contained_metal_price_autocorrelation_in_band():
-    """R12: lag-1 autocorrelation of the weekly contained-metal price series
-    is in [0.55, 0.95] — a plausible mean-reverting random walk, not white
-    noise. Never tied to a named metal anywhere in this measurement.
+def test_r12_contained_metal_price_autocorrelation_in_band(client):
+    """R12: lag-1 autocorrelation of the shipped `contained_metal_price_deck`
+    table is in [0.55, 0.95] — a plausible mean-reverting random walk, not
+    white noise. Never tied to a named metal anywhere in this measurement.
     """
     low, high = LAG1_PRICE_BAND
-    live = _price_lag1()
+    live, n = _shipped_price_deck_lag1(client)
     assert low <= live <= high, (
-        f"contained-metal price lag-1 autocorrelation {live:.4f} outside "
-        f"[{low}, {high}]"
+        f"contained-metal price deck lag-1 autocorrelation {live:.4f} over "
+        f"{n} rows, outside [{low}, {high}]"
     )
 
-    # Discrimination 1: an i.i.d. shuffle of the exact same values.
-    series = CAP.build_price_series().price_usd_per_tonne.to_numpy()
+    # Discrimination 1: an i.i.d. shuffle of the exact same shipped values.
+    df = _frame(
+        client,
+        f"SELECT contained_metal_price_usd_per_tonne "
+        f"FROM {_t('contained_metal_price_deck')} ORDER BY price_date",
+    )
+    series = df.contained_metal_price_usd_per_tonne.to_numpy(dtype=float)
     shuffled = series.copy()
     np.random.default_rng(0).shuffle(shuffled)
     shuffled_lag1 = float(np.corrcoef(shuffled[:-1], shuffled[1:])[0, 1])
     assert not (low <= shuffled_lag1 <= high), (
-        f"R12 does not discriminate: a shuffled version of the same values "
-        f"still autocorrelates at {shuffled_lag1:.4f}"
+        f"R12 does not discriminate: a shuffled version of the same shipped "
+        f"values still autocorrelates at {shuffled_lag1:.4f}"
     )
 
     # Discrimination 2: phi=0 means independent draws, not a random walk.
-    independent = _price_lag1(phi=0.0)
+    independent = _generator_price_deck_lag1(phi=0.0)
     assert not (low <= independent <= high), (
-        f"R12 does not discriminate: PRICE_OU_PHI=0.0 still autocorrelates "
-        f"at {independent:.4f}"
+        f"R12 does not discriminate: PRICE_DECK_OU_PHI=0.0 still "
+        f"autocorrelates at {independent:.4f}"
     )
 
 

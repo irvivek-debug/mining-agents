@@ -13,24 +13,40 @@ history of their own, so an entitlement over them could never join to a real
 repair; they inform `capital.py`'s options instead (see that module's
 docstring).
 
-Coverage design (measured and banded in `tests/test_realism.py` R11)
-----------------------------------------------------------------------
+Coverage design (measured and banded in `tests/test_realism.py` R11 / R11b)
+----------------------------------------------------------------------------
 The whole point of AGT-13 is that "inside warranty but paid own cost" must be
 a genuine finding, not an artefact of a uniformly random coverage_end spread
 over two years (which would make every repair's eligibility a coin flip with
-no structure to discover). So coverage is assigned per *asset*, not
-independently per entitlement, in three deliberately clustered groups:
+no structure to discover) — and not an artefact of a coverage window so broad
+that it swallows the entire 2026-01-01..2026-06-17 work-order window, which
+would make "inside cover" true of almost every repair instead of a genuine
+minority. A producing mine's fleet is mostly past its OEM warranty window at
+any given moment: heavy mining equipment typically carries 12-24 months of
+manufacturer cover from commissioning (occasionally longer for a standing
+extended-service agreement on a critical asset), so a mixed-age fleet has a
+minority of assets — and their repairs — inside any live coverage window, not
+a majority. So coverage is assigned per *asset*, not independently per
+entitlement, in three deliberately clustered groups:
 
 * **CONVEYOR-02** — both entitlements span the whole repair window (well
-  before 2026-01-01 to well after 2026-06-17). Every repair is eligible; the
-  finding here is entitlements that never expire yet are still not claimed.
+  before 2026-01-01 to well after 2026-06-17), modelling a standing multi-year
+  extended-service agreement on this one critical asset. Every repair on it
+  is eligible; the finding here is entitlements that never expire yet are
+  still not claimed. It is deliberately the exception, not the rule: it is
+  one of five assets, so it cannot on its own push the fleet-wide fraction of
+  covered repairs out of the minority band R11b polices.
 * **CRUSHER-03, MILL-01, PUMP-104A** — both entitlements on each asset expire
-  on the SAME date: that asset's own *median* repair date, recovered from
-  `erp_work_orders.created_at` at runtime, never hardcoded. Repairs before the
-  cutoff are eligible; repairs after are not. This is the cliff: a repair on
-  CRUSHER-03 dated one day after its cutoff was never covered, and one day
-  before it was — not a smooth probability, a hard edge grounded in when this
-  asset's own repairs actually happened.
+  on the SAME date: a cutoff set at `CLIFF_QUANTILE` (a low quantile, not the
+  median) of that asset's own repair dates, recovered from
+  `erp_work_orders.created_at` at runtime, never hardcoded. A low quantile
+  means the OEM window closed early in this asset's own repair history, so
+  only a minority of its repairs land before the cutoff — matching a fleet
+  mostly past warranty, not a coin flip. Repairs before the cutoff are
+  eligible; repairs after are not. This is the cliff: a repair on CRUSHER-03
+  dated one day after its cutoff was never covered, and one day before it was
+  — not a smooth probability, a hard edge grounded in when this asset's own
+  repairs actually happened.
 * **TRUCK-08** — both entitlements expired in 2025, before the repair window
   even starts. No repair on TRUCK-08 was ever covered; the finding is
   recoverable value that a lapsed clause protected but nothing ever tested it
@@ -63,6 +79,17 @@ _GENERATED_DIR = os.path.join(os.path.dirname(__file__), "..", "generated")
 #: Fraction of eligible (inside-coverage) repairs that actually get a claim
 #: filed. The rest are the own-cost-repair findings by construction.
 CLAIM_FILE_PROB = 0.35
+
+#: Rank, within a cliff asset's own sorted repair dates, its entitlements
+#: expire at. 0.5 would be the median — a coin-flip split. 0.12 means the
+#: cutoff sits at roughly the asset's earliest-repaired-tenth: the OEM window
+#: on this component closed early in the asset's own repair history, so only
+#: a minority of its repairs land inside cover, consistent with a mixed-age
+#: fleet mostly past warranty at any given moment (see the module docstring).
+#: Tuned, together with the CONVEYOR-02/TRUCK-08 groups, so the fleet-wide
+#: fraction of repairs inside cover lands mid COVERAGE_MINORITY_BAND in
+#: tests/test_realism.py's R11b.
+CLIFF_QUANTILE = 0.12
 
 #: Two components per asset, each with a fictional OEM vendor (industry-
 #: plausible, not naming any real manufacturer). "full", "cliff" and
@@ -129,12 +156,21 @@ def load_completed_repairs() -> pd.DataFrame:
     return df
 
 
-def median_repair_date_by_asset(repairs: pd.DataFrame) -> dict[str, pd.Timestamp]:
-    """Each asset's own median COMPLETED-repair date, recovered at runtime."""
-    return {
-        asset: pd.Timestamp(group.created_at.sort_values().iloc[len(group) // 2])
-        for asset, group in repairs.groupby("asset_id")
-    }
+def cliff_cutoff_date_by_asset(
+    repairs: pd.DataFrame, quantile: float = CLIFF_QUANTILE
+) -> dict[str, pd.Timestamp]:
+    """Each asset's own COMPLETED-repair date at the given quantile rank,
+    recovered at runtime — never hardcoded. An *actual observed* repair
+    timestamp is returned (the one at that sorted rank), not an interpolated
+    value between two repairs, so the cutoff is always a real cliff asset's
+    own genuine repair date.
+    """
+    out: dict[str, pd.Timestamp] = {}
+    for asset, group in repairs.groupby("asset_id"):
+        dates = group.created_at.sort_values().reset_index(drop=True)
+        idx = min(int(round(quantile * (len(dates) - 1))), len(dates) - 1)
+        out[asset] = pd.Timestamp(dates.iloc[idx])
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -227,7 +263,7 @@ def build_claims(entitlements: pd.DataFrame, repairs: pd.DataFrame) -> pd.DataFr
 def write_parquet() -> dict[str, pd.DataFrame]:
     os.makedirs(_GENERATED_DIR, exist_ok=True)
     repairs = load_completed_repairs()
-    cliff_dates = median_repair_date_by_asset(repairs)
+    cliff_dates = cliff_cutoff_date_by_asset(repairs)
     entitlements = build_entitlements(cliff_dates)
     claims = build_claims(entitlements, repairs)
 
@@ -243,7 +279,7 @@ if __name__ == "__main__":  # pragma: no cover
         print(f"{name}: {len(df)} rows")
 
     repairs = load_completed_repairs()
-    cliff_dates = median_repair_date_by_asset(repairs)
+    cliff_dates = cliff_cutoff_date_by_asset(repairs)
     entitlements = build_entitlements(cliff_dates)
     repairs = repairs.assign(
         eligible=[
