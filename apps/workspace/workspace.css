@@ -498,35 +498,69 @@ table.audit td.t { white-space: nowrap; }
 .ac-limit { font-size: 12px; color: var(--fg-muted); margin: 10px 0 0; max-width: 78ch; }
 .ac-limit .ac-label { display: block; margin-bottom: 3px; }
 
-/* ---------- the value screen ---------- */
+/* ---------- the value screen (sales/consulting framing, four bands) ---------- */
 
-.leak-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.leak-card { border: 1px solid var(--border); background: var(--surface); padding: 14px; }
-.leak-card .lk-name { font-size: 14px; margin: 0 0 6px; }
-.leak-card .lk-def { font-size: 12.5px; color: var(--fg-muted); margin: 0 0 12px; min-height: 48px; }
-.leak-card .lk-count { font-family: var(--display); font-size: 24px; font-weight: 700; color: var(--fg); }
-.leak-card .lk-count-sub { font-family: var(--mono); font-size: 10px; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--fg-muted); margin-left: 6px; }
-
+/* The addressable-pool treatment, unchanged from the previous draft of this
+   page: a proportion bar between two published percentages, never a currency
+   amount. The .warn / .ok modifiers below are new -- band 4's two-figure
+   comparison reuses this exact bar rather than inventing a second one, so a
+   reader who has learned to read this shape once reads it everywhere on the
+   page. */
 .money-range { margin: 16px 0; }
 .money-range-bar { height: 10px; background: var(--surface-high); border: 1px solid var(--border);
   position: relative; }
 .money-range-bar > span { position: absolute; top: -1px; bottom: -1px;
   background: var(--accent); opacity: 0.5; border: 1px solid var(--accent); }
+.money-range-bar.warn > span { background: var(--warning); border-color: var(--warning); }
+.money-range-bar.ok > span { background: var(--success); border-color: var(--success); }
 .money-range-labels { display: flex; justify-content: space-between; margin-top: 8px;
   font-family: var(--mono); font-size: 11px; color: var(--fg-muted); }
 .money-denominator { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--border); }
 .money-denominator .ac-label { min-width: 0; }
 
-.evidence-ladder { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-bottom: 16px; }
-.evidence-ladder .ev-class { border: 1px solid var(--border); background: var(--surface); padding: 14px; }
-.evidence-ladder .ev-class.fundable { border-left: 2px solid var(--success); }
-.evidence-ladder .ev-class.not-fundable { border-left: 2px solid var(--fg-dim); }
-.evidence-ladder .ev-letter { font-family: var(--display); font-size: 20px; font-weight: 700; }
-.evidence-ladder .ev-name { font-size: 12.5px; color: var(--fg-muted); margin: 2px 0 8px; }
-.evidence-ladder .ev-def { font-size: 12.5px; color: var(--fg); margin: 0; }
+/* Band 3: one published range per row, the bar positioned at its own low-high
+   span rather than from zero, so the reader sees where the range sits, not
+   just how wide it is. The badge and the citation are two different signals
+   on purpose -- INDUSTRY RANGE says what kind of number this is, the cite
+   line says whose it is -- because a reader stopped by the first is looking
+   for the second next. */
+.range-row { padding: 12px 0; border-top: 1px solid var(--border-soft); }
+.range-row:first-child { border-top: 0; padding-top: 0; }
+.range-row-head { display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.range-row-label { font-size: 13.5px; }
+.range-row-fig { font-family: var(--mono); font-size: 15px; font-weight: 700;
+  color: var(--fg); font-variant-numeric: tabular-nums; }
+.range-row-foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.range-row-foot .cite { margin: 0; }
+
+/* Band 4: the two-figure comparison, same bar component as the money range
+   above, framed as loss (warning) and win (success) rather than as two
+   neutral accents -- the whole point of the pair is that they read as
+   opposites at a glance. */
+.compare-row + .compare-row { margin-top: 14px; }
+.compare-head { display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; margin-bottom: 6px; font-size: 13.5px; }
+
+/* Band 2's hinge line. Set apart from every other paragraph on the page --
+   larger type, centred rule, no card chrome -- because the brief is explicit
+   that this sentence is the argument's hinge and has to read like one, not
+   like a caption underneath a table. */
+.hinge { margin: 22px 0 0; padding: 20px 0 0; border-top: 1px solid var(--border);
+  font-family: var(--display); font-size: 21px; font-weight: 700; line-height: 1.35;
+  color: var(--fg); max-width: 62ch; }
+.hinge cite { display: block; margin-top: 12px; font-style: normal;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 400; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--fg-dim); }
+
+/* The one row in the levers table that is not like the other five: the
+   accent rule down the left is the same device the case app uses to mark
+   "somebody else's evidence starts here" (apps/shared/app.css, .data td.bench)
+   -- reused here to mark "this is the row the whole page turns on". */
+tr.lever-gap { box-shadow: inset 2px 0 0 var(--accent); }
+tr.lever-gap td:first-child { font-weight: 700; }
+.badge.gap-badge { color: var(--accent); border-color: var(--accent); background: rgba(167,202,237,0.14); }
 
 /* ---------- print: SC-5 leaves the building on paper ---------- */
 

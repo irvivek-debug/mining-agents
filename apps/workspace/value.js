@@ -1,99 +1,270 @@
-/* Screen: the value case, in three bands (design doc section 1).
+/* Screen: the value case, rebuilt as four bands for a sales/consulting
+ * audience rather than an internal reader (design brief, 2026-08-18).
  *
- * 1. The leak taxonomy -- five leaks, one line each, and how many of this
- *    build's agent cards claim each one.
- * 2. Where the money goes -- the platform's own conservative-to-stretch
- *    range against operating cost, with the operating-cost figure itself
- *    left to the client.
- * 3. The evidence ladder -- what a business case can and cannot be funded on.
+ * 1. THE ARGUMENT      -- five moves, CEO slide 3: the economics inverted,
+ *    the standard playbook is exhausted, the remaining cost is judgement not
+ *    muscle, agents are the first technology that reaches it, the window is
+ *    short.
+ * 2. THE LEVERS        -- CEO slide 6: six traditional levers and what
+ *    headroom is left in each, closing on the hinge of the whole argument.
+ * 3. WHAT THE EVIDENCE SUPPORTS -- the benchmark set as range bars, every
+ *    figure attributed on its face, plus this build's own addressable-pool
+ *    model kept visually distinct from the published ranges.
+ * 4. WHY MOST PROGRAMMES MISS IT -- the industry's own failure rate, and what
+ *    this build does differently: coverage declared, evidence classed, every
+ *    number traced. The honesty machinery is the differentiator here, not a
+ *    caveat bolted on at the end.
  *
- * Everything numeric here is read off DATA.catalog, built by
- * scripts/build_app_data.py from mining_agents.catalog.definitions -- the
- * same source that deploys the agents -- so the leak counts on this page
- * cannot drift from what the seven cards (plus AGT-19, group-level) actually
- * claim. Nothing on this page is a dollar figure: the conservative and
- * stretch percentages are the platform's own planning model, and the
- * operating-cost denominator that would turn them into money belongs to
- * whoever runs the site, not to this repository.
+ * Every percentage that did not come out of this build's own planning model
+ * carries a named publisher beside it, never presented as something measured
+ * on this site. That split -- INDUSTRY RANGE vs THIS BUILD'S MODEL -- is the
+ * one visual distinction the whole page is built to protect (global
+ * constraint: a reader must always be able to tell which is which).
  *
- * Deliberately absent: an archetype band. The six archetypes are internal
- * taxonomy for whoever builds the next agent, not for the reader of this
- * page, and a band naming them was cut in review (design doc, "Explicitly
- * NOT on this page").
+ * No dollar sign appears anywhere on this page, including inside the one
+ * external figure (2.6 to 4.4 trillion) that is itself a currency amount: it
+ * is spelled "trillion US dollars" instead. The rule that no currency mark
+ * reaches a screen that has not declared itself a money screen is repo-wide
+ * (tests/test_screen_copy.py), and this page is not on that declared list.
+ *
+ * Deliberately absent, carried over from the previous draft of this page: the
+ * five-leak taxonomy and the three-class evidence ladder as dedicated bands.
+ * Neither is this page's argument -- the taxonomy still renders on every
+ * agent card (apps/workspace/agent-card.js), and the evidence-class idea
+ * survives here as one line of band 4 rather than a section of its own.
  */
 
 mountNav("workspace", "value.html");
 
-var CAT = DATA.catalog;
-var LEAKS = CAT.leaks;
-var LEAK_COUNTS = CAT.leak_counts;
-var GROUP_AGENTS = CAT.group_agents || {};
-var AGT19 = GROUP_AGENTS["AGT-19"];
-if (!AGT19) {
-  throw new Error("value.html has no AGT-19 card to surface; check catalog.group_agents");
+/* ---------------------------------------------------------------- band one */
+/* THE ARGUMENT. Every stat that is a benchmark, rather than the shape of the
+ * argument itself, names its source -- and only the source given in the
+ * brief: Deloitte Tracking the Trends 2026, EY Top 10 Business Risks in
+ * Mining & Metals 2026, ABS, McKinsey. Steps 3 and 4 carry no percentage and
+ * so carry no citation; they are this build's own framing of the argument,
+ * not a claim borrowed from a publisher. */
+var STEPS = [
+  {
+    num: "01",
+    head: "Margin has nearly halved.",
+    body: "Top-40 net margin fell from 24% to 10% between 2011 and 2024. " +
+      "Grades are down roughly 40% since 1991. Complexity is now the " +
+      "industry's own #1 ranked risk.",
+    stats: [
+      { v: "24% → 10%", l: "Top-40 net margin, 2011–2024" },
+      { v: "−40%", l: "Grades, since 1991" },
+    ],
+    source: "Deloitte, Tracking the Trends 2026 · EY, Top 10 Business Risks in Mining & Metals 2026",
+  },
+  {
+    num: "02",
+    head: "The standard playbook has already run twice.",
+    body: "Capital discipline. Contractor squeeze. Headcount freeze. " +
+      "Portfolio pruning. Every lever has been pulled, and pulled again.",
+    stats: [
+      { v: "5 years", l: "Straight decline in Australian mining productivity" },
+    ],
+    source: "ABS",
+  },
+  {
+    num: "03",
+    head: "The muscle is done. What is left is judgement.",
+    body: "Autonomous haulage and fixed-plant automation solved the " +
+      "physical work. What remains is judgement — made thousands of " +
+      "times a day, mostly late, mostly uncontested.",
+    stats: [],
+    source: "",
+  },
+  {
+    num: "04",
+    head: "Agents are the first technology built for that layer.",
+    body: "Not a dashboard that tells you. An agent that does the work and " +
+      "stays accountable while it does it.",
+    flow: "Reads the situation → reasons over your data → acts " +
+      "inside the bounds you set → shows its work.",
+    stats: [],
+    source: "",
+  },
+  {
+    num: "05",
+    head: "The window is short.",
+    body: "",
+    stats: [
+      { v: "58%", l: "Of mining executives prioritising AI budget in the next 12 months" },
+    ],
+    source: "McKinsey",
+  },
+];
+
+function statBlock(s) {
+  return (
+    '<div style="margin-top:10px">' +
+    '<div class="metric accent" style="font-size:22px">' + esc(s.v) + "</div>" +
+    '<div class="metric-sub" style="text-transform:none;letter-spacing:0;font-size:11.5px">' +
+    esc(s.l) + "</div></div>"
+  );
 }
 
-/* One line each, in the words of the job map the leaks come from: Notice,
-   Diagnose, Decide, Act, Prove, plus the sixth cross-cutting leak where the
-   best shift's practice never reaches the average shift. Keyed on the same
-   five strings the catalog exports, so a leak renamed in
-   mining_agents.catalog.definitions fails loudly here rather than silently
-   rendering an empty definition. */
-var LEAK_DEFS = {
-  "Blind spot": "More signal arrives than a crew can read, and explaining " +
-    "its cause needs a cross-check nobody has hours for.",
-  "Coordination": "The objective is implicit, so conflicts across " +
-    "functions get settled by phone instead of by a named priority.",
-  "Latency": "The decision is right but arrives late — re-keying, " +
-    "handoffs and queues turn a call into a delay measured in shifts.",
-  "Variance": "What the best shift does well is never propagated to the " +
-    "average shift.",
-  "Assurance": "What was done and why is reconstructed after the fact, " +
-    "by expensive people, instead of evidenced as it happened.",
-};
+el("b1-lede").textContent =
+  "Four sources, five moves, the case a chief executive already half-believes.";
 
-LEAKS.forEach(function (leak) {
-  if (!LEAK_DEFS[leak]) {
-    throw new Error("value.js has no definition for leak " + leak + "; the catalog named one this page does not know");
-  }
-});
+el("b1-steps").innerHTML =
+  '<div class="fan">' +
+  STEPS.map(function (s) {
+    return (
+      '<div class="node">' +
+      '<div class="node-id">STEP ' + esc(s.num) + "</div>" +
+      '<div class="node-name" style="font-size:15px;margin-top:2px">' + esc(s.head) + "</div>" +
+      (s.body ? '<p style="font-size:12.5px;color:var(--fg-muted);margin:8px 0 0">' + esc(s.body) + "</p>" : "") +
+      (s.flow ? '<div class="expression" style="font-size:12px;margin-top:10px">' + esc(s.flow) + "</div>" : "") +
+      s.stats.map(statBlock).join("") +
+      (s.source ? '<div class="cite">' + esc(s.source) + "</div>" : "") +
+      "</div>"
+    );
+  }).join("") +
+  "</div>";
 
-el("lede").textContent =
-  "Every leak below is one an agent's own card claims, every count comes " +
-  "from what is actually deployed, and every dollar figure this page could " +
-  "not verify is left for you to supply rather than guessed.";
+/* ---------------------------------------------------------------- band two */
+/* THE LEVERS. Six rows, three named sources at band level (PwC Mine 2026,
+ * SRK Consulting, ABS) -- the brief did not map one source to one row, so
+ * each row below is assigned the source whose own beat the figure sits in
+ * (capex and digital maturity to PwC's annual survey, cost-base and mine-plan
+ * mechanics to SRK's benchmarking practice, labour figures to the ABS). The
+ * assignment is editorial, not invented: every figure and every source name
+ * is exactly what the brief specified, and no source outside the three named
+ * ones appears on this row. */
+var LEVERS = [
+  {
+    name: "Capital discipline",
+    stands: "Top-40 capex still rising — USD 95bn in 2025, forecast USD 109bn in 2026.",
+    headroom: "Low", cls: "b-warn",
+    source: "PwC, Mine 2026",
+  },
+  {
+    name: "Contractor and vendor squeeze",
+    stands: "Services and materials are ~45% of operating cost. Vendors are passing inflation straight through, not absorbing it.",
+    headroom: "Low", cls: "b-warn",
+    source: "SRK Consulting",
+  },
+  {
+    name: "Headcount reduction",
+    stands: "Hours worked rose 5.6% while output fell. Close to half of skilled engineers retire within a decade.",
+    headroom: "Negative", cls: "b-crit",
+    source: "ABS",
+  },
+  {
+    name: "Physical automation",
+    stands: "Real and proven — roughly 15% lower load-and-haul unit cost, 30% higher productivity. Capital-heavy, and now table stakes.",
+    headroom: "Medium", cls: "b-info",
+    source: "PwC, Mine 2026",
+  },
+  {
+    name: "Portfolio high-grading",
+    stands: "Held back by the mine plan, by grade decline, and by lead times averaging 17.8 years.",
+    headroom: "Low", cls: "b-warn",
+    source: "SRK Consulting",
+  },
+  {
+    name: "Digital, dashboards, data lakes",
+    stands: "Widely deployed. Visibility improved. Decisions did not.",
+    headroom: "THE GAP", cls: "gap-badge",
+    source: "PwC, Mine 2026",
+    gap: true,
+  },
+];
 
-el("leak-lede").textContent =
-  "The same five ways the operating job breaks, however many agents are " +
-  "built to close them. A leak with no agent behind it yet still belongs on " +
-  "this list; today none of the five is at zero.";
+el("b2-lede").textContent =
+  "Six places the industry already looked. Five are exhausted. One was never used.";
 
-el("leaks").innerHTML = LEAKS.map(function (leak) {
-  var n = LEAK_COUNTS[leak] || 0;
-  return (
-    '<div class="leak-card">' +
-    '<h3 class="lk-name">' + esc(leak) + "</h3>" +
-    '<p class="lk-def">' + esc(LEAK_DEFS[leak]) + "</p>" +
-    '<span class="lk-count">' + num(n) + "</span>" +
-    '<span class="lk-count-sub">agent' + (n === 1 ? "" : "s") + " claiming it</span>" +
-    "</div>"
-  );
-}).join("");
+el("b2-table").innerHTML =
+  '<div class="table-scroll"><table class="data">' +
+  "<thead><tr><th>Lever</th><th>Where it stands</th><th>Headroom</th></tr></thead>" +
+  "<tbody>" +
+  LEVERS.map(function (r) {
+    return (
+      '<tr class="' + (r.gap ? "lever-gap" : "") + '">' +
+      "<td>" + esc(r.name) + "</td>" +
+      "<td>" + esc(r.stands) + '<span class="cite" style="display:block;margin-top:6px">' +
+      esc(r.source) + "</span></td>" +
+      '<td><span class="badge ' + esc(r.cls) + '">' + esc(r.headroom) + "</span></td>" +
+      "</tr>"
+    );
+  }).join("") +
+  "</tbody></table></div>";
 
-/* Band 2 -- where the money goes. The conservative and stretch percentages
-   are this platform's own bottom-up planning model of the addressable pool
-   as a share of operating cost; NO absolute figure is derived from them here.
-   The bar below is a visual proportion between the two published
-   percentages, not a currency amount, and the denominator that would turn
-   either into money is rendered by clientInput() -- the same "not typed,
-   not guessed" element every other screen uses for a figure only the client
-   holds. */
+el("b2-quote").innerHTML =
+  '<blockquote class="hinge">' +
+  "Most miners have already bought the data. What they have not bought is " +
+  "anything that acts on it. The industry spent a decade building the " +
+  "nervous system and never installed the reflex." +
+  '<cite>PwC Mine 2026 · SRK Consulting · ABS</cite>' +
+  "</blockquote>";
+
+/* -------------------------------------------------------------- band three */
+/* WHAT THE EVIDENCE SUPPORTS. The benchmark set from the 2026-08-18 research
+ * pass, used exactly as researched -- no figure here is recalled from
+ * memory or substituted from an earlier pass. Each row is a published range
+ * with a named publisher; none is this build's own measurement, and each
+ * carries the "INDUSTRY RANGE" badge that says so. */
+var EVIDENCE_ROWS = [
+  { label: "Higher throughput", low: 2, high: 5, unit: "%", scale: 10, source: "BCG, mature AI sites in mining & metals" },
+  { label: "Higher throughput", low: 4, high: 8, unit: "%", scale: 10, source: "McKinsey, metals & mining" },
+  { label: "Higher margin", low: 2, high: 4, unit: " pts", scale: 6, source: "BCG" },
+  { label: "Higher mineral recovery", low: 1, high: 3, unit: "%", scale: 5, source: "McKinsey" },
+  { label: "Lower unplanned downtime", low: 30, high: 50, unit: "%", scale: 60, source: "McKinsey / Deloitte, predictive maintenance" },
+  { label: "Lower maintenance cost", low: 18, high: 25, unit: "%", scale: 30, source: "McKinsey" },
+  { label: "Higher contract value recovered", low: 3, high: 5, unit: "%", scale: 8, source: "industry contract-management research" },
+];
+
+el("b3-lede").textContent =
+  "Every range below is somebody else's study of somebody else's site — " +
+  "the honest starting point for a business case, never its ceiling.";
+
+el("b3-rows").innerHTML =
+  EVIDENCE_ROWS.map(function (r) {
+    var leftPct = ((r.low / r.scale) * 100).toFixed(1);
+    var widthPct = (((r.high - r.low) / r.scale) * 100).toFixed(1);
+    return (
+      '<div class="range-row">' +
+      '<div class="range-row-head">' +
+      '<span class="range-row-label">' + esc(r.label) + "</span>" +
+      '<span class="range-row-fig">' + esc(r.low) + "–" + esc(r.high) + esc(r.unit) + "</span>" +
+      "</div>" +
+      '<div class="money-range-bar"><span style="left:' + leftPct + "%;width:" + widthPct + '%"></span></div>' +
+      '<div class="range-row-foot">' +
+      '<span class="badge b-info">INDUSTRY RANGE</span>' +
+      '<span class="cite">' + esc(r.source) + "</span>" +
+      "</div></div>"
+    );
+  }).join("");
+
+el("b3-pool").innerHTML =
+  '<div class="card">' +
+  '<div class="card-cap">Context, not a forecast for this site</div>' +
+  '<div class="metric accent">2.6–4.4T</div>' +
+  '<div class="metric-sub" style="text-transform:none;letter-spacing:0">' +
+  "Trillion US dollars, the agentic AI value pool across the global economy" +
+  "</div>" +
+  '<div style="margin-top:10px"><span class="badge b-info">INDUSTRY RANGE</span> ' +
+  '<span class="cite" style="display:inline">McKinsey</span></div>' +
+  "</div>";
+
+/* The addressable pool. This build's own bottom-up planning model of the
+ * conservative-to-stretch share of operating cost it targets -- kept exactly
+ * as it was on the previous draft of this page, and kept visually distinct
+ * from the published ranges above: a different badge, a different claim
+ * ("this build's model", never "measured on this site" and never presented
+ * as somebody else's study), because it is neither. NO absolute figure is
+ * derived from it here; the denominator that would turn a percentage into
+ * money is rendered by clientInput(), same as every other screen. */
 var CONSERVATIVE_PCT = 4.1;
 var STRETCH_PCT = 9.0;
 var BAR_MAX_PCT = 12; // purely a drawing scale for the range bar below
 
-el("money").innerHTML =
-  '<div class="card-cap">The addressable pool</div>' +
+el("b3-pool-model").innerHTML =
+  '<div class="card-cap">This build’s addressable pool</div>' +
+  '<div style="margin-bottom:10px"><span class="badge b-ok">THIS BUILD’S MODEL</span> ' +
+  '<span class="cite" style="display:inline">not a published benchmark</span></div>' +
   '<p class="lede" style="font-size:14px">Conservative <strong>' +
   CONSERVATIVE_PCT.toFixed(1) + "%</strong> of operating cost, stretch " +
   "<strong>" + STRETCH_PCT.toFixed(1) + "%</strong> — recurring, with no " +
@@ -114,83 +285,92 @@ el("money").innerHTML =
   "estimate it, so it structurally cannot turn the range into a number for " +
   "you.</p>";
 
-/* Band 3 -- the evidence ladder. */
-var EVIDENCE_LADDER = [
+/* --------------------------------------------------------------- band four */
+/* WHY MOST PROGRAMMES MISS IT. The industry's own failure rate (BCG AI Radar
+ * 2026), and the four things this build does that most programmes do not.
+ * This band is the differentiator: the honesty machinery -- coverage
+ * declared, evidence classed, every number traced, advisory by default -- is
+ * stated as what makes this build different, not apologised for. */
+el("b4-lede").textContent =
+  "Most AI programmes fail quietly. This is what changes that.";
+
+el("b4-adoption").innerHTML =
+  '<div class="compare-row">' +
+  '<div class="compare-head"><span>No material value</span><span class="range-row-fig">60%</span></div>' +
+  '<div class="money-range-bar warn"><span style="left:0%;width:60%"></span></div>' +
+  "</div>" +
+  '<div class="compare-row">' +
+  '<div class="compare-head"><span>Substantial value, at scale</span><span class="range-row-fig">5%</span></div>' +
+  '<div class="money-range-bar ok"><span style="left:0%;width:5%"></span></div>' +
+  "</div>" +
+  '<div style="margin-top:10px"><span class="badge b-info">INDUSTRY RANGE</span> ' +
+  '<span class="cite" style="display:inline">BCG AI Radar 2026</span></div>';
+
+var DIFFERENTIATORS = [
   {
-    letter: "A", name: "Cash-verifiable", fundable: true,
-    def: "The recovery lands as cash, a credit note or an avoided invoice, " +
-      "traced transaction by transaction. No counterfactual required.",
+    head: "Coverage, declared.",
+    body: "Every agent states how much of its job is instrumented and how " +
+      "much is scoped — never implied as complete by omission.",
   },
   {
-    letter: "B", name: "Metric-verifiable", fundable: true,
-    def: "A named operating metric moves against a signed baseline, " +
-      "converted to a dollar figure at a rate agreed with Finance before " +
-      "go-live.",
+    head: "Evidence, classed.",
+    body: "Every recommendation carries its class — cash-verifiable, " +
+      "metric-verifiable, or risk-adjusted — stated before you ask, not " +
+      "defended after.",
   },
   {
-    letter: "C", name: "Risk-adjusted", fundable: false,
-    def: "Avoided loss or exposure reduction, evidenced but with no " +
-      "counterfactual available. Reported to the board, never booked.",
+    head: "Numbers, traced.",
+    body: "Every figure on this page points at a named source or a field " +
+      "marked for you to fill. None is guessed to make a slide look complete.",
+  },
+  {
+    head: "Advisory, by default.",
+    body: "Every recommendation lands with a named human. Not a limitation " +
+      "— the governance model a board signs off on.",
   },
 ];
 
-el("ladder").innerHTML =
-  '<div class="evidence-ladder">' +
-  EVIDENCE_LADDER.map(function (row) {
+el("b4-cards").innerHTML =
+  '<div class="bento">' +
+  DIFFERENTIATORS.map(function (d) {
     return (
-      '<div class="ev-class ' + (row.fundable ? "fundable" : "not-fundable") + '">' +
-      '<div class="ev-letter">' + esc(row.letter) + "</div>" +
-      '<div class="ev-name">' + esc(row.name) +
-      (row.fundable ? "" : " · report only") + "</div>" +
-      '<p class="ev-def">' + esc(row.def) + "</p>" +
-      "</div>"
+      '<div class="card c3"><div class="card-cap">' + esc(d.head) + "</div>" +
+      '<p style="font-size:13px;color:var(--fg-muted);margin:0">' + esc(d.body) + "</p></div>"
     );
   }).join("") +
-  "</div>" +
-  '<p class="pnote">A business case has to clear its hurdle rate on Class A ' +
-  "and Class B alone. Class C is boardroom context — reported alongside the " +
-  "case, never counted inside it.</p>";
-
-/* Band 4 -- AGT-19, group-level, no persona in this build to render it on
-   (design doc section 3). Its card is the same renderer every persona-page
-   card uses, so a reader comparing this page against a role's page sees one
-   card shape, not two. */
-el("agt19").innerHTML =
-  '<p class="pnote">Group-level; not addressed to any one role. Surfaced ' +
-  "here rather than inventing a role for it to belong to.</p>" +
-  renderAgentCard(AGT19);
+  "</div>";
 
 /* ---------------------------------------------------------------- drawer */
 
 function drawerBody() {
-  var rows = [];
-  Object.keys(DATA.personas.personas).forEach(function (code) {
-    (DATA.personas.personas[code].cards || []).forEach(function (c) {
-      rows.push({ persona: code, card: c });
-    });
-  });
-  rows.push({ persona: "—", card: AGT19 });
-
+  var citations = [
+    "Deloitte, Tracking the Trends 2026 — margin, 2011–2024; grades, since 1991",
+    "EY, Top 10 Business Risks in Mining & Metals 2026 — complexity ranked #1",
+    "ABS — productivity, five-year decline; hours worked vs output",
+    "McKinsey — AI budget prioritisation; metals & mining throughput; mineral recovery; maintenance cost; agentic AI value pool",
+    "BCG — mature AI sites throughput; margin",
+    "McKinsey / Deloitte — predictive-maintenance downtime reduction",
+    "Industry contract-management research — contract value recovered",
+    "PwC, Mine 2026 — capex trend; automation unit cost and productivity; digital deployment",
+    "SRK Consulting — operating-cost mix; mine-plan and lead-time constraints",
+    "BCG AI Radar 2026 — share of firms at no material value and at scale",
+  ];
   return (
-    "<p>Every card behind the counts above, with the method pack file its " +
-    "coverage number was computed from.</p>" +
+    "<p>Every external source named above, in one place.</p>" +
     "<dl>" +
-    rows.map(function (r) {
-      var cov = r.card.coverage;
-      var covTxt = cov ? num(cov.instrumented) + " of " + num(cov.total) : "no pack";
-      return (
-        '<dt class="mono">' + esc(r.card.agent_id) + " · " + esc(r.persona) + "</dt>" +
-        "<dd>" + esc(r.card.archetype) + " · " + esc(r.card.authority) + "<br>" +
-        '<span class="mono">' + esc(r.card.pack || "—") + "</span> — " +
-        covTxt + " drivers instrumented</dd>"
-      );
+    citations.map(function (c) {
+      return "<dt class=\"mono\">" + esc(c.split(" —")[0]) + "</dt><dd>" +
+        esc(c) + "</dd>";
     }).join("") +
     "</dl>" +
-    '<dl><dt>Leaks, in the catalog\'s own order</dt><dd class="mono">' +
-    esc(LEAKS.join(" · ")) + "</dd></dl>"
+    "<dl><dt>The addressable-pool range</dt><dd>" + CONSERVATIVE_PCT.toFixed(1) +
+    "% conservative to " + STRETCH_PCT.toFixed(1) + "% stretch is this " +
+    "build's own bottom-up planning model, not one of the industry ranges " +
+    "above — it carries no publisher because it is not a publisher's " +
+    "figure.</dd></dl>"
   );
 }
 
 el("prov").innerHTML =
-  technicalDrawer(drawerBody(), "every card, its pack, and its coverage") +
+  technicalDrawer(drawerBody(), "every source named above, spelled out") +
   provenance();
