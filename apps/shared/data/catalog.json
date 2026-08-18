@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-17T14:44:05+00:00",
+  "generated_at": "2026-08-18T04:15:56+00:00",
   "source": "mining_agents.catalog.definitions",
   "counts": {
     "agent_nodes": 100,
@@ -3247,10 +3247,109 @@
       ],
       "honest_limit": "The least measurable agent in the portfolio, and the easiest to oversell: it inherits every weakness of the assumption set it is given, and a committee price deck can be optimised very precisely while still being wrong. It contributes nothing to a funding case and must not be added to one.",
       "pack": "agt19-strategic-planning.yaml",
+      "metric_impacts": [],
       "coverage": {
         "instrumented": 2,
         "total": 5
       }
     }
-  }
+  },
+  "metric_impact_summary": [
+    {
+      "metric": "Contract value recovered",
+      "agents": [
+        "S09"
+      ],
+      "ranges": [
+        {
+          "direction": "increase",
+          "low_pct": 3.0,
+          "high_pct": 5.0,
+          "source": "industry contract-management research",
+          "agents": [
+            "S09"
+          ]
+        }
+      ]
+    },
+    {
+      "metric": "Maintenance cost",
+      "agents": [
+        "S02"
+      ],
+      "ranges": [
+        {
+          "direction": "decrease",
+          "low_pct": 18.0,
+          "high_pct": 25.0,
+          "source": "McKinsey",
+          "agents": [
+            "S02"
+          ]
+        }
+      ]
+    },
+    {
+      "metric": "Mineral recovery",
+      "agents": [
+        "S06",
+        "S07"
+      ],
+      "ranges": [
+        {
+          "direction": "increase",
+          "low_pct": 1.0,
+          "high_pct": 3.0,
+          "source": "McKinsey",
+          "agents": [
+            "S06",
+            "S07"
+          ]
+        }
+      ]
+    },
+    {
+      "metric": "Throughput",
+      "agents": [
+        "S07"
+      ],
+      "ranges": [
+        {
+          "direction": "increase",
+          "low_pct": 2.0,
+          "high_pct": 5.0,
+          "source": "BCG, mature AI sites in mining & metals",
+          "agents": [
+            "S07"
+          ]
+        },
+        {
+          "direction": "increase",
+          "low_pct": 4.0,
+          "high_pct": 8.0,
+          "source": "McKinsey, metals & mining",
+          "agents": [
+            "S07"
+          ]
+        }
+      ]
+    },
+    {
+      "metric": "Unplanned downtime",
+      "agents": [
+        "S01"
+      ],
+      "ranges": [
+        {
+          "direction": "decrease",
+          "low_pct": 30.0,
+          "high_pct": 50.0,
+          "source": "McKinsey / Deloitte, predictive maintenance",
+          "agents": [
+            "S01"
+          ]
+        }
+      ]
+    }
+  ]
 }

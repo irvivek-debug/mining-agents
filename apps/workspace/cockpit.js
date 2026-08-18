@@ -56,6 +56,160 @@ el("counts").innerHTML = [
   )
   .join("");
 
+/* Task C (plan 2026-08-18): the metrics this site's carded agents move, each
+ * with its benchmark range and source, and this site's own measured position
+ * where a comparable measurement exists.
+ *
+ * Grouped BY METRIC, not by agent. CAT.metric_impact_summary already arrives
+ * grouped that way (scripts/build_app_data.py, _metric_impact_summary) --
+ * this screen reads the already-deduplicated summary rather than re-deriving
+ * it, so the two can never drift apart. The reason for the grouping itself
+ * lives on that function's own docstring: several agents move the same
+ * metric with the identical published range (S06 and S07 both cite
+ * McKinsey's mineral-recovery figure), and an agent-first cockpit would
+ * either repeat that range under two headings or need its own dedup pass to
+ * notice the two agents agree. Grouping by metric gets the dedup for free.
+ */
+const IMPACTS = CAT.metric_impact_summary;
+
+/* Which of this build's own measured gaps stands in for which benchmarked
+ * metric. Recovery and crusher feed rate are the exact pairing the case
+ * app's own evidence chart already draws -- crusher feed rate set beside the
+ * published throughput uplift (docs/superpowers/specs/2026-08-13-ux-uplift-
+ * design.md) -- reused here rather than invented, so the two applications
+ * never disagree about which of this site's own numbers stands in for which
+ * published one. The other three benchmarked metrics (unplanned downtime,
+ * maintenance cost, contract value recovered) have no comparable measurement
+ * anywhere in this build's own data and are shown as industry ranges only --
+ * never filled with an adjacent number to avoid looking incomplete, the same
+ * rule that leaves S03 and S05 without a benchmark of their own. */
+const SITE_GAP_FOR_METRIC = { "Mineral recovery": "recovery", Throughput: "feed_rate" };
+const GAP = DATA.signals.gap;
+
+function gapRowFor(metric) {
+  const id = SITE_GAP_FOR_METRIC[metric];
+  return id ? GAP.rows.find((row) => row.id === id) : null;
+}
+
+/* A gap row's own delta, read the same way persona-panel.js's gap table
+ * already reads it: a "points" row (recovery) prints in points, a "percent"
+ * row (crusher feed rate) prints in percent. The two are not the same unit
+ * as each other, and neither is forced into the other's just to share one
+ * bar -- see the comment above SITE_GAP_FOR_METRIC. */
+function siteValue(row) {
+  return row.delta_kind === "points" ? row.delta : row.delta_pct;
+}
+function siteFigureText(row) {
+  const dp = rowPlaces(row);
+  return row.delta_kind === "points"
+    ? "+" + fig(row.delta, "", dp) + " pts"
+    : "+" + fig(row.delta_pct, "%", 1);
+}
+
+/* A nice round bound for a range bar, with headroom so the widest published
+ * figure a row shows does not sit flush against its own edge. Computed from
+ * the range rather than hand-tuned per metric, for the same reason coverage
+ * is computed from the pack rather than typed by hand. */
+function impactScale(highPct) {
+  return Math.max(5, Math.ceil((highPct * 1.25) / 5) * 5);
+}
+
+/* An agent chip for a metric card. AGENTS is built off ALL_AGENTS
+ * (workspace.js), which AGT-19 is not in -- it has no AgentDef (design §3) --
+ * so chip() alone would throw if a group-level agent ever earned a metric
+ * impact. It does not today (AGT-19's metric_impacts is deliberately empty),
+ * but this guards the day one does without the chip silently going dead. */
+function impactChip(id) {
+  return AGENTS[id] ? chip(id) : '<span class="chip" title="' + esc(id) + '">' + esc(id) + "</span>";
+}
+
+/** One range, as a bar with its attribution on its own face -- the industry
+ *  badge and citation are never optional. `+`/`−` on the figure carries
+ *  direction a second way, for a reader skimming rather than reading the
+ *  metric name. A site-measured marker ticks the bar at this site's own
+ *  position when one exists, but its number is stated once per metric card
+ *  (below), not once per range -- Throughput carries two published ranges
+ *  from two firms and one site measurement, and repeating that one
+ *  measurement under both firms' rows would read as two facts instead of
+ *  one repeated. */
+function impactRangeRow(metric, range) {
+  const scale = impactScale(range.high_pct);
+  const leftPct = ((range.low_pct / scale) * 100).toFixed(1);
+  const widthPct = (((range.high_pct - range.low_pct) / scale) * 100).toFixed(1);
+  const sign = range.direction === "decrease" ? "−" : "+";
+  const dp = Number.isInteger(range.low_pct) && Number.isInteger(range.high_pct) ? 0 : 1;
+  const gapRow = gapRowFor(metric);
+  const marker = gapRow
+    ? '<span class="range-marker" style="left:' +
+      Math.min(100, (siteValue(gapRow) / scale) * 100).toFixed(1) + '%"></span>'
+    : "";
+  return (
+    '<div class="range-row">' +
+    '<div class="range-row-head">' +
+    '<span class="range-row-label">' + esc(metric) + "</span>" +
+    '<span class="range-row-fig">' + sign + fig(range.low_pct, "", dp) + "–" +
+    fig(range.high_pct, "%", dp) + "</span>" +
+    "</div>" +
+    '<div class="money-range-bar"><span style="left:' + leftPct + "%;width:" +
+    widthPct + '%"></span>' + marker + "</div>" +
+    '<div class="range-row-foot">' +
+    '<span class="badge b-info">INDUSTRY RANGE</span>' +
+    '<span class="cite">' + esc(range.source) + "</span>" +
+    "</div></div>"
+  );
+}
+
+/** The one site-measured line a metric card carries, stated once regardless
+ *  of how many published ranges sit above it. Absent entirely for the three
+ *  metrics with no comparable measurement in this build's own data -- never
+ *  filled with an adjacent number to avoid looking incomplete. */
+function siteMeasuredLine(metric) {
+  const gapRow = gapRowFor(metric);
+  if (!gapRow) return "";
+  return (
+    '<div class="range-row-foot" style="margin-top:10px">' +
+    '<span class="badge b-ok">SITE MEASURED</span>' +
+    '<span class="range-row-fig" style="font-size:13px">' + siteFigureText(gapRow) + "</span>" +
+    '<span class="cite">' + esc(gapRow.label) +
+    ", this site's best day against its ordinary day</span></div>"
+  );
+}
+
+el("impacts").innerHTML = IMPACTS.map(
+  (entry) =>
+    '<div class="card c6">' +
+    '<div class="card-cap">' + esc(entry.metric) + "</div>" +
+    entry.ranges.map((r) => impactRangeRow(entry.metric, r)).join("") +
+    siteMeasuredLine(entry.metric) +
+    '<div class="chips" style="margin-top:10px">' + entry.agents.map(impactChip).join("") + "</div>" +
+    "</div>"
+).join("");
+
+const SITE_MATCHED = IMPACTS.filter((entry) => gapRowFor(entry.metric)).length;
+
+el("impact-lede").textContent =
+  IMPACTS.length + " metrics this site's carded agents move, each a " +
+  "published industry range with the firm that measured it named beside " +
+  "it. " + SITE_MATCHED + " of them carry this site's own measured " +
+  "position too.";
+
+/* Every card in the build, persona-holding and group-level alike -- read the
+ * same way agent-card.js's own test fixtures read it, so this count and that
+ * one cannot silently diverge. */
+const ALL_CARDED_AGENTS = [].concat(
+  ...Object.values(PERSONAS).map((p) => p.cards || []),
+  Object.values(CAT.group_agents || {})
+).map((c) => c.agent_id);
+const AGENTS_WITH_IMPACT = new Set();
+IMPACTS.forEach((entry) => entry.agents.forEach((id) => AGENTS_WITH_IMPACT.add(id)));
+const AGENTS_WITHOUT_IMPACT = ALL_CARDED_AGENTS.length - AGENTS_WITH_IMPACT.size;
+
+el("impact-note").textContent =
+  AGENTS_WITH_IMPACT.size + " of the " + ALL_CARDED_AGENTS.length + " agents " +
+  "carrying a business case move a metric with a published range above; " +
+  "the other " + AGENTS_WITHOUT_IMPACT + " earn their place on evidence " +
+  "class and coverage instead — open their cards under My role to see them.";
+
 /* How many agents are filed under more than one process area. The old copy said
    "seven" and nothing checked it. */
 const SPANNERS = CAT.agents.filter(

@@ -211,7 +211,7 @@ test("a zero-coverage card renders visibly on the persona page, not blank and no
     coverage: { instrumented: 0, total: 5 },
   }];
   const html = PANEL.renderPanel("P1", synthetic);
-  assert.match(html, /0 of 5 drivers instrumented/, "the zero coverage did not render");
+  assert.match(html, /0 diagnostics proven · 5 scoped/, "the zero coverage did not render");
   assert.ok(!/b-crit/.test(html), "the zero coverage renders as a critical badge");
 });
 
@@ -244,8 +244,13 @@ test("nothing on the persona page implies authority is enforced", () => {
     if (!cards.length) continue;
     assert.match(
       html,
-      /a label this card carries, not a limit the platform enforces/,
-      `${code}'s card does not carry the authority-is-declared caveat`
+      /advisory by default: every recommendation lands with a named human/,
+      `${code}'s card does not carry the positively-framed authority statement`
+    );
+    assert.match(
+      html,
+      /a stance this card declares, not one the platform runs/,
+      `${code}'s card lost the non-enforcement caveat while gaining the positive framing`
     );
   }
 });

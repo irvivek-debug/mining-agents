@@ -298,3 +298,165 @@ def test_leak_counts_are_derived_never_authored():
     # zero would mean a leak from the taxonomy has no agent behind it at all.
     for leak in LEAKS:
         assert catalog["leak_counts"][leak] > 0, f"no card claims the {leak!r} leak"
+
+
+# --------------------------------------------------------------------------
+# Task C/D (plan 2026-08-18): metric_impacts on the export, and the cockpit's
+# per-metric summary built from them.
+# --------------------------------------------------------------------------
+
+def test_metric_impacts_reach_the_export_unchanged():
+    # Read independently off ALL_AGENTS, not copied from build_app_data.py,
+    # so a field the export dropped, reordered or renamed would be caught --
+    # the same discipline test_every_card_field_reaches_the_export already
+    # applies to every other card field.
+    from mining_agents.catalog.definitions import ALL_AGENTS
+    personas = json.loads((ROOT / "apps/shared/data/personas.json").read_text())["personas"]
+    checked = 0
+    for agent in ALL_AGENTS:
+        if agent.card is None:
+            continue
+        checked += 1
+        card = _card(personas, agent.persona, agent.agent_id)
+        assert card["metric_impacts"] == [
+            {
+                "metric": mi.metric, "direction": mi.direction,
+                "low_pct": mi.low_pct, "high_pct": mi.high_pct,
+                "source": mi.source,
+            }
+            for mi in agent.card.metric_impacts
+        ]
+    assert checked == 7
+
+
+def test_a_card_with_no_metric_impacts_exports_an_empty_list_not_an_absent_field():
+    """S03 and S05 are this plan's deliberate honesty decisions
+    (mining_agents/catalog/definitions.py): no published benchmark applies to
+    either, and the card says so by carrying an EMPTY list, never a missing
+    key -- a missing key would force every reader of the export to
+    special-case "field absent" as a second way of saying "field present and
+    empty". AGT-19 (no AgentDef, hand-transcribed card) is held to the same
+    rule."""
+    personas = json.loads((ROOT / "apps/shared/data/personas.json").read_text())["personas"]
+    for code, agent_id in [("P1", "S03"), ("P3", "S05")]:
+        card = _card(personas, code, agent_id)
+        assert "metric_impacts" in card, f"{agent_id}: metric_impacts key is absent, which reads as unknown, not empty"
+        assert card["metric_impacts"] == []
+
+    catalog = json.loads((ROOT / "apps/shared/data/catalog.json").read_text())
+    agt19 = catalog["group_agents"]["AGT-19"]
+    assert "metric_impacts" in agt19
+    assert agt19["metric_impacts"] == []
+
+
+def test_metric_impact_summary_dedupes_two_agents_citing_an_identical_range():
+    """S06 and S07 both cite McKinsey's identical 1-3% mineral-recovery range
+    (definitions.py). The cockpit's summary must fold them into ONE range
+    entry with both agents listed as contributors -- printing the identical
+    range twice would read as two independent claims when it is one."""
+    catalog = json.loads((ROOT / "apps/shared/data/catalog.json").read_text())
+    summary = {e["metric"]: e for e in catalog["metric_impact_summary"]}
+    recovery = summary["Mineral recovery"]
+    assert recovery["agents"] == ["S06", "S07"]
+    assert len(recovery["ranges"]) == 1, (
+        f"expected one deduplicated range, found {len(recovery['ranges'])}: {recovery['ranges']}"
+    )
+    assert recovery["ranges"][0]["agents"] == ["S06", "S07"]
+    assert recovery["ranges"][0]["low_pct"] == 1
+    assert recovery["ranges"][0]["high_pct"] == 3
+    assert recovery["ranges"][0]["source"] == "McKinsey"
+
+
+def test_metric_impact_summary_keeps_two_different_sources_separate():
+    """S07 alone cites TWO different firms' throughput ranges (BCG 2-5%,
+    McKinsey 4-8%) -- genuinely different claims, unlike the identical
+    mineral-recovery case above, and they must not merge into one."""
+    catalog = json.loads((ROOT / "apps/shared/data/catalog.json").read_text())
+    summary = {e["metric"]: e for e in catalog["metric_impact_summary"]}
+    throughput = summary["Throughput"]
+    assert throughput["agents"] == ["S07"]
+    assert len(throughput["ranges"]) == 2
+    sources = {r["source"] for r in throughput["ranges"]}
+    assert sources == {"BCG, mature AI sites in mining & metals", "McKinsey, metals & mining"}
+    for r in throughput["ranges"]:
+        assert r["agents"] == ["S07"]
+
+
+def test_metric_impact_summary_matches_an_independent_reconstruction():
+    """The whole summary, rebuilt here from ALL_AGENTS rather than compared
+    against what build_app_data.py already produced -- so a metric silently
+    dropped, an agent silently added, or a dedup key computed wrong would
+    fail this even though catalog.json is internally self-consistent."""
+    from mining_agents.catalog.definitions import ALL_AGENTS
+    catalog = json.loads((ROOT / "apps/shared/data/catalog.json").read_text())
+
+    expected: dict = {}
+    for agent in ALL_AGENTS:
+        if agent.card is None:
+            continue
+        for mi in agent.card.metric_impacts:
+            bucket = expected.setdefault(mi.metric, {"agents": set(), "ranges": {}})
+            bucket["agents"].add(agent.agent_id)
+            key = (mi.direction, mi.low_pct, mi.high_pct, mi.source)
+            bucket["ranges"].setdefault(key, set()).add(agent.agent_id)
+    # AGT-19 has no AgentDef and its own metric_impacts is deliberately empty
+    # (build_app_data.py, _AGT19_CARD), so it never contributes here either.
+
+    got = {e["metric"]: e for e in catalog["metric_impact_summary"]}
+    assert set(got) == set(expected), f"metrics differ: export has {sorted(got)}, expected {sorted(expected)}"
+    for metric, bucket in expected.items():
+        assert set(got[metric]["agents"]) == bucket["agents"], metric
+        got_ranges = {
+            (r["direction"], r["low_pct"], r["high_pct"], r["source"]): set(r["agents"])
+            for r in got[metric]["ranges"]
+        }
+        assert got_ranges == bucket["ranges"], metric
+
+
+def test_cards_with_no_metric_impacts_never_appear_as_a_contributor():
+    """S03, S05 and AGT-19 are deliberate honesty decisions: no metric in
+    metric_impact_summary may list any of them as a contributing agent."""
+    catalog = json.loads((ROOT / "apps/shared/data/catalog.json").read_text())
+    for entry in catalog["metric_impact_summary"]:
+        for excluded in ("S03", "S05", "AGT-19"):
+            assert excluded not in entry["agents"], (
+                f"{excluded} is listed as a contributor to {entry['metric']!r}, "
+                "but its metric_impacts is deliberately empty"
+            )
+
+
+def test_metric_impact_summary_is_sorted_by_metric_name():
+    catalog = json.loads((ROOT / "apps/shared/data/catalog.json").read_text())
+    metrics = [e["metric"] for e in catalog["metric_impact_summary"]]
+    assert metrics == sorted(metrics)
+
+
+def test_metric_impact_summary_is_computed_from_its_argument_not_memorised():
+    """Mutation-style proof, the same discipline
+    test_coverage_is_computed_from_the_pack_file_not_memorised already applies
+    to coverage: two synthetic cards citing an identical range dedupe into
+    one, two citing different sources for the same metric stay apart as two,
+    and a card with no metric_impacts contributes nothing at all -- so this
+    cannot be a function that returns a fixed shape regardless of its input."""
+    import scripts.build_app_data as build
+
+    def card(agent_id, source):
+        return {
+            "agent_id": agent_id,
+            "metric_impacts": [
+                {"metric": "Test metric", "direction": "increase", "low_pct": 1, "high_pct": 2, "source": source},
+            ],
+        }
+
+    same_source = build._metric_impact_summary([card("X1", "McKinsey"), card("X2", "McKinsey")])
+    assert len(same_source) == 1
+    assert same_source[0]["agents"] == ["X1", "X2"]
+    assert len(same_source[0]["ranges"]) == 1, "identical ranges from two agents did not dedupe"
+
+    different_source = build._metric_impact_summary([card("X1", "McKinsey"), card("X2", "BCG")])
+    assert len(different_source) == 1
+    assert different_source[0]["agents"] == ["X1", "X2"]
+    assert len(different_source[0]["ranges"]) == 2, "two different sources for the same metric merged into one"
+
+    no_impacts = build._metric_impact_summary([{"agent_id": "X3", "metric_impacts": []}])
+    assert no_impacts == [], "a card with no metric_impacts must contribute nothing, not an empty-range entry"

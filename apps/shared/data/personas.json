@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-17T14:44:05+00:00",
+  "generated_at": "2026-08-18T04:15:56+00:00",
   "source": "docs/persona-profiles.yaml",
   "personas": {
     "P1": {
@@ -71,6 +71,15 @@
             }
           ],
           "honest_limit": "Data-driven remaining-useful-life estimation needs run-to-failure data, and well-maintained machines are protected from failing by definition \u2014 this starts physics- and rule-based, and earns the data over time.",
+          "metric_impacts": [
+            {
+              "metric": "Unplanned downtime",
+              "direction": "decrease",
+              "low_pct": 30.0,
+              "high_pct": 50.0,
+              "source": "McKinsey / Deloitte, predictive maintenance"
+            }
+          ],
           "pack": "p1-reliability.yaml",
           "coverage": {
             "instrumented": 5,
@@ -94,6 +103,7 @@
             }
           ],
           "honest_limit": "There is no published data on unclaimed warranty value in heavy industry; the baseline must come from the site's own claims history, and any vendor-quoted figure is unsourceable.",
+          "metric_impacts": [],
           "pack": "agt13-warranty.yaml",
           "coverage": {
             "instrumented": 4,
@@ -169,6 +179,15 @@
             }
           ],
           "honest_limit": "Work order records carry no planned date or due date field, so schedule compliance against a plan cannot be evidenced from them \u2014 only realised cost against priority and backlog age can be.",
+          "metric_impacts": [
+            {
+              "metric": "Maintenance cost",
+              "direction": "decrease",
+              "low_pct": 18.0,
+              "high_pct": 25.0,
+              "source": "McKinsey"
+            }
+          ],
           "pack": "p2-planner.yaml",
           "coverage": {
             "instrumented": 4,
@@ -249,6 +268,7 @@
             }
           ],
           "honest_limit": "Attributing an incident to a fatigue signal requires both an operator link and sub-day timestamp resolution across the incident and biometric records; where either is missing, the correlation is reported as not instrumented rather than inferred.",
+          "metric_impacts": [],
           "pack": "p3-hse.yaml",
           "coverage": {
             "instrumented": 4,
@@ -344,6 +364,15 @@
             }
           ],
           "honest_limit": "The widely quoted \"9.2% contract value leakage\" figure is a misattribution: the source study found that good contract management could improve profitability by roughly 9% of annual revenue \u2014 an opportunity figure, not a leakage rate \u2014 and it is not used here.",
+          "metric_impacts": [
+            {
+              "metric": "Contract value recovered",
+              "direction": "increase",
+              "low_pct": 3.0,
+              "high_pct": 5.0,
+              "source": "industry contract-management research"
+            }
+          ],
           "pack": "agt14-contract-integrity.yaml",
           "coverage": {
             "instrumented": 4,
@@ -413,6 +442,15 @@
             }
           ],
           "honest_limit": "The assay-to-block pairing is a spatial approximation at a declared search radius; the reconciliation is evidence about the paired subset only, and the unpaired population may differ systematically from it.",
+          "metric_impacts": [
+            {
+              "metric": "Mineral recovery",
+              "direction": "increase",
+              "low_pct": 1.0,
+              "high_pct": 3.0,
+              "source": "McKinsey"
+            }
+          ],
           "pack": "p5-geologist.yaml",
           "coverage": {
             "instrumented": 5,
@@ -486,6 +524,29 @@
             }
           ],
           "honest_limit": "Torque and throughput figures bound the daily mean only; a recommended setting change must still be checked against the instantaneous alarm limit before it is applied.",
+          "metric_impacts": [
+            {
+              "metric": "Throughput",
+              "direction": "increase",
+              "low_pct": 2.0,
+              "high_pct": 5.0,
+              "source": "BCG, mature AI sites in mining & metals"
+            },
+            {
+              "metric": "Throughput",
+              "direction": "increase",
+              "low_pct": 4.0,
+              "high_pct": 8.0,
+              "source": "McKinsey, metals & mining"
+            },
+            {
+              "metric": "Mineral recovery",
+              "direction": "increase",
+              "low_pct": 1.0,
+              "high_pct": 3.0,
+              "source": "McKinsey"
+            }
+          ],
           "pack": "p6-metallurgist.yaml",
           "coverage": {
             "instrumented": 3,

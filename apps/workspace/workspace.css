@@ -498,6 +498,27 @@ table.audit td.t { white-space: nowrap; }
 .ac-limit { font-size: 12px; color: var(--fg-muted); margin: 10px 0 0; max-width: 78ch; }
 .ac-limit .ac-label { display: block; margin-bottom: 3px; }
 
+/* The metric-impact row (design §2, plan 2026-08-18 Task D): the .range-row /
+   .money-range-bar pair are the same component the value screen's evidence
+   band uses (workspace.css, "band 3" rules below), reused rather than
+   redrawn so a reader who has learned to read a range bar once reads it the
+   same way on every screen. .ac-impacts-body only supplies the flex sizing
+   that lets the rows sit beside the "Metric impact" label the way coverage's
+   body already does. */
+.ac-impacts-body { flex: 1; min-width: 200px; }
+.ac-impact-empty { margin: 0; }
+
+/* The cockpit's site-measured marker (cockpit.js): a tick on the same bar as
+   the published range it sits beside, in a second colour so it cannot be
+   read as part of the industry figure it is being compared against -- the
+   bar it decorates, .money-range-bar, is declared in the value-screen block
+   below; this rule is deliberately kept apart from that block because the
+   marker is cockpit-only and the bar itself is not. */
+.money-range-bar .range-marker {
+  position: absolute; top: -3px; bottom: -3px; width: 2px;
+  background: var(--success); opacity: 1; border: none;
+}
+
 /* ---------- the value screen (sales/consulting framing, four bands) ---------- */
 
 /* The addressable-pool treatment, unchanged from the previous draft of this

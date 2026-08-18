@@ -93,6 +93,22 @@ def _card_record(agent) -> dict:
             for fl in card.financial_lines
         ],
         "honest_limit": card.honest_limit,
+        # Always a list, never an absent key -- even when empty (S03, S05:
+        # AgentCard's own docstring, "deliberately allowed to be empty").
+        # The screens that read this field (agent-card.js, cockpit.js) branch
+        # on its length, and an absent key would force every reader of the
+        # export to special-case "field missing" as a second way of saying
+        # the same thing as "field present and empty".
+        "metric_impacts": [
+            {
+                "metric": mi.metric,
+                "direction": mi.direction,
+                "low_pct": mi.low_pct,
+                "high_pct": mi.high_pct,
+                "source": mi.source,
+            }
+            for mi in card.metric_impacts
+        ],
     }
     if card.pack:
         record["pack"] = card.pack
@@ -142,6 +158,13 @@ _AGT19_CARD = {
                      "wrong. It contributes nothing to a funding case and "
                      "must not be added to one.",
     "pack": "agt19-strategic-planning.yaml",
+    # Deliberately empty, the same way S03's and S05's are (AgentCard's own
+    # docstring): the plan's researched benchmark table has no row for
+    # capital-allocation quality, and this card's own honest_limit already
+    # says its one financial line is Class C and funds nothing -- stretching
+    # an adjacent agent's percentage onto it would be exactly the borrowed
+    # figure the plan rules out.
+    "metric_impacts": [],
 }
 
 
@@ -168,6 +191,73 @@ def _leak_counts(cards: list[dict]) -> dict:
         for leak in card["leaks"]:
             counts[leak] += 1
     return counts
+
+
+def _metric_impact_summary(cards: list[dict]) -> list[dict]:
+    """Every metric this build's carded agents move, grouped BY METRIC.
+
+    Task C (plan 2026-08-18) asks the cockpit to choose between "metrics,
+    with contributing agents" and "agents, with their metrics", and to
+    justify the choice. Metric wins, for one concrete reason: several agents
+    move the same metric with the identical published range -- S06 and S07
+    both cite McKinsey's mineral-recovery range. An agent-first cockpit would
+    either print that range twice, under two separate headings, reading as
+    two independent claims when it is one; or it would need its own dedup
+    pass bolted on afterwards to notice the two agents agree. Grouping by
+    metric gets the dedup for free, because the grouping key -- metric,
+    direction, bounds, source -- IS the tuple being deduplicated on; every
+    agent citing an identical range is folded into that one range's own
+    ``agents`` list rather than repeating the range.
+
+    Cards with no metric_impacts (S03, S05, AGT-19) contribute no rows here.
+    That is not a gap in this summary -- see AgentCard's own docstring and
+    the per-card comments in mining_agents/catalog/definitions.py -- and the
+    cockpit says so in its own words rather than leaving their absence
+    unexplained.
+    """
+    by_metric: dict[str, dict] = {}
+    for card in cards:
+        for mi in card["metric_impacts"]:
+            metric = mi["metric"]
+            bucket = by_metric.setdefault(
+                metric, {"metric": metric, "agents": set(), "ranges": {}}
+            )
+            bucket["agents"].add(card["agent_id"])
+            key = (mi["direction"], mi["low_pct"], mi["high_pct"], mi["source"])
+            range_bucket = bucket["ranges"].setdefault(
+                key,
+                {
+                    "direction": mi["direction"],
+                    "low_pct": mi["low_pct"],
+                    "high_pct": mi["high_pct"],
+                    "source": mi["source"],
+                    "agents": set(),
+                },
+            )
+            range_bucket["agents"].add(card["agent_id"])
+
+    out = []
+    for metric in sorted(by_metric):
+        bucket = by_metric[metric]
+        ranges = sorted(
+            (
+                {
+                    "direction": r["direction"],
+                    "low_pct": r["low_pct"],
+                    "high_pct": r["high_pct"],
+                    "source": r["source"],
+                    "agents": sorted(r["agents"]),
+                }
+                for r in bucket["ranges"].values()
+            ),
+            key=lambda r: (r["low_pct"], r["high_pct"], r["source"]),
+        )
+        out.append({
+            "metric": metric,
+            "agents": sorted(bucket["agents"]),
+            "ranges": ranges,
+        })
+    return out
 
 
 def _traversal_holders(traversal: str) -> dict:
@@ -329,6 +419,11 @@ def build_catalog() -> dict:
         # AGT-19 has no AgentDef and so never appears in "agents" above; its
         # card is exported here for the value screen (design §3, §4 step 4).
         "group_agents": _group_agent_cards(),
+        # The cockpit's metric-impact band (Task C, plan 2026-08-18), grouped
+        # by metric and deduplicated across agents that cite an identical
+        # range -- see _metric_impact_summary's own docstring for why metric
+        # rather than agent is the grouping key.
+        "metric_impact_summary": _metric_impact_summary(_all_cards()),
     }
 
 
