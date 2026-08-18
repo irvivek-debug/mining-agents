@@ -5,12 +5,14 @@ import pytest
 from mining_agents.catalog.definitions import (
     ALL_AGENTS,
     ARCHETYPES,
+    BENCHMARK_SOURCES,
     DEEP,
     EVIDENCE_CLASSES,
     LEAKS,
     SWARMS,
     AgentCard,
     FinancialLine,
+    MetricImpact,
 )
 from mining_agents.tools.bqml_predict import list_models
 from mining_agents.tools.graph_traverse import TRAVERSALS
@@ -345,6 +347,8 @@ def test_no_currency_figure_appears_in_any_card():
             agent.card.decision,
             agent.card.honest_limit,
             *(fl.line for fl in agent.card.financial_lines),
+            *(mi.metric for mi in agent.card.metric_impacts),
+            *(mi.source for mi in agent.card.metric_impacts),
         ])
         assert not currency_pattern.search(text), agent.agent_id
 
@@ -364,6 +368,8 @@ def test_no_named_commodity_appears_in_any_card():
             agent.card.decision,
             agent.card.honest_limit,
             *(fl.line for fl in agent.card.financial_lines),
+            *(mi.metric for mi in agent.card.metric_impacts),
+            *(mi.source for mi in agent.card.metric_impacts),
         ]).lower()
         for commodity in named_commodities:
             # \b word boundaries plus a "lead time" exclusion — "lead" is a
@@ -371,3 +377,164 @@ def test_no_named_commodity_appears_in_any_card():
             # legitimately uses ("lead time"); only the metal usage counts.
             pattern = rf"\b{commodity}\b" if commodity != "lead" else r"\blead\b(?!\s+time)"
             assert not re.search(pattern, text), (agent.agent_id, commodity)
+
+
+# ---------------------------------------------------------------------------
+# MetricImpact — the quantified, sourced benchmark ranges hung off a card
+# (design: sales-ready workspace, Task A). These are INDUSTRY BENCHMARKS
+# from published research, never a measurement on this site's data, and
+# `source` is the field that makes that distinction legible — so it is
+# validated, not merely required to be truthy.
+# ---------------------------------------------------------------------------
+
+#: Independently transcribed from the plan's researched benchmark table
+#: (docs/superpowers/plans/2026-08-18-sales-ready-workspace.md, "The
+#: benchmark set", researched 2026-08-18) — the six rows usable as a
+#: per-agent citation. The three portfolio-level rows (value pool, no
+#: material value, at scale) are framing-page material, not per-agent
+#: citations, and are excluded here on purpose. This is hardcoded
+#: independently of BENCHMARK_SOURCES so a drift in either one is caught,
+#: not assumed away by comparing the module to itself.
+PLAN_BENCHMARK_SOURCES = {
+    "BCG, mature AI sites in mining & metals",
+    "McKinsey, metals & mining",
+    "BCG",
+    "McKinsey",
+    "McKinsey / Deloitte, predictive maintenance",
+    "industry contract-management research",
+}
+
+#: Firms actually named in the plan's benchmark table. "industry
+#: contract-management research" is also a citation in that table (the
+#: contract value recovered row), but it names a research category, not a
+#: consultancy, so it is tracked separately rather than folded into this set.
+PLAN_BENCHMARK_FIRMS = {"BCG", "McKinsey", "Deloitte"}
+
+#: The exact metric_impacts expected on each of the seven carded agents,
+#: transcribed by hand against the plan's benchmark table and each agent's
+#: `decision` / `financial_lines`, independent of definitions.py, so an
+#: accidental edit there is caught here rather than assumed correct.
+CARD_METRIC_IMPACTS: dict[str, list[tuple]] = {
+    "S01": [
+        ("Unplanned downtime", "decrease", 30.0, 50.0,
+         "McKinsey / Deloitte, predictive maintenance"),
+    ],
+    "S02": [
+        ("Maintenance cost", "decrease", 18.0, 25.0, "McKinsey"),
+    ],
+    "S03": [],
+    "S05": [],
+    "S06": [
+        ("Mineral recovery", "increase", 1.0, 3.0, "McKinsey"),
+    ],
+    "S07": [
+        ("Throughput", "increase", 2.0, 5.0, "BCG, mature AI sites in mining & metals"),
+        ("Throughput", "increase", 4.0, 8.0, "McKinsey, metals & mining"),
+        ("Mineral recovery", "increase", 1.0, 3.0, "McKinsey"),
+    ],
+    "S09": [
+        ("Contract value recovered", "increase", 3.0, 5.0, "industry contract-management research"),
+    ],
+}
+
+
+def _minimal_impact_kwargs() -> dict:
+    return dict(metric="Throughput", direction="increase", low_pct=2, high_pct=5,
+                source="McKinsey")
+
+
+def test_metric_impact_without_a_source_raises_at_construction():
+    """The rule that matters most: an impact built without attribution must
+    not be constructible at all. Covers both an empty string and the field
+    omitted outright — 'no source' has two shapes and both must raise.
+    """
+    kwargs = _minimal_impact_kwargs()
+    kwargs["source"] = ""
+    with pytest.raises(pydantic.ValidationError):
+        MetricImpact(**kwargs)
+
+    kwargs = _minimal_impact_kwargs()
+    del kwargs["source"]
+    with pytest.raises(pydantic.ValidationError):
+        MetricImpact(**kwargs)
+
+
+def test_metric_impact_source_must_name_a_researched_benchmark_not_just_be_non_empty():
+    """A test that only checked 'source is a non-empty string' would pass on
+    source='x' or source='internal analysis' — exactly the unattributed
+    filler the plan calls out as the thing that ends a CFO conversation.
+    Both must be rejected at construction, not merely discouraged.
+    """
+    for bogus_source in ("internal analysis", "x", "site data", "TBD"):
+        kwargs = _minimal_impact_kwargs()
+        kwargs["source"] = bogus_source
+        with pytest.raises(pydantic.ValidationError):
+            MetricImpact(**kwargs)
+
+
+def test_metric_impact_source_names_one_of_the_firms_actually_cited_in_the_plan():
+    """Enumerate, don't guess. Every BENCHMARK_SOURCES entry that isn't the
+    table's own contract-management citation must contain one of the firms
+    the plan's benchmark table actually names (BCG, McKinsey, Deloitte).
+    """
+    assert set(BENCHMARK_SOURCES) == PLAN_BENCHMARK_SOURCES
+    for source in BENCHMARK_SOURCES:
+        if source == "industry contract-management research":
+            continue  # the table's own citation for that row; not a firm
+        assert any(firm in source for firm in PLAN_BENCHMARK_FIRMS), source
+
+
+def test_metric_impact_rejects_low_pct_greater_than_high_pct():
+    kwargs = _minimal_impact_kwargs()
+    kwargs["low_pct"], kwargs["high_pct"] = 10, 5
+    with pytest.raises(pydantic.ValidationError):
+        MetricImpact(**kwargs)
+
+    # Boundary: equal values are a valid (zero-width) range, not rejected —
+    # the guard is strictly low > high, not low >= high.
+    kwargs["low_pct"], kwargs["high_pct"] = 5, 5
+    MetricImpact(**kwargs)
+
+
+def test_metric_impact_rejects_a_bogus_direction():
+    kwargs = _minimal_impact_kwargs()
+    kwargs["direction"] = "sideways"
+    with pytest.raises(pydantic.ValidationError):
+        MetricImpact(**kwargs)
+
+
+def test_card_metric_impacts_match_the_researched_benchmark_mapping():
+    by_id = {a.agent_id: a for a in ALL_AGENTS}
+    for agent_id, expected in CARD_METRIC_IMPACTS.items():
+        actual = [
+            (mi.metric, mi.direction, mi.low_pct, mi.high_pct, mi.source)
+            for mi in by_id[agent_id].card.metric_impacts
+        ]
+        assert actual == expected, agent_id
+
+
+def test_s03_and_s05_carry_no_metric_impacts_by_design():
+    """S03 (warranty/OEM claims recovery) and S05 (HSE, Class C
+    risk-adjusted) have no defensible published benchmark in the plan's
+    table for the specific claim their card makes. An empty list is the
+    honest answer — not a maintenance or downtime figure borrowed from an
+    adjacent agent to avoid an empty-looking card.
+    """
+    by_id = {a.agent_id: a for a in ALL_AGENTS}
+    assert by_id["S03"].card.metric_impacts == []
+    assert by_id["S05"].card.metric_impacts == []
+
+
+def test_no_metric_impact_reintroduces_the_disputed_leakage_figure():
+    """S09's honest_limit already states the widely quoted '9.2% contract
+    value leakage' figure is a misattribution. The 3-5% RECOVERY figure is a
+    distinct, defensible claim — this guards against the disputed figure
+    creeping back in via a metric_impacts entry instead of the line it was
+    originally caught in.
+    """
+    for agent in ALL_AGENTS:
+        if agent.card is None:
+            continue
+        for mi in agent.card.metric_impacts:
+            assert "9.2" not in mi.metric, agent.agent_id
+            assert "9.2" not in mi.source, agent.agent_id

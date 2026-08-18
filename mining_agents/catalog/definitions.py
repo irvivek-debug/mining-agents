@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Role = Literal["coordinator", "specialist", "critic"]
 
@@ -43,6 +43,74 @@ class FinancialLine(BaseModel):
     evidence_class: EvidenceClass
 
 
+#: The exact source citations from the plan's researched benchmark table
+#: (docs/superpowers/plans/2026-08-18-sales-ready-workspace.md, "The
+#: benchmark set", researched 2026-08-18). A `MetricImpact.source` must be
+#: one of these strings, verbatim — not a paraphrase, not a firm name typed
+#: from memory. That table is the single citable authority for every
+#: percentage on a card; a source that doesn't match it exactly is either a
+#: typo or an invented number, and either way it must not reach a client
+#: deck. (The value pool / "no material value" / "at scale" rows are
+#: portfolio-level, not per-agent, so they are cited on the framing page,
+#: not here — their sources are omitted from this set on purpose.)
+BENCHMARK_SOURCES: tuple[str, ...] = (
+    "BCG, mature AI sites in mining & metals",
+    "McKinsey, metals & mining",
+    "BCG",
+    "McKinsey",
+    "McKinsey / Deloitte, predictive maintenance",
+    "industry contract-management research",
+)
+
+
+class MetricImpact(BaseModel):
+    """A quantified, sourced range for how an agent's work is expected to
+    move one operational metric.
+
+    This is an INDUSTRY BENCHMARK RANGE from published research — BCG,
+    McKinsey, Deloitte, and named contract-management research — never a
+    number measured on this site's data. Nothing here is computed from the
+    demo dataset; `source` exists precisely so a reader can tell an industry
+    range apart from a site-measured figure. An unattributed percentage is
+    the line that ends a CFO conversation, so `source` is validated against
+    the plan's researched benchmark table (`BENCHMARK_SOURCES`) rather than
+    merely required to be non-empty — a missing OR a fabricated/mistyped
+    citation both raise at import, the same way a made-up archetype does.
+    """
+    metric: str
+    direction: Literal["increase", "decrease"]
+    low_pct: float
+    high_pct: float
+    source: str
+
+    @field_validator("metric")
+    @classmethod
+    def _metric_is_named(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("a metric impact must name a metric")
+        return v
+
+    @field_validator("source")
+    @classmethod
+    def _source_is_a_researched_benchmark(cls, v: str) -> str:
+        if v not in BENCHMARK_SOURCES:
+            raise ValueError(
+                f"{v!r} is not one of the plan's researched benchmark "
+                "sources (BENCHMARK_SOURCES) — every impact must cite a "
+                "real, checkable source naming the firm or study behind "
+                "it, not an invented, paraphrased, or unattributed one"
+            )
+        return v
+
+    @model_validator(mode="after")
+    def _low_at_most_high(self) -> "MetricImpact":
+        if self.low_pct > self.high_pct:
+            raise ValueError(
+                f"low_pct ({self.low_pct}) must be <= high_pct ({self.high_pct})"
+            )
+        return self
+
+
 class AgentCard(BaseModel):
     """The business-framing card rendered on a persona page (design §2).
 
@@ -57,6 +125,15 @@ class AgentCard(BaseModel):
     does NOT live here — it is computed from the pack file at export time
     (see design §2, "Coverage is the load-bearing row"), never authored by
     hand, so a card cannot silently overclaim what its pack actually covers.
+
+    `metric_impacts` is deliberately allowed to be empty. It carries
+    published, sourced benchmark ranges for the operational metrics this
+    agent's work plausibly moves — not a measurement, an industry range
+    (see `MetricImpact`). An agent whose work has no defensible published
+    benchmark (e.g. a Class C, risk-adjusted safety card, or a claim with no
+    published baseline) must carry none rather than borrow a number from an
+    adjacent agent's benchmark to avoid looking empty; a stretched figure is
+    worse than a short list.
     """
     decision: str
     leaks: list[Leak]
@@ -65,6 +142,7 @@ class AgentCard(BaseModel):
     financial_lines: list[FinancialLine]
     honest_limit: str
     pack: str | None = None
+    metric_impacts: list[MetricImpact] = Field(default_factory=list)
 
     @field_validator("leaks")
     @classmethod
@@ -177,6 +255,14 @@ S01 = SwarmDef(
                           "starts physics- and rule-based, and earns the "
                           "data over time.",
             pack="p1-reliability.yaml",
+            metric_impacts=[
+                MetricImpact(
+                    metric="Unplanned downtime",
+                    direction="decrease",
+                    low_pct=30, high_pct=50,
+                    source="McKinsey / Deloitte, predictive maintenance",
+                ),
+            ],
         ),
     ),
     specialists=(
@@ -246,6 +332,14 @@ S02 = SwarmDef(
                           "cannot be evidenced from them — only realised "
                           "cost against priority and backlog age can be.",
             pack="p2-planner.yaml",
+            metric_impacts=[
+                MetricImpact(
+                    metric="Maintenance cost",
+                    direction="decrease",
+                    low_pct=18, high_pct=25,
+                    source="McKinsey",
+                ),
+            ],
         ),
     ),
     specialists=(
@@ -311,6 +405,14 @@ S03 = SwarmDef(
                           "from the site's own claims history, and any "
                           "vendor-quoted figure is unsourceable.",
             pack="agt13-warranty.yaml",
+            # No metric_impacts: this card's own honest_limit says there is
+            # no published benchmark for unclaimed warranty/OEM claims value
+            # in heavy industry. Nothing in the plan's benchmark table prices
+            # warranty recovery, and fleet uptime figures (unplanned
+            # downtime, maintenance cost) belong to S01/S02's predictive-
+            # maintenance work, not to this agent's claims-recovery work —
+            # attaching either here would be exactly the borrowed-figure
+            # move the plan rules out.
         ),
     ),
     specialists=(
@@ -430,6 +532,15 @@ S05 = SwarmDef(
                           "correlation is reported as not instrumented "
                           "rather than inferred.",
             pack="p3-hse.yaml",
+            # No metric_impacts, deliberately. This is the HSE card: its one
+            # financial line is Class C, risk-adjusted, and reports avoided
+            # exposure — it funds nothing and is never booked. None of the
+            # plan's researched benchmarks price safety-incident avoidance
+            # or interlock-evidence quality; "Unplanned downtime" and
+            # "Maintenance cost" are asset-reliability figures (S01/S02),
+            # not safety figures, and stretching either onto a safety agent
+            # to avoid an empty list is the exact move the plan forbids. An
+            # empty list is the honest answer here.
         ),
     ),
     specialists=(
@@ -508,6 +619,14 @@ S06 = SwarmDef(
                           "subset only, and the unpaired population may "
                           "differ systematically from it.",
             pack="p5-geologist.yaml",
+            metric_impacts=[
+                MetricImpact(
+                    metric="Mineral recovery",
+                    direction="increase",
+                    low_pct=1, high_pct=3,
+                    source="McKinsey",
+                ),
+            ],
         ),
     ),
     specialists=(
@@ -572,6 +691,26 @@ S07 = SwarmDef(
                           "still be checked against the instantaneous alarm "
                           "limit before it is applied.",
             pack="p6-metallurgist.yaml",
+            metric_impacts=[
+                MetricImpact(
+                    metric="Throughput",
+                    direction="increase",
+                    low_pct=2, high_pct=5,
+                    source="BCG, mature AI sites in mining & metals",
+                ),
+                MetricImpact(
+                    metric="Throughput",
+                    direction="increase",
+                    low_pct=4, high_pct=8,
+                    source="McKinsey, metals & mining",
+                ),
+                MetricImpact(
+                    metric="Mineral recovery",
+                    direction="increase",
+                    low_pct=1, high_pct=3,
+                    source="McKinsey",
+                ),
+            ],
         ),
     ),
     specialists=(
@@ -686,6 +825,17 @@ S09 = SwarmDef(
                           "revenue — an opportunity figure, not a leakage "
                           "rate — and it is not used here.",
             pack="agt14-contract-integrity.yaml",
+            metric_impacts=[
+                # Deliberately NOT the "9.2% leakage" figure disclaimed
+                # above — this is the distinct, defensible RECOVERY figure
+                # from the plan's benchmark table.
+                MetricImpact(
+                    metric="Contract value recovered",
+                    direction="increase",
+                    low_pct=3, high_pct=5,
+                    source="industry contract-management research",
+                ),
+            ],
         ),
     ),
     specialists=(
