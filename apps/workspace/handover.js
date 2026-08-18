@@ -61,15 +61,13 @@ const COVERED =
    that used to open this sentence is in the drawer, where a reader who wants to
    check the sheet can find it and a reader who wants to read it need not. */
 el("lede").textContent =
-  "What the last shift leaves the next one, written by an agent team of " +
+  "What the last shift leaves the next one. A team of " +
   members.length +
-  ". " +
+  " writes it — " +
   COVERS.length +
-  " of them cover " +
+  " covering " +
   COVERED +
-  " between them, one more " +
-  "reads what they wrote and reports what they left out, and the lead — the " +
-  "one you ask — puts the sheet together. " +
+  ", one more reporting what they left out. " +
   (S12.hitl_required
     ? "It needs your sign-off before it is issued."
     : "It commits nothing and needs no sign-off: it is read, not actioned.");
@@ -111,10 +109,7 @@ function section(id, index) {
     `<div class="card-cap">${index} · ${esc(a.display_name)}</div>` +
     `<div class="dim" style="font-size:12.5px;margin-bottom:12px">Writes this ` +
     `section from ${esc(whatItReads(a))}.</div>` +
-    notConnected(
-      "This section is written in sentences, by the agent named above, from " +
-        "what it read. It has not been written."
-    ) +
+    notConnected("Not yet written.") +
     "</div>"
   );
 }
@@ -156,10 +151,8 @@ function omission() {
     runtimeNote() +
     "</div>" +
     '<div class="remedy">Write the brief above and this agent runs with the ' +
-    "others; what it finds, or does not find, comes back in the same answer. " +
-    "This band is never empty and never hidden. When it runs and finds " +
-    "nothing, it says it found nothing — which is a different statement from " +
-    "saying nothing, and only one of the two can be relied on.</div></li>" +
+    "others. This band never hides an empty result — when it finds nothing, " +
+    "it says so.</div></li>" +
     `<li><strong>What it checks the brief against</strong><div class="dim">${esc(
       whatItReads(critic)
     )}</div>` +
@@ -207,10 +200,8 @@ function mountRun() {
   el("run").innerHTML =
     '<div class="run-brief">' +
     '<button class="ask primary" id="run-brief" type="button">Write this brief now</button>' +
-    '<p class="pnote">You ask one agent and its team writes the whole sheet. It ' +
-    "takes a minute or two, and every step it takes appears below as it happens: " +
-    "what it looked up, what came back, and where it got to. Asking again starts " +
-    "over and stops the answer in progress.</p></div>" +
+    '<p class="pnote">One agent, its team writes the whole sheet — a minute or ' +
+    "two. Asking again restarts it.</p></div>" +
     '<div class="brief-out" id="brief-out" aria-live="polite"></div>';
 
   let live = null;
@@ -254,7 +245,7 @@ function mountRun() {
       log.appendChild(line);
     }
 
-    coverage("The brief is being written now, and the reviewer runs with it.");
+    coverage("The brief is being written now.");
 
     /* The answer as the agent wrote it, kept whole.
      *
@@ -297,8 +288,7 @@ function mountRun() {
           if (!mine.wrote) {
             mine.wrote = true;
             coverage(
-              "The brief above has been written, and whatever the reviewer " +
-                "reported about what it left out is part of that answer."
+              "The brief above has been written; the reviewer's findings are included."
             );
           }
           return;

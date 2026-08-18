@@ -291,10 +291,38 @@ table.audit td.t { white-space: nowrap; }
 
 /* The sidecar is empty until chat.js fills it; it still has to read as a column
    rather than as a gap, and it sticks so the transcript stays beside the panel
-   the reader is scrolling. */
+   the reader is scrolling.
+
+   Its surface is deliberately not the panel's. Every static block on this page
+   -- .card, .rail, .group, .agent-card -- is var(--surface) on var(--border),
+   and the sidecar wore the identical pair, which is the exact defect reported:
+   a live conversation reading as one more content block that happens to carry
+   an input at the bottom. --surface-top is two steps lighter than --surface
+   (#353535 against #1F2020) and the border swaps the neutral --border
+   (#374151) for --accent (#A7CAED) -- the colour this system already reserves
+   for "something is live or in motion" everywhere else it appears (the pill,
+   the reveal underline, INDUSTRY RANGE's badge is the one exception that
+   proves the rule: it is never used for a static fact). Both differences are
+   measured, not eyeballed -- tests/js/chat.test.js pins the two hex pairs
+   apart. */
 .sidecar {
-  border: 1px solid var(--border); background: var(--surface);
+  border: 1px solid var(--accent); background: var(--surface-top);
   padding: 14px; min-width: 0;
+}
+
+/* The label a boundary alone cannot carry: what kind of thing this column is,
+   said before any transcript exists to say it for itself. Sits above #runtime
+   and #chat as a third, permanent child of .sidecar, so chat.js mounting or
+   remounting #chat never erases it. */
+.sidecar-tag {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent);
+  margin-bottom: 12px;
+}
+.sidecar-tag::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex: none;
 }
 /* 88px, not 20px: the topbar is sticky at 69px tall, and a sidecar pinned to
    the viewport top slides underneath it and loses its first line. */

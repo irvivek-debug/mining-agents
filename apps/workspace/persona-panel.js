@@ -119,8 +119,8 @@ function _blockBranch(code, DATA) {
   if (!rows.length) {
     return (
       '<section class="pblock"><h2>What your part of the mine is doing</h2>' +
-      '<p class="pnote">No single part of the site belongs to this role, so there ' +
-      "is no separate signal for it. The figures below are the whole site's.</p>" +
+      '<p class="pnote">No part of the site is specific to this role — the ' +
+      "figures below are site-wide.</p>" +
       "</section>"
     );
   }

@@ -113,10 +113,8 @@ function mountChat(node, personaCode, DATA, deps) {
 
   node.innerHTML =
     '<div class="chat-head"><h2>Ask your agents</h2>' +
-    '<p class="pnote">These agents belong to the ' + CHAT_SHELL.esc(start.title) +
-    " role. Start with one of the questions below, or write your own. A real " +
-    "answer takes a minute or two; every step the agent takes appears here as " +
-    "it happens.</p></div>" +
+    '<p class="pnote">' + CHAT_SHELL.esc(start.title) +
+    " role · a real answer takes a minute or two.</p></div>" +
     '<div class="starters">' +
     start.starters.map(function (q) {
       return '<button class="starter" type="button">' + CHAT_SHELL.esc(q) + "</button>";

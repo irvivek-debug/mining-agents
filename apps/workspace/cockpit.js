@@ -30,11 +30,8 @@ const TEAM_SPECIALISTS = (() => {
 })();
 
 el("lede").textContent =
-  "Not every agent here takes questions. The ones that do are listed below; " +
-  "behind each of them sit specialists and a reviewer you never address " +
-  "directly. They are grouped three ways — by the person accountable, by " +
-  "standard process area, and by where the money is — because which grouping " +
-  "helps depends entirely on why you came here.";
+  "Every agent you can talk to, backed by a team you never address " +
+  "directly — grouped three ways below: by role, by process, by cost.";
 
 el("counts").innerHTML = [
   [C.entrypoints, "agents you can talk to", "of " + C.agent_nodes + " in the teams behind them", true],
@@ -188,10 +185,9 @@ el("impacts").innerHTML = IMPACTS.map(
 const SITE_MATCHED = IMPACTS.filter((entry) => gapRowFor(entry.metric)).length;
 
 el("impact-lede").textContent =
-  IMPACTS.length + " metrics this site's carded agents move, each a " +
-  "published industry range with the firm that measured it named beside " +
-  "it. " + SITE_MATCHED + " of them carry this site's own measured " +
-  "position too.";
+  IMPACTS.length + " metrics this site's carded agents move — each a " +
+  "sourced industry range, " + SITE_MATCHED + " with this site's own " +
+  "measured position too.";
 
 /* Every card in the build, persona-holding and group-level alike -- read the
  * same way agent-card.js's own test fixtures read it, so this count and that
@@ -206,9 +202,9 @@ const AGENTS_WITHOUT_IMPACT = ALL_CARDED_AGENTS.length - AGENTS_WITH_IMPACT.size
 
 el("impact-note").textContent =
   AGENTS_WITH_IMPACT.size + " of the " + ALL_CARDED_AGENTS.length + " agents " +
-  "carrying a business case move a metric with a published range above; " +
-  "the other " + AGENTS_WITHOUT_IMPACT + " earn their place on evidence " +
-  "class and coverage instead — open their cards under My role to see them.";
+  "carrying a business case move a metric with a published range; the other " +
+  AGENTS_WITHOUT_IMPACT + " earn their place on evidence class and coverage " +
+  "— see My role.";
 
 /* How many agents are filed under more than one process area. The old copy said
    "seven" and nothing checked it. */
@@ -237,9 +233,7 @@ const AXES = [
     tab: "By person",
     head: "By the person accountable",
     lede:
-      "One group per role on this site. It is the same grouping the role page " +
-      "uses: you open your own page and find every agent that answers a " +
-      "question you are answerable for.",
+      "One group per role — the same grouping your own role page uses.",
     groups: () =>
       Object.entries(CAT.by_persona).map(([code, g]) => ({
         title: (PERSONAS[code] || {}).title || code,
@@ -259,13 +253,9 @@ const AXES = [
     tab: "By process",
     head: "By standard process area",
     lede:
-      "The standard process area each agent works in — the same list a process " +
-      "owner already works from. " +
-      SPANNERS +
-      " agents sit in two areas at once and are counted in both, so these " +
-      "groups add up to more than the number of agents. A fatigue agent that " +
-      "also touches logistics genuinely belongs to both, and filing it under " +
-      "one would flatter the coverage of neither.",
+      "The standard process area each agent works in. " + SPANNERS +
+      " agents span two areas and are counted in both, so these groups add " +
+      "up to more than the agent count.",
     groups: () =>
       Object.entries(CAT.by_apqc_code).map(([code, g]) => ({
         title: CAT.apqc_names[code] || code,
@@ -279,11 +269,8 @@ const AXES = [
     tab: "By where the money is",
     head: "By where the money is",
     lede:
-      "Which part of the cost of running this site an agent works on. The tree " +
-      "these come from is rooted on all-in sustaining cost per tonne. Every " +
-      "agent you can talk to sits in exactly one part of it, or in the layer " +
-      "above where the parts meet, and the build refuses to publish a tree " +
-      "whose parts do not add back to the catalog's own count.",
+      "Which part of the cost of running this site an agent works on, " +
+      "rooted on all-in sustaining cost per tonne.",
     groups: () =>
       Object.entries(CAT.by_value_branch).map(([branch, g]) => {
         const b = DATA.value_tree.branches.find((x) => x.branches.includes(branch));
@@ -361,15 +348,20 @@ renderAxis();
 
 const GATED = CAT.agents.filter((a) => a.is_entrypoint && a.hitl_required);
 
-el("signoff-lede").textContent =
-  GATED.length +
-  " of the " +
-  C.entrypoints +
-  " agents you can talk to cannot act on what they conclude. Each one puts " +
-  "the case together, shows the evidence behind it, and then stops: it needs " +
-  "your sign-off before anything moves. There is no other route by which a " +
-  "recommendation reaches a system of record. The agent can only ask; only a " +
-  "person can commit.";
+// A labelled bar, not a sentence describing a proportion: GATED.length / C.
+// entrypoints is a share like any other on this suite, and this build already
+// has one shape for "N of M, drawn" (agent-card.js's coverage row, the same
+// .share-bar this reuses) -- so a reader who has learned to read that shape
+// once reads this one the same way, rather than meeting an eleventh custom
+// component for one number.
+const SIGNOFF_PCT = C.entrypoints ? (GATED.length / C.entrypoints) * 100 : 0;
+
+el("signoff-lede").innerHTML =
+  '<div class="share-bar" role="img" aria-hidden="true" style="max-width:420px">' +
+  '<span style="width:' + SIGNOFF_PCT.toFixed(1) + '%"></span></div>' +
+  '<p class="lede" style="margin-top:8px">' + GATED.length + " of " + C.entrypoints +
+  " agents advise rather than act: each puts its case together and needs " +
+  "your sign-off before anything moves.</p>";
 
 el("signoff").innerHTML = GATED.map((a) => a.agent_id).map(chip).join("");
 

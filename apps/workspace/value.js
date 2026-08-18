@@ -47,9 +47,7 @@ var STEPS = [
   {
     num: "01",
     head: "Margin has nearly halved.",
-    body: "Top-40 net margin fell from 24% to 10% between 2011 and 2024. " +
-      "Grades are down roughly 40% since 1991. Complexity is now the " +
-      "industry's own #1 ranked risk.",
+    body: "Complexity is now the industry's own top-ranked risk.",
     stats: [
       { v: "24% → 10%", l: "Top-40 net margin, 2011–2024" },
       { v: "−40%", l: "Grades, since 1991" },
@@ -386,6 +384,35 @@ el("b4-ladder").innerHTML =
   '<p style="font-size:13px;color:var(--fg-muted);margin:12px 0 0">' +
   "A business case clears its hurdle on Class A and Class B alone. " +
   "Class C is reported alongside it, never counted inside it.</p></div>";
+
+/* THE GROUP-LEVEL AGENT: AGT-19, the Strategic Planning Advisor.
+ *
+ * It has no AgentDef and so no persona page of its own (design §3) -- every
+ * other card in this build renders beneath a role's governing question on
+ * persona.html, and this is the one that does not fit that shape because its
+ * question is not any one role's. It re-tests the group plan itself: how the
+ * plan should change when a price, cost or capital assumption moves, and
+ * which asset absorbs it. The value page is where that belongs -- it is
+ * already the page that speaks at group level rather than at any one site or
+ * role.
+ *
+ * Framed as what it is, not as an apology: the group-plan agent, sitting
+ * above the roles the rest of this build addresses. Its own honest_limit
+ * field (rendered by renderAgentCard below, unedited) already carries the
+ * caution this card needs -- it is the least measurable agent in the
+ * portfolio and must not be added to a funding case -- so nothing here
+ * repeats or softens that; it is said once, on the card's own face.
+ */
+var GROUP_AGENTS = DATA.catalog.group_agents || {};
+var AGT19 = GROUP_AGENTS["AGT-19"];
+if (!AGT19) {
+  throw new Error("value.html has no AGT-19 card to surface; check catalog.group_agents");
+}
+
+el("agt19").innerHTML =
+  '<p class="pnote">Not addressed to one role — it re-tests the group plan ' +
+  "itself as assumptions move, and says which asset absorbs the change.</p>" +
+  renderAgentCard(AGT19);
 
 /* ---------------------------------------------------------------- drawer */
 

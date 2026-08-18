@@ -46,18 +46,15 @@ const persona = PERSONAS[coord.persona] || {};
 document.title = `${coord.display_name} — Mining Agents workspace`;
 el("title").textContent = coord.display_name;
 el("lede").textContent =
-  "You put the question to one agent. Behind it, " +
+  "You ask one agent. Behind it: " +
   swarm.specialists.length +
-  " specialists work the same problem from different evidence, and a reviewer " +
-  "reads what they produced and looks for what they missed — " +
+  " specialists and a reviewer — " +
   members.length +
-  " agents in all, of which you address one. Answerable for this team: " +
+  " in all. Answerable for this team: " +
   (persona.title || coord.persona) +
-  ". Filed under " +
-  coord.apqc_names.join(" and ") +
   ". " +
   (coord.hitl_required
-    ? "Nothing it proposes reaches a system of record on its own: it needs your sign-off first."
+    ? "Needs your sign-off before anything reaches a system of record."
     : "This team reports; it commits nothing.");
 
 /* Every member is WAITING, and that is the truthful state rather than a
@@ -138,11 +135,7 @@ el("work").innerHTML =
   "</div>" +
 
   '<div class="card" style="margin-top:16px"><div class="card-cap">What this team actually did</div>' +
-  notConnected(
-    "When this team runs, every step it takes is listed here in the order it " +
-      "took it: what it looked up, what came back, and where it stopped. It has " +
-      "not been run."
-  ) +
+  notConnected("Every step will be listed here, in order. It has not been run.") +
   "</div>" +
 
   '<div class="card" style="margin-top:16px"><div class="card-cap">What it reads</div>' +
@@ -153,9 +146,6 @@ el("work").innerHTML =
       "following the links out from a machine, a part or a person to see " +
       `${tracesPlainly()} — which is the question no single table answers.</p>`
     : "") +
-  '<p class="dim" style="font-size:12.5px;margin:0">The tables behind those ' +
-  "words, their columns and how an answer is worked out are in the technical " +
-  "detail at the foot of this page.</p>" +
   "</div>" +
 
   '<div style="margin-top:16px">' +
