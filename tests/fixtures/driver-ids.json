@@ -45,5 +45,17 @@
   "feed_variability",
   "bypass",
   "reagent_regime",
-  "grind_size_p80"
+  "grind_size_p80",
+  "congestion_cycle_time",
+  "queue_buildup_leading_indicator",
+  "payload_utilization",
+  "operator_behaviour_variance",
+  "breakdown_reassignment_effectiveness",
+  "fatigue_signal_shift_delta",
+  "safety_signal_shift_delta",
+  "radio_emergency_shift_delta",
+  "maintenance_demand_shift_delta",
+  "production_output_shift_delta",
+  "fleet_availability_shift_delta",
+  "dispatch_performance_shift_delta"
 ]

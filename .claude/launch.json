@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "apps",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8000", "--directory", "apps"],
+      "port": 8000
+    },
+    {
+      "name": "workspace-server",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "uvicorn", "apps.workspace.server:app", "--port", "8800", "--reload"],
+      "port": 8800
+    },
+    {
+      "name": "prod-workspace",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["scripts/proxy_workspace.py", "--port", "8804"],
+      "port": 8804
+    }
+  ]
+}

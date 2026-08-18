@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-18T04:15:56+00:00",
+  "generated_at": "2026-08-18T04:50:16+00:00",
   "source": "mining_agents.catalog.definitions",
   "counts": {
     "agent_nodes": 100,
@@ -3223,10 +3223,10 @@
     "Assurance"
   ],
   "leak_counts": {
-    "Latency": 6,
-    "Blind spot": 3,
+    "Latency": 8,
+    "Blind spot": 4,
     "Variance": 2,
-    "Coordination": 1,
+    "Coordination": 2,
     "Assurance": 1
   },
   "group_agents": {

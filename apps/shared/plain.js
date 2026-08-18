@@ -158,6 +158,22 @@ var METHOD_DRIVERS = {
   local_vs_group_divergence: "whether the site plans and the group plan still describe the same year",
   capital_option_dominance: "whether one capital option now clearly beats another on the current outlook",
   plan_output_completeness: "whether the plan states the trigger that would make it change",
+
+  /* P7 — Mine Controller (Optimiser: which dispatch choice serves the shift's objective) */
+  congestion_cycle_time: "whether trucks are queuing long enough to cost the shift its tonnes",
+  queue_buildup_leading_indicator: "whether a queue is building before it shows up in cycle time",
+  payload_utilization: "whether trucks are leaving the face carrying less than they could",
+  operator_behaviour_variance: "how much of the cycle-time spread is down to how the fleet is being run",
+  breakdown_reassignment_effectiveness: "whether the fleet is being re-dispatched well when a truck goes down",
+
+  /* P8 — Shift Supervisor (Sentinel: what changed since last shift, and whether it matters now) */
+  fatigue_signal_shift_delta: "whether crew fatigue readings have moved since the last comparable period",
+  safety_signal_shift_delta: "whether the safety picture has moved since the last comparable period",
+  radio_emergency_shift_delta: "whether emergency radio traffic has moved since the last comparable period",
+  maintenance_demand_shift_delta: "whether the maintenance load coming at the shift has moved",
+  production_output_shift_delta: "whether output has moved since the last comparable period",
+  fleet_availability_shift_delta: "whether the fleet available to the shift has moved",
+  dispatch_performance_shift_delta: "whether haulage performance has moved since the last comparable period",
 };
 
 /* A search term is the model's own text, so its length is not ours to trust:

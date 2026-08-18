@@ -228,13 +228,42 @@ test("a persona with a card but no method pack of its own still gets its card", 
 });
 
 test("a persona with neither a method nor a card renders no card block at all", () => {
-  for (const code of ["P7", "P8"]) {
-    const persona = DATA.personas.personas[code];
-    assert.ok(!persona.method, `fixture assumption broke: ${code} now has a method`);
-    assert.ok(!(persona.cards || []).length, `fixture assumption broke: ${code} now has a card`);
-    const html = PANEL.renderPanel(code, DATA);
-    assert.ok(!html.includes("business-framing card"), `${code} renders the no-card note it has no reason to render`);
-  }
+  // Proved on a synthetic persona, not on P7 or P8 as it once was.
+  //
+  // Those two were the last personas carrying neither, and both were given a
+  // pack and a card to close the empty screens in the demo. Every shipped
+  // persona now has both, so there is no live fixture left for this behaviour
+  // — and the behaviour still matters: a fork that adds a role before it adds
+  // that role's agents must not get a stray card block. Pinning it to whichever
+  // persona happens to be unfinished this week is what broke this test, so it
+  // is pinned to a persona the test owns outright instead.
+  const synthetic = JSON.parse(JSON.stringify(DATA));
+  synthetic.personas.personas.P1.method = null;
+  delete synthetic.personas.personas.P1.cards;
+  const html = PANEL.renderPanel("P1", synthetic);
+  assert.ok(!html.includes("business-framing card"),
+    "a persona with no method and no cards still rendered a card block");
+
+  // The string above is the NO-CARD NOTE, not a marker on a card, so the
+  // assertion is that a persona with nothing to show says nothing rather than
+  // announcing an absence. Two converse checks keep it from passing vacuously.
+  //
+  // First: a persona that HAS cards renders them, so an empty render would not
+  // sail through the assertion above.
+  const withCards = PANEL.renderPanel("P1", DATA);
+  assert.ok(withCards.includes("agent-card"),
+    "P1 carries cards but rendered none, so the negative assertion above "
+    + "proves nothing");
+
+  // Second: the note itself must still be reachable. It exists for a persona
+  // that has a governing question but no card yet — delete the note and the
+  // first assertion passes forever while the real behaviour is gone.
+  const questionNoCards = JSON.parse(JSON.stringify(DATA));
+  delete questionNoCards.personas.personas.P1.cards;
+  const noteHtml = PANEL.renderPanel("P1", questionNoCards);
+  assert.ok(noteHtml.includes("business-framing card"),
+    "a persona with a governing question but no card no longer says so; the "
+    + "note has been lost rather than suppressed");
 });
 
 test("nothing on the persona page implies authority is enforced", () => {

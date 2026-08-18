@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-18T04:15:56+00:00",
+  "generated_at": "2026-08-18T04:50:17+00:00",
   "source": "docs/persona-profiles.yaml",
   "personas": {
     "P1": {
@@ -601,6 +601,35 @@
       "hitl_agents": [
         "D14",
         "S04"
+      ],
+      "method": {
+        "metric": "haul fleet movement rate"
+      },
+      "cards": [
+        {
+          "agent_id": "S04",
+          "display_name": "Shift Dispatch Re-plan Coordinator",
+          "decision": "Which route or load setpoint best serves the shift's movement-rate objective when two parts of the operation want incompatible things \u2014 a route that is short but congested against one that is long but clear.",
+          "leaks": [
+            "Latency",
+            "Coordination"
+          ],
+          "archetype": "Optimiser",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "movement rate lost to route and load mismatch \u2192 C1 cash cost",
+              "evidence_class": "B"
+            }
+          ],
+          "honest_limit": "Congestion is compared against each route's own baseline, not a fleet-wide norm, and no table links a haul cycle to the operator who drove it at usable scale \u2014 operator-behaviour and breakdown-reassignment findings are reported as not instrumented rather than inferred.",
+          "metric_impacts": [],
+          "pack": "p7-mine-controller.yaml",
+          "coverage": {
+            "instrumented": 3,
+            "total": 5
+          }
+        }
       ]
     },
     "P8": {
@@ -641,7 +670,36 @@
       ],
       "value_branch": "site_wide",
       "agent_count": 1,
-      "hitl_agents": []
+      "hitl_agents": [],
+      "method": {
+        "metric": "shift handover risk surface"
+      },
+      "cards": [
+        {
+          "agent_id": "S12",
+          "display_name": "Shift Handover & Site Value Briefing Coordinator",
+          "decision": "What changed since the last shift closed, across production, safety, fatigue and maintenance demand, and whether the incoming supervisor needs to act on it before anything else.",
+          "leaks": [
+            "Blind spot",
+            "Latency"
+          ],
+          "archetype": "Sentinel",
+          "authority": "L1 \u2014 Recommend",
+          "financial_lines": [
+            {
+              "line": "shift handover risk surface narrowed \u2192 risk position (avoided loss)",
+              "evidence_class": "C"
+            }
+          ],
+          "honest_limit": "A period-over-period change is reported only where the underlying table carries a genuine time series; fleet availability and route-level dispatch performance carry no such series today, and are reported as not instrumented rather than inferred from a single snapshot.",
+          "metric_impacts": [],
+          "pack": "p8-shift-supervisor.yaml",
+          "coverage": {
+            "instrumented": 5,
+            "total": 7
+          }
+        }
+      ]
     }
   }
 }

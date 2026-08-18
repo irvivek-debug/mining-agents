@@ -117,9 +117,14 @@ def test_every_card_field_reaches_the_export():
             {"line": fl.line, "evidence_class": fl.evidence_class}
             for fl in agent.card.financial_lines
         ]
-    assert checked == 7, (
-        f"expected the seven documented cards (S01, S02, S03, S05, S06, S07, "
-        f"S09), found {checked}"
+    # Nine, not seven: S04 (P7, Optimiser) and S12 (P8, Sentinel) were added
+    # to close the two personas that had neither a card nor a pack. The number
+    # is written out rather than derived from ALL_AGENTS, deliberately — a
+    # count taken from the same source the loop walks would rise silently with
+    # a card added by accident, and the point of this assertion is to notice.
+    assert checked == 9, (
+        f"expected the nine documented cards (S01, S02, S03, S04, S05, S06, "
+        f"S07, S09, S12), found {checked}"
     )
 
 
@@ -326,7 +331,7 @@ def test_metric_impacts_reach_the_export_unchanged():
             }
             for mi in agent.card.metric_impacts
         ]
-    assert checked == 7
+    assert checked == 9
 
 
 def test_a_card_with_no_metric_impacts_exports_an_empty_list_not_an_absent_field():
