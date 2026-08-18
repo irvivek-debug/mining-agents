@@ -20,17 +20,21 @@ from mining_agents.tools.graph_traverse import TRAVERSALS
 HITL_COORDINATORS = {"S01", "S02", "S04", "S05", "S07", "S08", "S09", "S10", "S11"}
 HITL_DEEP = {"D07", "D14", "D25", "D30", "D37"}
 
-#: The seven coordinators that carry a card as of this task, and the pack
-#: file each one's card references. Fixed set, not derived — a test that
-#: derives its expectation from the same code it is checking cannot fail.
+#: The nine coordinators that carry a card as of Task F, and the pack file
+#: each one's card references. Fixed set, not derived — a test that derives
+#: its expectation from the same code it is checking cannot fail. S04 (P7,
+#: Optimiser) and S12 (P8, Sentinel) were added in Task F to close the two
+#: personas that previously had neither a card nor a method pack.
 CARD_COORDINATORS = {
     "S01": "p1-reliability.yaml",
     "S02": "p2-planner.yaml",
     "S03": "agt13-warranty.yaml",
+    "S04": "p7-mine-controller.yaml",
     "S05": "p3-hse.yaml",
     "S06": "p5-geologist.yaml",
     "S07": "p6-metallurgist.yaml",
     "S09": "agt14-contract-integrity.yaml",
+    "S12": "p8-shift-supervisor.yaml",
 }
 
 
@@ -203,12 +207,13 @@ def test_graph_traverse_is_never_granted_without_a_traversal():
 
 
 # ---------------------------------------------------------------------------
-# Agent cards (value-framing design, §2). Cards live only on the seven
-# coordinators that already hold — or, for the CFO proof-point agents, will
-# hold — a method pack. Every other agent's `card` is None.
+# Agent cards (value-framing design, §2). Cards live only on the nine
+# coordinators that hold a method pack (five persona packs plus the two CFO
+# proof-point + two persona-completion packs — S03/S09 for AGT-13/AGT-14, S04
+# for P7, S12 for P8). Every other agent's `card` is None.
 # ---------------------------------------------------------------------------
 
-def test_exactly_the_seven_pack_holding_coordinators_declare_a_card():
+def test_exactly_the_nine_pack_holding_coordinators_declare_a_card():
     by_id = {a.agent_id: a for a in ALL_AGENTS}
     with_card = {a.agent_id for a in ALL_AGENTS if a.card is not None}
     assert with_card == set(CARD_COORDINATORS)
@@ -423,6 +428,7 @@ CARD_METRIC_IMPACTS: dict[str, list[tuple]] = {
         ("Maintenance cost", "decrease", 18.0, 25.0, "McKinsey"),
     ],
     "S03": [],
+    "S04": [],
     "S05": [],
     "S06": [
         ("Mineral recovery", "increase", 1.0, 3.0, "McKinsey"),
@@ -435,6 +441,7 @@ CARD_METRIC_IMPACTS: dict[str, list[tuple]] = {
     "S09": [
         ("Contract value recovered", "increase", 3.0, 5.0, "industry contract-management research"),
     ],
+    "S12": [],
 }
 
 
@@ -523,6 +530,19 @@ def test_s03_and_s05_carry_no_metric_impacts_by_design():
     by_id = {a.agent_id: a for a in ALL_AGENTS}
     assert by_id["S03"].card.metric_impacts == []
     assert by_id["S05"].card.metric_impacts == []
+
+
+def test_s04_and_s12_carry_no_metric_impacts_by_design():
+    """S04 (dispatch re-plan, Optimiser) and S12 (shift handover, Sentinel)
+    have no row in the plan's benchmark table that prices their specific
+    claim either — S04 would have to borrow S07's already-claimed
+    "Throughput" citation for a mechanically different lever, and S12's
+    Class C risk-adjusted briefing has no published benchmark at all. An
+    empty list is the honest answer, same as S03 and S05.
+    """
+    by_id = {a.agent_id: a for a in ALL_AGENTS}
+    assert by_id["S04"].card.metric_impacts == []
+    assert by_id["S12"].card.metric_impacts == []
 
 
 def test_no_metric_impact_reintroduces_the_disputed_leakage_figure():

@@ -26,6 +26,8 @@ PACKS = {
     "P3": "p3-hse.yaml",
     "P5": "p5-geologist.yaml",
     "P6": "p6-metallurgist.yaml",
+    "P7": "p7-mine-controller.yaml",
+    "P8": "p8-shift-supervisor.yaml",
 }
 
 

@@ -456,6 +456,40 @@ S04 = SwarmDef(
             "mining_data.fleet_vehicles",
         ],
         tools=["bq_query", "request_approval"],
+        card=AgentCard(
+            decision="Which route or load setpoint best serves the shift's "
+                     "movement-rate objective when two parts of the "
+                     "operation want incompatible things — a route that is "
+                     "short but congested against one that is long but "
+                     "clear.",
+            leaks=["Latency", "Coordination"],
+            archetype="Optimiser",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="movement rate lost to route and load mismatch → "
+                         "C1 cash cost",
+                    evidence_class="B",
+                ),
+            ],
+            honest_limit="Congestion is compared against each route's own "
+                          "baseline, not a fleet-wide norm, and no table "
+                          "links a haul cycle to the operator who drove it "
+                          "at usable scale — operator-behaviour and "
+                          "breakdown-reassignment findings are reported as "
+                          "not instrumented rather than inferred.",
+            pack="p7-mine-controller.yaml",
+            # No metric_impacts, deliberately. The plan's benchmark table's
+            # "Throughput" rows describe mature-AI-site throughput gains
+            # generally and are already the S07 (crusher-mill) card's claim;
+            # dispatch/haul optimisation moves a different lever toward the
+            # same aggregate outcome, and reusing S07's exact cited range
+            # here — rather than a range this agent's own mechanism has
+            # earned — is the borrowed-figure move the plan rules out. No
+            # row in the table prices fleet movement rate or haul dispatch
+            # specifically, so an empty list is the honest answer, same as
+            # S03 and S05.
+        ),
     ),
     specialists=(
         _a("S04-SP1", "Cycle Time Variance Analyst", "S04", "specialist",
@@ -999,6 +1033,36 @@ S12 = SwarmDef(
             "mining_data.biometric_fatigue_logs",
         ],
         tools=["bq_query"],
+        card=AgentCard(
+            decision="What changed since the last shift closed, across "
+                     "production, safety, fatigue and maintenance demand, "
+                     "and whether the incoming supervisor needs to act on "
+                     "it before anything else.",
+            leaks=["Blind spot", "Latency"],
+            archetype="Sentinel",
+            authority="L1 — Recommend",
+            financial_lines=[
+                FinancialLine(
+                    line="shift handover risk surface narrowed → risk "
+                         "position (avoided loss)",
+                    evidence_class="C",
+                ),
+            ],
+            honest_limit="A period-over-period change is reported only "
+                          "where the underlying table carries a genuine "
+                          "time series; fleet availability and route-level "
+                          "dispatch performance carry no such series today, "
+                          "and are reported as not instrumented rather than "
+                          "inferred from a single snapshot.",
+            pack="p8-shift-supervisor.yaml",
+            # No metric_impacts, deliberately, for the same reason as S03 and
+            # S05: this is the shift-briefing card, its one financial line is
+            # Class C and risk-adjusted, and no row in the plan's benchmark
+            # table prices a shift-handover briefing or a noticing agent's
+            # coverage. Borrowing an adjacent agent's throughput or downtime
+            # figure to avoid an empty list is exactly the move the plan
+            # forbids; an empty list is the honest answer.
+        ),
     ),
     specialists=(
         _a("S12-SP1", "Availability Summariser", "S12", "specialist",
