@@ -340,6 +340,53 @@ el("b4-cards").innerHTML =
   }).join("") +
   "</div>";
 
+/* THE EVIDENCE LADDER, restored.
+ *
+ * Band 4's second card asserts that every recommendation carries an evidence
+ * class. Asserting it is not the same as showing it, and the three classes are
+ * the part a CFO actually uses: they decide what may be booked and what may
+ * only be reported. Without them "evidence, classed" is a claim about rigour
+ * rather than a demonstration of it, and the band's whole argument -- that this
+ * build answers the failure rate above it -- rests on the demonstration.
+ *
+ * Deliberately a strip rather than the band it used to be. It is the mechanism
+ * behind one differentiator, not a fifth pillar of the argument, and giving it
+ * a heading of its own cost the page more attention than it earns. */
+var LADDER = [
+  {
+    cls: "A", tone: "ok", name: "Cash-verifiable",
+    body: "Lands as cash, a credit note or an avoided invoice, traced " +
+      "transaction by transaction. No counterfactual needed.",
+  },
+  {
+    cls: "B", tone: "info", name: "Metric-verifiable",
+    body: "A named operating metric moves against a baseline signed with " +
+      "Finance before go-live, at a rate agreed in advance.",
+  },
+  {
+    cls: "C", tone: "warn", name: "Risk-adjusted",
+    body: "Exposure reduced and evidenced, with no counterfactual available. " +
+      "Reported to the board, never counted in the case.",
+  },
+];
+
+el("b4-ladder").innerHTML =
+  '<div class="card"><div class="card-cap">What each class means, and what it funds</div>' +
+  '<div class="bento" style="margin-top:12px">' +
+  LADDER.map(function (l) {
+    return (
+      '<div class="c4">' +
+      '<div class="compare-head"><span><span class="badge b-' + l.tone + '">CLASS ' +
+      esc(l.cls) + "</span> " + esc(l.name) + "</span></div>" +
+      '<p style="font-size:13px;color:var(--fg-muted);margin:6px 0 0">' +
+      esc(l.body) + "</p></div>"
+    );
+  }).join("") +
+  "</div>" +
+  '<p style="font-size:13px;color:var(--fg-muted);margin:12px 0 0">' +
+  "A business case clears its hurdle on Class A and Class B alone. " +
+  "Class C is reported alongside it, never counted inside it.</p></div>";
+
 /* ---------------------------------------------------------------- drawer */
 
 function drawerBody() {

@@ -202,3 +202,26 @@ test("neither heading level carries a digit", async () => {
     assert.ok(!/\d/.test(heading), `heading carries a digit: ${heading}`);
   }
 });
+
+test("the evidence ladder defines all three classes and the funding rule", async () => {
+  // Band 4 claims "evidence, classed" as a differentiator. A claim of rigour
+  // is not a demonstration of it: the three definitions are the part a CFO
+  // uses, because they decide what may be booked and what may only be
+  // reported. An earlier rebuild dropped them and left the assertion standing
+  // alone, which is what this test exists to stop recurring.
+  const html = await renderedHtml();
+  for (const cls of ["A", "B", "C"]) {
+    assert.match(html, new RegExp("CLASS\\s*" + cls),
+      `class ${cls} is missing from the evidence ladder`);
+  }
+  for (const name of ["Cash-verifiable", "Metric-verifiable", "Risk-adjusted"]) {
+    assert.ok(html.includes(name), `${name} is missing`);
+  }
+  // The funding rule is the whole point of naming the classes. Without it a
+  // reader can see three labels and still not know which ones pay for the
+  // programme, which is the question the band is answering.
+  assert.match(html, /Class A and Class B alone/,
+    "the ladder lists the classes but never says which of them a case rests on");
+  assert.match(html, /never counted inside it/,
+    "the ladder never states that Class C is excluded from the case");
+});
