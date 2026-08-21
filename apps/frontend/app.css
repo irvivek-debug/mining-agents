@@ -592,7 +592,18 @@ main.main-content { max-width: 1200px; margin: 0 auto; padding: 36px 24px 80px 2
   line-height: 1.4; word-break: break-word;
 }
 .flow-stage[data-stage="decides"] .flow-value { font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; }
-.flow-detail { font-size: 11.5px; color: var(--m3-text-secondary); line-height: 1.5; margin-top: 3px; }
+/* The business reading of the stage. Sits between the mechanism's headline and
+   its detail, tinted so the eye can take the business register on its own pass
+   and drop to the mechanism only when it wants to. */
+.flow-business {
+  font-size: 12px; color: var(--m3-text-primary); line-height: 1.5;
+  margin-top: 5px; padding: 7px 10px;
+  background: var(--m3-primary-container); border-radius: var(--radius-sm);
+  border-left: 2px solid var(--m3-primary);
+}
+.flow-stage[data-stage="approval"] .flow-business { background: var(--m3-critical-container); border-left-color: var(--m3-critical); }
+.flow-stage[data-stage="lands"] .flow-business { background: var(--m3-success-container); border-left-color: var(--m3-success); }
+.flow-detail { font-size: 11px; color: var(--m3-text-secondary); line-height: 1.5; margin-top: 5px; }
 .flow-stage[data-stage="reads"] .flow-detail { font-family: var(--font-mono); font-size: 11px; }
 
 /* =============================================================================

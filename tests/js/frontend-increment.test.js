@@ -126,6 +126,88 @@ test("an agent needing human release says so in both the approval and the landin
   }
 });
 
+test("every flow stage carries a business reading as well as the mechanism", () => {
+  for (const a of AGENTS) {
+    for (const stage of a.flow) {
+      assert.ok(stage.business, `${a.id} stage ${stage.key} has no business line`);
+      assert.ok(stage.business.length > 40,
+        `${a.id} stage ${stage.key} business line is too short to say anything`);
+      assert.notEqual(stage.business, stage.detail,
+        `${a.id} stage ${stage.key} repeats the mechanism instead of translating it`);
+    }
+  }
+});
+
+test("the business reading never prints a table name or a service account at the reader", () => {
+  // The whole point of this line is that it is readable without knowing the
+  // schema. A snake_case identifier leaking into it means a lexicon lookup was
+  // skipped -- except on the trigger stage, where naming the human group that
+  // can call the agent is the useful fact.
+  for (const a of AGENTS) {
+    for (const stage of a.flow) {
+      if (stage.key === "trigger") continue;
+      assert.doesNotMatch(stage.business, /[a-z]+_[a-z]+/,
+        `${a.id} stage ${stage.key} leaks an identifier: ${stage.business}`);
+    }
+  }
+});
+
+test("the reads line names every table in plain English, and counts them consistently", () => {
+  for (const a of AGENTS) {
+    const reads = a.flow.find((s) => s.key === "reads");
+    // Checked against the emitted list rather than by parsing the sentence: a
+    // plain name can contain the word "and" ("vessel and berth schedules"), so
+    // counting separators in prose is not a sound way to count sources.
+    assert.equal(reads.sources.length, a.provenance.length,
+      `${a.id} names a different number of sources than it declares tables`);
+    for (const name of reads.sources) {
+      assert.doesNotMatch(name, /_/, `${a.id} source "${name}" is not plain English`);
+      assert.ok(reads.business.includes(name),
+        `${a.id} omits "${name}" from its reads line`);
+    }
+  }
+});
+
+test("a claim about a critic is only made where a critic exists", () => {
+  // The coordinator and specialist lines promise the swarm's critic will attack
+  // the finding. Every swarm has one today; if that ever stopped being true the
+  // line would be a false assurance on a sales screen.
+  const ids = new Set(AGENTS.map((a) => a.id));
+  for (const a of AGENTS) {
+    const decides = a.flow.find((s) => s.key === "decides");
+    if (!/critic/i.test(decides.business)) continue;
+    if (a.pattern === "A_CRITIC") continue; // it is the critic
+    const swarm = a.id.split("-")[0];
+    assert.ok(ids.has(swarm + "-R-CRITIC"),
+      `${a.id} promises a critic, but ${swarm} has none`);
+  }
+});
+
+test("a solver claim is only made where the agent actually holds tools", () => {
+  for (const a of AGENTS) {
+    const decides = a.flow.find((s) => s.key === "decides");
+    const claimsSolver = /runs in a named solver/.test(decides.business);
+    assert.equal(claimsSolver, a.tools.length > 0,
+      `${a.id} solver claim disagrees with its tool list`);
+  }
+});
+
+test("the human-caller line is only used for agents a person can actually reach", () => {
+  for (const a of AGENTS) {
+    const trigger = a.flow.find((s) => s.key === "trigger");
+    if (!/A person can ask for this directly/.test(trigger.business)) continue;
+    assert.equal(a.endpoint_type || a.endpoint, "cloud_run",
+      `${a.id} claims direct human access but is not reachable over HTTPS`);
+    assert.match(trigger.detail, /@/, `${a.id} names no caller`);
+  }
+});
+
+test("every stage's business line is rendered, not just carried in the data", () => {
+  const app = read("app.js");
+  assert.match(app, /flow-business/);
+  assert.match(read("app.css"), /\.flow-business \{/);
+});
+
 /* --------------------------------------------------- persona portraits -- */
 
 test("every persona has a portrait and no two personas share one", () => {

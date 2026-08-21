@@ -59,31 +59,41 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by sa-mining-orchestrator@genial-union-475913-i7.iam.gserviceaccount.com, exec-committee@argolis-mining.com."
+    "detail": "Called over HTTPS by sa-mining-orchestrator@genial-union-475913-i7.iam.gserviceaccount.com, exec-committee@argolis-mining.com.",
+    "business": "A person can ask for this directly \u2014 exec-committee@argolis-mining.com \u2014 as well as the platform. It answers on demand, not on a monthly cycle."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "3 grounding tables",
-    "detail": "geological_block_models, financial_ledger, mine_production_schedule"
+    "detail": "geological_block_models, financial_ledger, mine_production_schedule",
+    "business": "Bounded to the geological block model, the financial ledger and the mine production schedule. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the geological block model",
+     "the financial ledger",
+     "the mine production schedule"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "max NPV = sum [(P-s)Qr - cQc - mQm - F]/(1+d)^t",
-    "detail": "Applied through kenneth_lane_optimizer, ornstein_uhlenbeck_simulator, ssd_capex_evaluator, risk_assessor."
+    "detail": "Applied through kenneth_lane_optimizer, ornstein_uhlenbeck_simulator, ssd_capex_evaluator, risk_assessor.",
+    "business": "A capital judgement, made the same way every quarter. The method is fixed in advance so this year's answer can be compared with last year's. The arithmetic runs in a named solver rather than being improvised, so the working can be reproduced on demand."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -127,31 +137,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S01-COORDINATOR."
+    "detail": "Dispatched in-process by S01-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "drill_holes"
+    "detail": "drill_holes",
+    "business": "Bounded to drill hole logs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "drill hole logs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "RQD = (sum(pieces >= 10cm) / total_length) * 100",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -195,31 +213,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S01-COORDINATOR."
+    "detail": "Dispatched in-process by S01-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "assay_logs"
+    "detail": "assay_logs",
+    "business": "Bounded to laboratory assay results. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "laboratory assay results"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Z_hat(x0) = sum(lambda_i * Z(x_i))",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -263,31 +289,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S01-COORDINATOR."
+    "detail": "Dispatched in-process by S01-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "geological_block_models"
+    "detail": "geological_block_models",
+    "business": "Bounded to the geological block model. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the geological block model"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "n = (sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta))",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -343,31 +377,41 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "3 grounding tables",
-    "detail": "drill_holes, assay_logs, geological_block_models"
+    "detail": "drill_holes, assay_logs, geological_block_models",
+    "business": "Bounded to drill hole logs, laboratory assay results and the geological block model. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "drill hole logs",
+     "laboratory assay results",
+     "the geological block model"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "gamma(h) = 1/(2N(h)) * sum [Z(x_i) - Z(x_i+h)]^2",
-    "detail": "Applied through variogram_modeler, rqd_calculator, kriging_solver."
+    "detail": "Applied through variogram_modeler, rqd_calculator, kriging_solver.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it. The arithmetic runs in a named solver rather than being improvised, so the working can be reproduced on demand."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -415,31 +459,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S01-COORDINATOR."
+    "detail": "Dispatched in-process by S01-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assay_logs, qaqc_standards"
+    "detail": "assay_logs, qaqc_standards",
+    "business": "Bounded to laboratory assay results and QA/QC assay standards. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "laboratory assay results",
+     "QA/QC assay standards"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "JORC Resource Confidence Index & Blank Contamination Variance",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -483,31 +536,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S02-COORDINATOR."
+    "detail": "Dispatched in-process by S02-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "geotech_sensors"
+    "detail": "geotech_sensors",
+    "business": "Bounded to geotechnical sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "geotechnical sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "FoS = [c' + (sigma_n - u)*tan(phi')] / tau_m",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -551,31 +612,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S02-COORDINATOR."
+    "detail": "Dispatched in-process by S02-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "mine_production_schedule"
+    "detail": "mine_production_schedule",
+    "business": "Bounded to the mine production schedule. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the mine production schedule"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "V_t(S) = max_a [R(S, a) + gamma * V_{t+1}(S')]",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -619,31 +688,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S02-COORDINATOR."
+    "detail": "Dispatched in-process by S02-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "pit_designs"
+    "detail": "pit_designs",
+    "business": "Bounded to pit designs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "pit designs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Bishop Method: FoS = sum([c'b + (W - ub)tan(phi')]*m_alpha) / sum(W*sin(alpha))",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -691,31 +768,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "mine_production_schedule, pit_designs"
+    "detail": "mine_production_schedule, pit_designs",
+    "business": "Bounded to the mine production schedule and pit designs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the mine production schedule",
+     "pit designs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Lerchs-Grossmann Graph Max-Flow: max sum(w_i * v_i)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -763,31 +849,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S02-COORDINATOR."
+    "detail": "Dispatched in-process by S02-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "survey_scans, mine_production_schedule"
+    "detail": "survey_scans, mine_production_schedule",
+    "business": "Bounded to survey scans and the mine production schedule. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "survey scans",
+     "the mine production schedule"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "F1 = Mined_Volume / Planned_Volume, F2 = Milled_Metal / Mined_Metal",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -831,31 +926,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S03-COORDINATOR."
+    "detail": "Dispatched in-process by S03-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "blast_designs"
+    "detail": "blast_designs",
+    "business": "Bounded to approved blast designs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "approved blast designs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "B = K_b * d_h * sqrt(rho_e / rho_r)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -899,31 +1002,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S03-COORDINATOR."
+    "detail": "Dispatched in-process by S03-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "explosives_inventory"
+    "detail": "explosives_inventory",
+    "business": "Bounded to explosives stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "explosives stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "q = M_exp / V_rock (kg/m3)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -967,31 +1078,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S03-COORDINATOR."
+    "detail": "Dispatched in-process by S03-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "vibration_monitors"
+    "detail": "vibration_monitors",
+    "business": "Bounded to vibration monitoring. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vibration monitoring"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "PPV = K * (D / sqrt(W))^(-beta)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1039,31 +1158,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "blast_designs, explosives_inventory"
+    "detail": "blast_designs, explosives_inventory",
+    "business": "Bounded to approved blast designs and explosives stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "approved blast designs",
+     "explosives stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Kuz-Ram: x50 = A * Q^(1/6) * (115/E)^0.63 * (V0/Q)^0.8",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -1111,31 +1239,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S03-COORDINATOR."
+    "detail": "Dispatched in-process by S03-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "blast_designs, safety_permits"
+    "detail": "blast_designs, safety_permits",
+    "business": "Bounded to approved blast designs and safety permits and work authorisations. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "approved blast designs",
+     "safety permits and work authorisations"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Statutory Exclusion Zone Radius & Misfire Detection Gate",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -1179,31 +1316,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S04-COORDINATOR."
+    "detail": "Dispatched in-process by S04-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "fleet_telemetry"
+    "detail": "fleet_telemetry",
+    "business": "Bounded to haul fleet telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Passes = Truck_Capacity / (Shovel_Bucket_Payload * Fill_Factor)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1247,31 +1392,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S04-COORDINATOR."
+    "detail": "Dispatched in-process by S04-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "dispatch_routes"
+    "detail": "dispatch_routes",
+    "business": "Bounded to truck dispatch assignments. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "truck dispatch assignments"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "min sum(c_ij * x_ij) s.t. network flow continuity",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1315,31 +1468,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S04-COORDINATOR."
+    "detail": "Dispatched in-process by S04-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "fleet_telemetry"
+    "detail": "fleet_telemetry",
+    "business": "Bounded to haul fleet telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "P(X > 1.20 * Target_Payload) = 0",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1389,31 +1550,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "fleet_telemetry, dispatch_routes"
+    "detail": "fleet_telemetry, dispatch_routes",
+    "business": "Bounded to haul fleet telemetry and truck dispatch assignments. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry",
+     "truck dispatch assignments"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Little's Law Queueing: L = lambda * W",
-    "detail": "Applied through littles_law_haulage_solver."
+    "detail": "Applied through littles_law_haulage_solver.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it. The arithmetic runs in a named solver rather than being improvised, so the working can be reproduced on demand."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -1461,31 +1631,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S04-COORDINATOR."
+    "detail": "Dispatched in-process by S04-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "fleet_telemetry, safety_telemetry"
+    "detail": "fleet_telemetry, safety_telemetry",
+    "business": "Bounded to haul fleet telemetry and safety system telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry",
+     "safety system telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Haul Road Grade Braking Runaway Distance Envelope",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -1529,31 +1708,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S05-COORDINATOR."
+    "detail": "Dispatched in-process by S05-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "crusher_telemetry"
+    "detail": "crusher_telemetry",
+    "business": "Bounded to crusher sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "crusher sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Q = 3600 * A_gap * v_discharge",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1597,31 +1784,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S05-COORDINATOR."
+    "detail": "Dispatched in-process by S05-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "crusher_telemetry"
+    "detail": "crusher_telemetry",
+    "business": "Bounded to crusher sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "crusher sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "u(t) = Kp*e(t) + Ki*int(e)dt + Kd*de/dt",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1669,31 +1864,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S05-COORDINATOR."
+    "detail": "Dispatched in-process by S05-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assets, crusher_telemetry"
+    "detail": "assets, crusher_telemetry",
+    "business": "Bounded to the asset register and crusher sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "crusher sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "V = K * (W * L) / H",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1743,31 +1947,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "crusher_telemetry, assets"
+    "detail": "crusher_telemetry, assets",
+    "business": "Bounded to crusher sensor readings and the asset register. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "crusher sensor readings",
+     "the asset register"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Bond Comminution: W = 10 Wi (1/sqrt(P80) - 1/sqrt(F80))",
-    "detail": "Applied through bond_comminution_solver."
+    "detail": "Applied through bond_comminution_solver.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it. The arithmetic runs in a named solver rather than being improvised, so the working can be reproduced on demand."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -1811,31 +2024,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S05-COORDINATOR."
+    "detail": "Dispatched in-process by S05-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "crusher_telemetry"
+    "detail": "crusher_telemetry",
+    "business": "Bounded to crusher sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "crusher sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Tramp Iron Eddy-Current Sensor Interlock Gate",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -1879,31 +2100,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S06-COORDINATOR."
+    "detail": "Dispatched in-process by S06-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Acoustic Toe Angle & Ball Charge Trajectory",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -1947,31 +2176,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S06-COORDINATOR."
+    "detail": "Dispatched in-process by S06-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Austin Population Balance Grinding Kinetics",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2015,31 +2252,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S06-COORDINATOR."
+    "detail": "Dispatched in-process by S06-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Plitt Cut Size: d50c = (50.5 * Dc^0.46 * Di^0.6 * Do^0.68) / (Du^0.71 * h^0.38 * Q^0.45)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2087,31 +2332,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "plant_telemetry, assets"
+    "detail": "plant_telemetry, assets",
+    "business": "Bounded to processing plant telemetry and the asset register. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry",
+     "the asset register"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Morrell Specific Energy: W = 4 * M_i * (x2^f(x2) - x1^f(x1))",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -2155,31 +2409,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S06-COORDINATOR."
+    "detail": "Dispatched in-process by S06-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Pipeline Critical Settling Velocity & Slurry Viscosity Limits",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -2223,31 +2485,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S07-COORDINATOR."
+    "detail": "Dispatched in-process by S07-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "reagent_inventory"
+    "detail": "reagent_inventory",
+    "business": "Bounded to reagent stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "reagent stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "theta = (K * C) / (1 + K * C)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2291,31 +2561,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S07-COORDINATOR."
+    "detail": "Dispatched in-process by S07-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Gas Holdup: eps_g = J_g / (u_b + J_l)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2359,31 +2637,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S07-COORDINATOR."
+    "detail": "Dispatched in-process by S07-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "flotation_assays"
+    "detail": "flotation_assays",
+    "business": "Bounded to flotation circuit assays. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "flotation circuit assays"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Separation Efficiency: SE = R_val - R_gangue",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2431,31 +2717,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "flotation_assays, plant_telemetry"
+    "detail": "flotation_assays, plant_telemetry",
+    "business": "Bounded to flotation circuit assays and processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "flotation circuit assays",
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Langmuir Kinetics: R(t) = R_inf * [1 - exp(-k*t)]",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -2499,31 +2794,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S07-COORDINATOR."
+    "detail": "Dispatched in-process by S07-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "flotation_assays"
+    "detail": "flotation_assays",
+    "business": "Bounded to flotation circuit assays. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "flotation circuit assays"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Arsenic / Bismuth Penalty Threshold Matrix",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -2567,31 +2870,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S08-COORDINATOR."
+    "detail": "Dispatched in-process by S08-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "water_balance_logs"
+    "detail": "water_balance_logs",
+    "business": "Bounded to the site water balance. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the site water balance"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "V_ret = V_in - V_evap - V_seep - V_pore",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2635,31 +2946,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S08-COORDINATOR."
+    "detail": "Dispatched in-process by S08-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "tsf_piezometers"
+    "detail": "tsf_piezometers",
+    "business": "Bounded to tailings dam piezometer readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "tailings dam piezometer readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Terzaghi Consolidation: du/dt = c_v * (d2u / dz2)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2703,31 +3022,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S08-COORDINATOR."
+    "detail": "Dispatched in-process by S08-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Kynch Sedimentation Solids Flux Theory",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2775,31 +3102,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "tsf_piezometers, water_balance_logs"
+    "detail": "tsf_piezometers, water_balance_logs",
+    "business": "Bounded to tailings dam piezometer readings and the site water balance. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "tailings dam piezometer readings",
+     "the site water balance"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "GISTM Dam Conformance & Phreatic Surface Line",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -2847,31 +3183,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S08-COORDINATOR."
+    "detail": "Dispatched in-process by S08-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "tsf_piezometers, safety_permits"
+    "detail": "tsf_piezometers, safety_permits",
+    "business": "Bounded to tailings dam piezometer readings and safety permits and work authorisations. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "tailings dam piezometer readings",
+     "safety permits and work authorisations"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Critical State Soil Mechanics & Static Liquefaction Index",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -2919,31 +3264,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S09-COORDINATOR."
+    "detail": "Dispatched in-process by S09-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assets, crusher_telemetry"
+    "detail": "assets, crusher_telemetry",
+    "business": "Bounded to the asset register and crusher sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "crusher sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "ISO 10816-3 RMS Velocity & BPFI Harmonics",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -2991,31 +3345,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S09-COORDINATOR."
+    "detail": "Dispatched in-process by S09-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assets, lube_samples"
+    "detail": "assets, lube_samples",
+    "business": "Bounded to the asset register and oil and lubricant sample results. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "oil and lubricant sample results"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "PQ Index & Karl Fischer Moisture PPM",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3063,31 +3426,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S09-COORDINATOR."
+    "detail": "Dispatched in-process by S09-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assets, crusher_telemetry"
+    "detail": "assets, crusher_telemetry",
+    "business": "Bounded to the asset register and crusher sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "crusher sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Delta T Component Temperature Rise Model",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3141,31 +3513,41 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "3 grounding tables",
-    "detail": "assets, crusher_telemetry, erp_work_orders"
+    "detail": "assets, crusher_telemetry, erp_work_orders",
+    "business": "Bounded to the asset register, crusher sensor readings and ERP work orders. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "crusher sensor readings",
+     "ERP work orders"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Weibull Hazard Rate: h(t) = (beta / eta) * (t / eta)^(beta - 1)",
-    "detail": "Applied through vibration_iso10816_solver."
+    "detail": "Applied through vibration_iso10816_solver.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it. The arithmetic runs in a named solver rather than being improvised, so the working can be reproduced on demand."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -3213,31 +3595,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S09-COORDINATOR."
+    "detail": "Dispatched in-process by S09-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assets, erp_work_orders"
+    "detail": "assets, erp_work_orders",
+    "business": "Bounded to the asset register and ERP work orders. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "ERP work orders"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "LOTO Isolation Integrity & Failure Window Safety Gate",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -3281,31 +3672,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S10-COORDINATOR."
+    "detail": "Dispatched in-process by S10-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "vendor_contracts"
+    "detail": "vendor_contracts",
+    "business": "Bounded to vendor contracts. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vendor contracts"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Levenshtein Distance & Unit Price Deviation",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3349,31 +3748,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S10-COORDINATOR."
+    "detail": "Dispatched in-process by S10-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "vendor_contracts"
+    "detail": "vendor_contracts",
+    "business": "Bounded to vendor contracts. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vendor contracts"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "P_t = P_0 * [a + b*(L_t/L_0) + c*(M_t/M_0)]",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3421,31 +3828,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S10-COORDINATOR."
+    "detail": "Dispatched in-process by S10-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assets, vendor_contracts"
+    "detail": "assets, vendor_contracts",
+    "business": "Bounded to the asset register and vendor contracts. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "vendor contracts"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "MTBF vs Warranty Period Recovery Claimer",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3493,31 +3909,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "vendor_contracts, invoices"
+    "detail": "vendor_contracts, invoices",
+    "business": "Bounded to vendor contracts and supplier invoices. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vendor contracts",
+     "supplier invoices"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Invoice Contract Matching & Rate Card Variance",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -3565,31 +3990,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S10-COORDINATOR."
+    "detail": "Dispatched in-process by S10-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "vendor_contracts, invoices"
+    "detail": "vendor_contracts, invoices",
+    "business": "Bounded to vendor contracts and supplier invoices. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vendor contracts",
+     "supplier invoices"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Vendor Beneficial Ownership & Single-Source Flags",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -3633,31 +4067,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S11-COORDINATOR."
+    "detail": "Dispatched in-process by S11-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "spares_inventory"
+    "detail": "spares_inventory",
+    "business": "Bounded to spare parts stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "spare parts stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "SS = Z_alpha * sqrt(L * sigma_D^2 + D^2 * sigma_L^2)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3701,31 +4143,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S11-COORDINATOR."
+    "detail": "Dispatched in-process by S11-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "purchase_orders"
+    "detail": "purchase_orders",
+    "business": "Bounded to purchase orders. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "purchase orders"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Gamma Distribution Lead Time Modeling",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3769,31 +4219,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S11-COORDINATOR."
+    "detail": "Dispatched in-process by S11-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "spares_inventory"
+    "detail": "spares_inventory",
+    "business": "Bounded to spare parts stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "spare parts stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "H = C_unit * (i + w + o)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -3841,31 +4299,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "spares_inventory, purchase_orders"
+    "detail": "spares_inventory, purchase_orders",
+    "business": "Bounded to spare parts stock on hand and purchase orders. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "spare parts stock on hand",
+     "purchase orders"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Wilson EOQ: Q* = sqrt(2*D*S / H)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -3909,31 +4376,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S11-COORDINATOR."
+    "detail": "Dispatched in-process by S11-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "spares_inventory"
+    "detail": "spares_inventory",
+    "business": "Bounded to spare parts stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "spare parts stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Inactive Inventory Aging (>365 Days) Write-Down",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -3977,31 +4452,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S12-COORDINATOR."
+    "detail": "Dispatched in-process by S12-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "rail_schedules"
+    "detail": "rail_schedules",
+    "business": "Bounded to rail movement schedules. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "rail movement schedules"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Railway Headway & Velocity Optimization",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4045,31 +4528,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S12-COORDINATOR."
+    "detail": "Dispatched in-process by S12-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "stockpiles"
+    "detail": "stockpiles",
+    "business": "Bounded to stockpile balances. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "stockpile balances"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Linear Blend Optimization: min ||A*x - b||",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4113,31 +4604,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S12-COORDINATOR."
+    "detail": "Dispatched in-process by S12-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "port_vessels"
+    "detail": "port_vessels",
+    "business": "Bounded to vessel and berth schedules. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vessel and berth schedules"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "BIMCO Laytime Pro-Rata & Demurrage Liability",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "One narrow calculation, done properly. It does not get to decide what the answer means \u2014 that is the coordinator's job, and the critic's."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4189,31 +4688,41 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "3 grounding tables",
-    "detail": "rail_schedules, port_vessels, stockpiles"
+    "detail": "rail_schedules, port_vessels, stockpiles",
+    "business": "Bounded to rail movement schedules, vessel and berth schedules and stockpile balances. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "rail movement schedules",
+     "vessel and berth schedules",
+     "stockpile balances"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Dynamic Network Sim: min sum(Rail + Port + Demurrage)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -4261,31 +4770,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via in-process",
-    "detail": "Dispatched in-process by S12-COORDINATOR."
+    "detail": "Dispatched in-process by S12-COORDINATOR.",
+    "business": "It runs inside its coordinator's work and has no separate front door, so there is no way to call it out of context."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "port_vessels, stockpiles"
+    "detail": "port_vessels, stockpiles",
+    "business": "Bounded to vessel and berth schedules and stockpile balances. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vessel and berth schedules",
+     "stockpile balances"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "IMSBC Transportable Moisture Limit (TML) Interlock",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -4329,31 +4847,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "drill_holes"
+    "detail": "drill_holes",
+    "business": "Bounded to drill hole logs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "drill hole logs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "ResNet-UNet Rock Classifier (<12s/tray)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4401,31 +4927,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "drill_holes, assay_logs"
+    "detail": "drill_holes, assay_logs",
+    "business": "Bounded to drill hole logs and laboratory assay results. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "drill hole logs",
+     "laboratory assay results"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "SWIR/VNIR Spectral Feature Extractor",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4473,31 +5008,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "drill_holes, geological_block_models"
+    "detail": "drill_holes, geological_block_models",
+    "business": "Bounded to drill hole logs and the geological block model. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "drill hole logs",
+     "the geological block model"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Spatial Drill Spacing Confidence Index",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -4541,31 +5085,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "blast_designs"
+    "detail": "blast_designs",
+    "business": "Bounded to approved blast designs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "approved blast designs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Chapman-Jouguet Detonation Hugoniot Solver",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4609,31 +5161,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "blast_designs"
+    "detail": "blast_designs",
+    "business": "Bounded to approved blast designs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "approved blast designs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Ballistic Range: R = (v0^2 * sin(2*theta)) / g",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -4677,31 +5237,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "blast_designs"
+    "detail": "blast_designs",
+    "business": "Bounded to approved blast designs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "approved blast designs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Split-Desktop High-Res Image Segmentation",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4745,31 +5313,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "geotech_sensors"
+    "detail": "geotech_sensors",
+    "business": "Bounded to geotechnical sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "geotechnical sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "InSAR Phase Shift Velocity Gradient Delta_phi",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -4813,31 +5389,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "geotech_sensors"
+    "detail": "geotech_sensors",
+    "business": "Bounded to geotechnical sensor readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "geotechnical sensor readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Gutenberg-Richter Law: log(N) = a - b*M",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -4881,31 +5465,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "pit_designs"
+    "detail": "pit_designs",
+    "business": "Bounded to pit designs. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "pit designs"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Darcy's Law: Q = -k * A * (dh / dl)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -4949,31 +5541,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "fleet_telemetry"
+    "detail": "fleet_telemetry",
+    "business": "Bounded to haul fleet telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Rolling Resistance: RR = W * (C_rr + sin(theta))",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5017,31 +5617,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "fleet_telemetry"
+    "detail": "fleet_telemetry",
+    "business": "Bounded to haul fleet telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Specific Fuel Consumption: SFC = m_dot_f / P_engine",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5085,31 +5693,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "fleet_telemetry"
+    "detail": "fleet_telemetry",
+    "business": "Bounded to haul fleet telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "TKPH = Q_avg * V_avg <= Rating",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5153,31 +5769,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "fleet_telemetry"
+    "detail": "fleet_telemetry",
+    "business": "Bounded to haul fleet telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "YOLOv8 Ground Engaging Tool Watcher",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -5221,31 +5845,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Acoustic Power Spectrum 1/3 Octave Band FFT",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5289,31 +5921,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Aperture Occlusion Optical Flow Percentage",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5357,31 +5997,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Net Positive Suction Head: NPSHa > NPSHr",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5425,31 +6073,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "plant_telemetry"
+    "detail": "plant_telemetry",
+    "business": "Bounded to processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Mass Balance Continuity: A * (dh/dt) = Q_in - Q_out",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5497,31 +6153,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "flotation_assays, plant_telemetry"
+    "detail": "flotation_assays, plant_telemetry",
+    "business": "Bounded to flotation circuit assays and processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "flotation circuit assays",
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Sauter Mean Bubble Diameter d32 & RGB Grade Proxy",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5565,31 +6230,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "reagent_inventory"
+    "detail": "reagent_inventory",
+    "business": "Bounded to reagent stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "reagent stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "1st-Order Hydrolysis Kinetics: C(t) = C_0 * exp(-k*t)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -5633,31 +6306,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "water_balance_logs"
+    "detail": "water_balance_logs",
+    "business": "Bounded to the site water balance. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the site water balance"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Nernst Equation: E_h = E0 - (RT/nF) * ln(Q)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -5701,31 +6382,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "tsf_piezometers"
+    "detail": "tsf_piezometers",
+    "business": "Bounded to tailings dam piezometer readings. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "tailings dam piezometer readings"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Non-Newtonian Yield Stress: tau_y = rho * g * h * sin(theta)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -5769,31 +6458,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "assets"
+    "detail": "assets",
+    "business": "Bounded to the asset register. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Duval Triangle & DGA Ratio (Acetylene / Hydrogen)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -5837,31 +6534,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "assets"
+    "detail": "assets",
+    "business": "Bounded to the asset register. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "High-Frequency Transient Phase-Resolved PD",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -5905,31 +6610,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "assets"
+    "detail": "assets",
+    "business": "Bounded to the asset register. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Time-of-Flight Acoustic Wave Attenuation",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -5973,31 +6686,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "assets"
+    "detail": "assets",
+    "business": "Bounded to the asset register. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Ultrasonic Thickness Pulse-Echo Gauge: d = (v * t) / 2",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6041,31 +6762,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "erp_work_orders"
+    "detail": "erp_work_orders",
+    "business": "Bounded to ERP work orders. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "ERP work orders"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Critical Path Method (CPM) Schedule Float",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6113,31 +6842,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "vendor_contracts, fleet_telemetry"
+    "detail": "vendor_contracts, fleet_telemetry",
+    "business": "Bounded to vendor contracts and haul fleet telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vendor contracts",
+     "haul fleet telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Standby Hours vs Daily Rate Dispute Validator",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -6181,31 +6919,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "purchase_orders"
+    "detail": "purchase_orders",
+    "business": "Bounded to purchase orders. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "purchase orders"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "API Gravity: API = (141.5 / SG) - 131.5",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6253,31 +6999,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "spares_inventory, plant_telemetry"
+    "detail": "spares_inventory, plant_telemetry",
+    "business": "Bounded to spare parts stock on hand and processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "spare parts stock on hand",
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Bond Wear Rate: M_ball = 0.16 * (Wi - 7)^0.5",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6325,31 +7080,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "assets, lube_samples"
+    "detail": "assets, lube_samples",
+    "business": "Bounded to the asset register and oil and lubricant sample results. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "the asset register",
+     "oil and lubricant sample results"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "ISO 4406 Solid Contamination Cleanliness Code",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6393,31 +7157,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "invoices"
+    "detail": "invoices",
+    "business": "Bounded to supplier invoices. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "supplier invoices"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Levenshtein Distance & Exact Amount Hash Match",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -6461,31 +7233,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "spares_inventory"
+    "detail": "spares_inventory",
+    "business": "Bounded to spare parts stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "spare parts stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "RFID Tag vs SAP Movement Type 201 Reconciler",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6529,31 +7309,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "port_vessels"
+    "detail": "port_vessels",
+    "business": "Bounded to vessel and berth schedules. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vessel and berth schedules"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "BIMCO Laytime Standard Statement of Fact Parser",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6597,31 +7385,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "reagent_inventory"
+    "detail": "reagent_inventory",
+    "business": "Bounded to reagent stock on hand. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "reagent stock on hand"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Arrhenius Reaction: k = A * exp(-E_a / RT)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -6665,31 +7461,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "rail_schedules"
+    "detail": "rail_schedules",
+    "business": "Bounded to rail movement schedules. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "rail movement schedules"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Braking Distance: d = v^2 / [2g*(mu +- theta)]",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -6733,31 +7537,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "port_vessels"
+    "detail": "port_vessels",
+    "business": "Bounded to vessel and berth schedules. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "vessel and berth schedules"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "3D LiDAR Collision Margin: Distance > 5.0m",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -6803,31 +7615,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "fatigue_monitoring_logs"
+    "detail": "fatigue_monitoring_logs",
+    "business": "Bounded to operator fatigue monitoring. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "operator fatigue monitoring"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "SAFTE Score: E(t) = S(t) + C(t) - P(t)",
-    "detail": "Applied through safte_circadian_fatigue_solver."
+    "detail": "Applied through safte_circadian_fatigue_solver.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later. The arithmetic runs in a named solver rather than being improvised, so the working can be reproduced on demand."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -6871,31 +7691,39 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "1 grounding table",
-    "detail": "safety_telemetry"
+    "detail": "safety_telemetry",
+    "business": "Bounded to safety system telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "safety system telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Gas Limits: LEL < 10%, O2 in [19.5, 23.5]%, H2S < 10ppm",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  },
@@ -6943,31 +7771,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "fleet_telemetry, plant_telemetry"
+    "detail": "fleet_telemetry, plant_telemetry",
+    "business": "Bounded to haul fleet telemetry and processing plant telemetry. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "haul fleet telemetry",
+     "processing plant telemetry"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "GHG Protocol: CO2e = sum(Fuel * EF) + (Grid_MWh * EF)",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Advisory \u2014 no gate",
-    "detail": "No human gate. The output is advisory and returns to the agent that asked for it."
+    "detail": "No human gate. The output is advisory and returns to the agent that asked for it.",
+    "business": "There is nothing to approve, because nothing leaves this step. It produces evidence for the next agent, not an action."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "Coordinator evidence set",
-    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control."
+    "detail": "Its coordinator's evidence set, cited and timestamped. Nothing reaches plant control.",
+    "business": "It arrives in the coordinator's case file with its citations attached. It can never reach plant control."
    }
   ]
  },
@@ -7015,31 +7852,40 @@ window.agentCatalogData = {
     "key": "trigger",
     "label": "Trigger",
     "value": "Invoked via cloud-run",
-    "detail": "Called over HTTPS by the swarm orchestrator."
+    "detail": "Called over HTTPS by the swarm orchestrator.",
+    "business": "The platform starts it on its own cadence. Nobody has to remember to run it, and nobody outside the estate can."
    },
    {
     "key": "reads",
     "label": "Reads",
     "value": "2 grounding tables",
-    "detail": "tenement_leases, safety_permits"
+    "detail": "tenement_leases, safety_permits",
+    "business": "Bounded to tenement and lease records and safety permits and work authorisations. Nothing outside that is in scope, so an answer can always be traced back to a system of record.",
+    "sources": [
+     "tenement and lease records",
+     "safety permits and work authorisations"
+    ]
    },
    {
     "key": "decides",
     "label": "Decides",
     "value": "Regulatory Obligation NLP Entity Matcher & Tenement Lease Auditor",
-    "detail": "Applied directly by the agent \u2014 no external solver in the path."
+    "detail": "Applied directly by the agent \u2014 no external solver in the path.",
+    "business": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later."
    },
    {
     "key": "approval",
     "label": "Approval",
     "value": "Human release required",
-    "detail": "Dual-key human release. A named operator and a second approver must both sign."
+    "detail": "Dual-key human release. A named operator and a second approver must both sign.",
+    "business": "Two named people own the outcome. Until both sign, this is advice and nothing in the business has changed."
    },
    {
     "key": "lands",
     "label": "Lands in",
     "value": "ERP staging buffer",
-    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA."
+    "detail": "An ERP staging buffer, held pending release. Never a PLC, never SCADA.",
+    "business": "It arrives in the ERP queue a supervisor already works from, so adopting it is not a new process. It can never reach plant control."
    }
   ]
  }

@@ -106,6 +106,121 @@ FALLBACK_PLAIN = {
 }
 
 
+# --------------------------------------------------------------------------
+# The business layer on the decision flow.
+#
+# The flow's own lines say what happens mechanically. These say why a person
+# who does not read SQL should care about that step. Each is derived from a
+# closed enum or a counted field -- none of them glosses the governing
+# equation, because the catalogue holds 101 distinct equations and any
+# mechanical reading of them would be a guess dressed as a fact.
+# --------------------------------------------------------------------------
+
+#: Plain-English name for every table the catalogue declares. Exhaustive by
+#: assertion in main(): an unmapped table stops the build rather than printing a
+#: snake_case identifier to someone who was promised business language.
+TABLE_IN_PLAIN_ENGLISH = {
+    "assay_logs": "laboratory assay results",
+    "assets": "the asset register",
+    "blast_designs": "approved blast designs",
+    "crusher_telemetry": "crusher sensor readings",
+    "dispatch_routes": "truck dispatch assignments",
+    "drill_holes": "drill hole logs",
+    "erp_work_orders": "ERP work orders",
+    "explosives_inventory": "explosives stock on hand",
+    "fatigue_monitoring_logs": "operator fatigue monitoring",
+    "financial_ledger": "the financial ledger",
+    "fleet_telemetry": "haul fleet telemetry",
+    "flotation_assays": "flotation circuit assays",
+    "geological_block_models": "the geological block model",
+    "geotech_sensors": "geotechnical sensor readings",
+    "invoices": "supplier invoices",
+    "lube_samples": "oil and lubricant sample results",
+    "mine_production_schedule": "the mine production schedule",
+    "pit_designs": "pit designs",
+    "plant_telemetry": "processing plant telemetry",
+    "port_vessels": "vessel and berth schedules",
+    "purchase_orders": "purchase orders",
+    "qaqc_standards": "QA/QC assay standards",
+    "rail_schedules": "rail movement schedules",
+    "reagent_inventory": "reagent stock on hand",
+    "safety_permits": "safety permits and work authorisations",
+    "safety_telemetry": "safety system telemetry",
+    "spares_inventory": "spare parts stock on hand",
+    "stockpiles": "stockpile balances",
+    "survey_scans": "survey scans",
+    "tenement_leases": "tenement and lease records",
+    "tsf_piezometers": "tailings dam piezometer readings",
+    "vendor_contracts": "vendor contracts",
+    "vibration_monitors": "vibration monitoring",
+    "water_balance_logs": "the site water balance",
+}
+
+#: What the maths being applied means for whether the answer can be trusted.
+#: Keyed on the agent's role, because the role is what decides who checks it.
+#: The coordinator and specialist lines promise the swarm's critic; every swarm
+#: in the catalogue has one, and a test asserts that before this ships.
+DECIDES_IN_BUSINESS = {
+    "L0_STRATEGIC": "A capital judgement, made the same way every quarter. The method is fixed in advance so this year's answer can be compared with last year's.",
+    "A_COORDINATOR": "It weighs what its specialists found and commits to one recommendation, then hands it to its own critic to be attacked before anyone sees it.",
+    "A_SPECIALIST": "One narrow calculation, done properly. It does not get to decide what the answer means — that is the coordinator's job, and the critic's.",
+    "A_CRITIC": "This is the check. It re-derives what the specialists claimed and throws out anything it cannot trace back to a table.",
+    "B_DEEP": "Deterministic. The same inputs give the same answer every time, which is what lets an auditor reproduce it a year later.",
+}
+
+#: What running the calculation inside a named solver buys the business.
+SOLVER_NOTE = " The arithmetic runs in a named solver rather than being improvised, so the working can be reproduced on demand."
+
+
+def human_callers(a) -> list[str]:
+    """Callers on the allowlist that are people rather than machines."""
+    return [c for c in (a.caller_allowlist or []) if "gserviceaccount.com" not in c]
+
+
+def trigger_in_business(a) -> str:
+    if a.endpoint_type.value == "in_process":
+        return ("It runs inside its coordinator's work and has no separate front door, "
+                "so there is no way to call it out of context.")
+    people = human_callers(a)
+    if people:
+        return ("A person can ask for this directly — " + ", ".join(people) +
+                " — as well as the platform. It answers on demand, not on a monthly cycle.")
+    return ("The platform starts it on its own cadence. Nobody has to remember to run it, "
+            "and nobody outside the estate can.")
+
+
+def reads_in_business(tables: list[str]) -> str:
+    names = [TABLE_IN_PLAIN_ENGLISH[t] for t in tables]
+    if len(names) == 1:
+        listed = names[0]
+    elif len(names) == 2:
+        listed = names[0] + " and " + names[1]
+    else:
+        listed = ", ".join(names[:-1]) + " and " + names[-1]
+    return ("Bounded to " + listed + ". Nothing outside that is in scope, "
+            "so an answer can always be traced back to a system of record.")
+
+
+def decides_in_business(a) -> str:
+    return DECIDES_IN_BUSINESS[a.pattern.value] + (SOLVER_NOTE if a.tools else "")
+
+
+def approval_in_business(a) -> str:
+    if a.hitl_required:
+        return ("Two named people own the outcome. Until both sign, this is advice and "
+                "nothing in the business has changed.")
+    return ("There is nothing to approve, because nothing leaves this step. It produces "
+            "evidence for the next agent, not an action.")
+
+
+def lands_in_business(a) -> str:
+    if a.hitl_required:
+        return ("It arrives in the ERP queue a supervisor already works from, so adopting it "
+                "is not a new process. It can never reach plant control.")
+    return ("It arrives in the coordinator's case file with its citations attached. "
+            "It can never reach plant control.")
+
+
 def trigger_line(a) -> str:
     """How this agent gets invoked, from endpoint type and caller allowlist."""
     if a.endpoint_type.value == "in_process":
@@ -151,20 +266,29 @@ def flow(a) -> list[dict]:
     return [
         {"key": "trigger", "label": "Trigger",
          "value": "Invoked via " + a.endpoint_type.value.replace("_", "-"),
-         "detail": trigger_line(a)},
+         "detail": trigger_line(a),
+         "business": trigger_in_business(a)},
         {"key": "reads", "label": "Reads",
          "value": f"{len(tables)} grounding " + ("table" if len(tables) == 1 else "tables"),
-         "detail": ", ".join(tables)},
+         "detail": ", ".join(tables),
+         "business": reads_in_business(tables),
+         # The plain names as a list as well as a sentence. A plain name can
+         # itself contain the word "and" ("vessel and berth schedules"), so
+         # counting sources by parsing the sentence is not sound.
+         "sources": [TABLE_IN_PLAIN_ENGLISH[t] for t in tables]},
         {"key": "decides", "label": "Decides",
          "value": a.governing_equation,
          "detail": ("Applied through " + ", ".join(tools) + "."
-                    if tools else "Applied directly by the agent — no external solver in the path.")},
+                    if tools else "Applied directly by the agent — no external solver in the path."),
+         "business": decides_in_business(a)},
         {"key": "approval", "label": "Approval",
          "value": "Human release required" if a.hitl_required else "Advisory — no gate",
-         "detail": approval_line(a)},
+         "detail": approval_line(a),
+         "business": approval_in_business(a)},
         {"key": "lands", "label": "Lands in",
          "value": "ERP staging buffer" if a.hitl_required else "Coordinator evidence set",
-         "detail": lands_line(a)},
+         "detail": lands_line(a),
+         "business": lands_in_business(a)},
     ]
 
 
@@ -208,6 +332,16 @@ def main() -> None:
         r["agent_id"]: r
         for r in json.loads(MANIFEST.read_text())["registered_agents"]
     }
+
+    declared = sorted({t for a in C.CATALOG for t in a.source_tables})
+    unmapped = [t for t in declared if t not in TABLE_IN_PLAIN_ENGLISH]
+    if unmapped:
+        raise SystemExit(
+            f"{len(unmapped)} declared tables have no plain-English name: {unmapped}. "
+            f"Add them to TABLE_IN_PLAIN_ENGLISH -- printing a snake_case identifier on "
+            f"a screen that promised business language is the failure this check exists "
+            f"to prevent."
+        )
 
     cat = sorted(C.CATALOG, key=lambda a: (TIER_OF[a.pattern.value], a.agent_id))
     agents = {a.agent_id: card(a, manifest) for a in cat}

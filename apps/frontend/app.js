@@ -657,6 +657,11 @@
           '<div class="flow-body">' +
             '<div class="flow-label">' + esc(st.label) + "</div>" +
             '<div class="flow-value">' + esc(st.value) + "</div>" +
+            /* Two registers per stage, deliberately: what happens, then why a
+               person who does not read SQL should care. The business line is
+               generated from the same fields as the mechanism, never written
+               about an agent one at a time. */
+            (st.business ? '<div class="flow-business">' + esc(st.business) + "</div>" : "") +
             '<div class="flow-detail">' + esc(st.detail) + "</div>" +
           "</div></div>";
       }).join("");
