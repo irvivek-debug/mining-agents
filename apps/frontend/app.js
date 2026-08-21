@@ -15,7 +15,12 @@
 (function () {
   "use strict";
 
-  var SCREENS = ["macro", "schematic", "personas", "ecosystem", "governance"];
+  var SCREENS = ["macro", "schematic", "personas", "ecosystem", "architecture"];
+
+  /* The fifth screen was called "governance" until it became the logical
+     architecture. Links to #governance are already in circulation, so the old
+     name resolves rather than silently falling back to the first screen. */
+  var LEGACY_SCREEN = { governance: "architecture" };
 
   function el(id) { return document.getElementById(id); }
   function esc(s) {
@@ -93,6 +98,20 @@
     Array.prototype.forEach.call(root.querySelectorAll("[data-launch-row] a"), function (a) {
       a.addEventListener("click", function (e) { e.stopPropagation(); });
     });
+  }
+
+  /* Entry animations are applied by adding a class and removing it once the
+     run is over. Leaving the class on is what made the architecture stack
+     replay -- and briefly vanish -- every time its tab was clicked: hiding a
+     pane with display:none restarts any CSS animation on its children, so a
+     rule holding opacity:0 before its delay elapses re-applies on every
+     return. Removing the class leaves the elements simply visible. */
+  function playOnce(node, count, stepMs, durationMs) {
+    if (!node) return;
+    node.classList.add("motion-playing");
+    setTimeout(function () {
+      node.classList.remove("motion-playing");
+    }, count * stepMs + durationMs + 80);
   }
 
   /* =========================================================== S1 — Macro */
@@ -650,8 +669,8 @@
       el("dd-biz-cannot").textContent = b.cannot || "";
       el("dd-biz-failure").textContent = b.onFailure || "";
 
-      el("dd-flow").innerHTML = (a.flow || []).map(function (st) {
-        return '<div class="flow-stage" data-stage="' + esc(st.key) + '">' +
+      el("dd-flow").innerHTML = (a.flow || []).map(function (st, i) {
+        return '<div class="flow-stage" data-stage="' + esc(st.key) + '" style="--motion-i:' + i + ';">' +
           '<div class="flow-rail"><div class="flow-marker">' + esc(st.label.charAt(0)) + "</div>" +
           '<div class="flow-connector"></div></div>' +
           '<div class="flow-body">' +
@@ -665,6 +684,9 @@
             '<div class="flow-detail">' + esc(st.detail) + "</div>" +
           "</div></div>";
       }).join("");
+      /* Runs on each deep dive because each one is a different decision --
+         but not when the tab is merely revisited. */
+      playOnce(el("dd-flow"), (a.flow || []).length, 45, 240);
 
       var gemini = a.geminiUrl || window.geminiEnterpriseUrl || "";
       var gemLink = el("dd-link-gemini");
@@ -786,6 +808,7 @@
     var selectedId = null, hoveredId = null;
     var domainFilter = "ALL", hiddenLayers = {};
     var laidOut = false, dragging = null, pending = null, swallowNextClick = false;
+    var stackAnimated = false;
 
     /* ---------------------------------------------------- logical stack */
 
@@ -829,8 +852,10 @@
       var t = tokens();
 
       el("arch-stack").innerHTML = model.layers.map(function (layer, i) {
+        /* --motion-i drives the stagger. Blocks and seams alternate, so the
+           index counts both and the stack assembles in document order. */
         var block =
-          '<div class="arch-block" data-layer="' + esc(layer.key) + '">' +
+          '<div class="arch-block" data-layer="' + esc(layer.key) + '" style="--motion-i:' + (i * 2) + ';">' +
             '<div class="arch-block-band">' + esc(layer.band) + "</div>" +
             "<div>" +
               '<div class="arch-block-name">' + esc(layer.name) + "</div>" +
@@ -845,7 +870,8 @@
             "</div>" +
           "</div>";
         var seam = i < model.layers.length - 1
-          ? '<div class="arch-seam"><span class="arch-seam-down">&#9660;</span><span class="arch-seam-up">&#9650;</span></div>'
+          ? '<div class="arch-seam" style="--motion-i:' + (i * 2 + 1) + ';">' +
+              '<span class="arch-seam-down">&#9660;</span><span class="arch-seam-up">&#9650;</span></div>'
           : "";
         return block + seam;
       }).join("");
@@ -1231,11 +1257,21 @@
     }
 
     function enter() {
+      /* The stack assembles on first sight only. Replaying it on every tab
+         click would be decoration rather than explanation. */
+      if (!stackAnimated) {
+        stackAnimated = true;
+        var stack = el("arch-stack");
+        var items = stack ? stack.children.length : 0;
+        playOnce(stack, items, 38, 280);
+      }
+
       if (!svg || laidOut) return;
       measure();
       if (!nodes.length) return;
       layout(420);
       draw();
+      playOnce(svg, 0, 0, 320);
       laidOut = true;
     }
 
@@ -1264,7 +1300,7 @@
       /* Stamped at render, not hard-coded: a frozen date on an architecture
          screen reads as a stale audit, which is worse than no date at all. */
       var now = new Date();
-      el("gov-audit-line").innerHTML =
+      el("arch-audit-line").innerHTML =
         "LAST RENDER: " + now.toISOString().slice(0, 16).replace("T", " ") + "Z<br>POSTURE: ENFORCED";
     }
 
@@ -1274,6 +1310,7 @@
   /* ============================================================== ROUTER */
   var App = {
     go: function (screen) {
+      if (LEGACY_SCREEN[screen]) screen = LEGACY_SCREEN[screen];
       if (SCREENS.indexOf(screen) === -1) screen = "macro";
 
       SCREENS.forEach(function (s) {
@@ -1293,7 +1330,7 @@
       /* Screen 5's graph is laid out on first sight, not at init: a hidden pane
          measures zero wide, and a force layout against a zero-width box puts
          every node in the same place. */
-      if (screen === "governance") { setTimeout(S5.enter, 50); }
+      if (screen === "architecture") { setTimeout(S5.enter, 50); }
 
       try {
         if (window.history && window.history.pushState) {
@@ -1323,10 +1360,11 @@
       });
       window.addEventListener("resize", function () {
         if (el("pane-schematic").classList.contains("active")) S2.resize();
-        if (el("pane-governance").classList.contains("active")) S5.resize();
+        if (el("pane-architecture").classList.contains("active")) S5.resize();
       });
 
       var initial = (window.location.hash || "").replace(/^#/, "");
+      if (LEGACY_SCREEN[initial]) initial = LEGACY_SCREEN[initial];
       App.go(SCREENS.indexOf(initial) !== -1 ? initial : "macro");
     }
   };

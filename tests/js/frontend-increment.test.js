@@ -355,3 +355,87 @@ test("squad members the registry does not hold are labelled, not linked", () => 
   assert.ok(unregistered.length > 0,
     "no unregistered squad member left -- if the registry gained them, drop this guard");
 });
+
+/* ----------------------------------------- the fifth screen's rename ----- */
+
+test("the fifth screen is Logical Architecture, routed at #architecture", () => {
+  const html = read("index.html");
+  assert.match(html, /id="tab-architecture"[^>]*>Logical Architecture</);
+  assert.match(html, /id="pane-architecture"/);
+  assert.match(read("app.js"), /"ecosystem", "architecture"\]/);
+});
+
+test("no id or route still says governance", () => {
+  const html = read("index.html");
+  for (const stale of ["tab-governance", "pane-governance", "gov-audit-line",
+                       "Governance &amp; Safety"]) {
+    assert.ok(!html.includes(stale), `${stale} survived the rename`);
+  }
+});
+
+test("links already shared as #governance still land on the right screen", () => {
+  // The screen was called governance when its URL went out to people. A rename
+  // that silently drops them onto the first screen is a broken link that looks
+  // like a working one.
+  const app = read("app.js");
+  assert.match(app, /LEGACY_SCREEN\s*=\s*\{\s*governance:\s*"architecture"\s*\}/);
+  // Applied on both entry points: a click-through and a cold load.
+  const uses = app.match(/LEGACY_SCREEN\[\w+\]/g) || [];
+  assert.ok(uses.length >= 2,
+    `the legacy map is read ${uses.length} time(s); both go() and init() need it`);
+});
+
+/* ----------------------------------------------------------- motion ----- */
+
+const CSS = read("app.css");
+
+test("entry animations are scoped to a class that gets removed", () => {
+  // Held on, the class re-applies its own opacity:0 every time the pane is
+  // shown again -- display:none restarts CSS animations -- which made the
+  // stack replay and briefly vanish on every tab click.
+  for (const rule of [".arch-stack.motion-playing", ".decision-flow.motion-playing",
+                      "#datagraph-svg.motion-playing"]) {
+    assert.ok(CSS.includes(rule), `${rule} is not scoped to the removable class`);
+  }
+  assert.ok(!/motion-in/.test(CSS), "the old always-on class is still in the stylesheet");
+  assert.match(read("app.js"), /node\.classList\.remove\("motion-playing"\)/);
+});
+
+test("the motion stays subtle: nothing travels more than 5px", () => {
+  // "Very subtle" is the requirement, so it is measured rather than trusted.
+  const travels = [...CSS.matchAll(/translateY\((-?[\d.]+)px\)/g)].map((m) => Math.abs(+m[1]));
+  assert.ok(travels.length > 0, "no translateY found — has the motion section moved?");
+  for (const t of travels) {
+    assert.ok(t <= 5, `a ${t}px translate is not subtle`);
+  }
+});
+
+test("the motion stays subtle: no entry animation runs longer than 0.4s", () => {
+  const section = CSS.slice(CSS.indexOf("   MOTION"));
+  const durations = [...section.matchAll(/animation:\s*\w+\s+([\d.]+)s/g)].map((m) => +m[1]);
+  assert.ok(durations.length > 0, "no animation durations found in the motion section");
+  for (const d of durations) {
+    // The seam drift is the one continuous animation and is deliberately slow;
+    // everything else is an entry and must be brief.
+    assert.ok(d <= 0.4 || d === 3.4, `a ${d}s animation is not subtle`);
+  }
+});
+
+test("only one animation on the page repeats", () => {
+  const infinite = [...CSS.matchAll(/animation:[^;]*infinite[^;]*;/g)].map((m) => m[0]);
+  // pulseAlert on the critical schematic node predates this work; the seam
+  // drift is the only one added. Anything beyond those two is ambient noise.
+  assert.ok(infinite.length <= 3, `${infinite.length} looping animations is too many`);
+  assert.ok(infinite.some((r) => /seamDrift/.test(r)), "the seam drift is missing");
+});
+
+test("prefers-reduced-motion switches off every class the motion section animates", () => {
+  const guard = CSS.slice(CSS.indexOf("@media (prefers-reduced-motion: reduce)"));
+  assert.ok(guard.length > 100, "the reduced-motion guard is missing");
+  for (const cls of ["motion-playing", "arch-seam-down", "arch-seam-up", "flow-stage"]) {
+    assert.ok(guard.includes(cls), `${cls} is animated but not covered by the guard`);
+  }
+  // It must neutralise inherited animations too, not just the new ones.
+  assert.match(guard, /animation-iteration-count:\s*1\s*!important/);
+  assert.match(guard, /animation-duration:\s*0\.001ms\s*!important/);
+});

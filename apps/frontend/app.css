@@ -719,6 +719,61 @@ main.main-content { max-width: 1200px; margin: 0 auto; padding: 36px 24px 80px 2
 .dg-join-row:hover { color: var(--m3-primary); }
 .dg-join-keys { color: var(--m3-text-tertiary); font-size: 9.5px; }
 
+/* =============================================================================
+   MOTION
+   Deliberately quiet. Durations and easing are the ones already in this file
+   (0.15-0.28s, ease); travel never exceeds 5px. Motion is used in exactly three
+   places, each because it carries meaning the static layout cannot:
+
+     1. the architecture stack assembles top-down, which is the screen's argument
+     2. the seam arrows drift in opposite directions, showing the two-way traffic
+     3. a decision's five stages arrive in sequence, because it is a sequence
+
+   Everything else stays still. The whole section is disabled under
+   prefers-reduced-motion at the end of the file.
+   ========================================================================== */
+
+@keyframes riseIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes seamDrift { from { transform: translateY(-1px); opacity: 0.55; } to { transform: translateY(1px); opacity: 1; } }
+@keyframes seamDriftUp { from { transform: translateY(1px); opacity: 0.55; } to { transform: translateY(-1px); opacity: 1; } }
+@keyframes layerIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* 1. The stack assembles from the screen a person touches down to the source
+      the data comes from -- the same order the argument is made in. Runs once,
+      on first sight: replaying it on every tab-back would be decoration. */
+.arch-stack.motion-playing > .arch-block,
+.arch-stack.motion-playing > .arch-seam {
+  opacity: 0;
+  animation: riseIn 0.28s ease forwards;
+  animation-delay: calc(var(--motion-i, 0) * 38ms);
+}
+
+/* 2. The one piece of continuous motion on the page: 3.4s, 2px of travel, and
+      the two arrows move apart rather than together, which is the whole point
+      of drawing both. */
+.arch-seam-down { animation: seamDrift 3.4s ease-in-out infinite alternate; }
+.arch-seam-up { animation: seamDriftUp 3.4s ease-in-out infinite alternate; }
+
+/* 3. Five stages, arriving as a sequence. Re-runs whenever a different agent is
+      opened, because it is a different decision. */
+.decision-flow.motion-playing > .flow-stage {
+  opacity: 0;
+  animation: riseIn 0.24s ease forwards;
+  animation-delay: calc(var(--motion-i, 0) * 45ms);
+}
+
+/* The graph settles before it is drawn, so the layer arrives rather than snaps. */
+#datagraph-svg.motion-playing > g { animation: layerIn 0.32s ease both; }
+
+/* Hover lifts match the house treatment already used on the node and metric
+   cards -- 1px, and the shadow token that already exists. */
+.arch-block, .arch-control-card { transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s; }
+.arch-block:hover, .arch-control-card:hover { transform: translateY(-1px); }
+.arch-control-card:hover { box-shadow: var(--shadow-sm); }
+.agent-launch-chip { transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s; }
+.agent-launch-chip:hover { transform: translateY(-1px); }
+.persona-hero-img { transition: box-shadow 0.2s ease; }
+
 @media (max-width: 1100px) {
   .arch-stack-grid { grid-template-columns: 1fr; }
   .arch-control-rail { position: static; }
@@ -743,4 +798,26 @@ main.main-content { max-width: 1200px; margin: 0 auto; padding: 36px 24px 80px 2
   .outcome-kpi-block { border-right: none; border-bottom: 1px solid var(--m3-border-subtle); padding-bottom: 12px; }
   .node-drawer-overlay { width: 100%; }
   main.main-content { padding: 24px 16px 64px 16px; }
+}
+
+/* =============================================================================
+   Motion is a preference, not a given. Under prefers-reduced-motion every
+   animation on this page is switched off and its final state applied directly,
+   including the ones this file inherited (fadeIn on pane activation, pulseAlert
+   on the critical node) -- an accessibility setting that only covers the newest
+   additions is not honouring the setting.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .arch-stack.motion-playing > .arch-block,
+  .arch-stack.motion-playing > .arch-seam,
+  .decision-flow.motion-playing > .flow-stage,
+  #datagraph-svg.motion-playing > g { opacity: 1; transform: none; }
+  .arch-seam-down, .arch-seam-up { opacity: 1; transform: none; }
+  .arch-block:hover, .arch-control-card:hover, .agent-launch-chip:hover { transform: none; }
 }

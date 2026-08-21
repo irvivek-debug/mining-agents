@@ -69,12 +69,36 @@ Body 13.5–14px sans. Labels 10–11.5px sans 700 uppercase, letter-spacing 0.4
   `cubic-bezier(0.16,1,0.3,1)` 0.25s, `-8px 0 28px rgba(0,0,0,0.18)`.
 
 ## Motion
+Quiet by rule. Entry animations last 0.24-0.32s and travel no more than 5px;
+hover lifts are 1px. Motion is spent where it carries meaning the static layout
+cannot, and nowhere else.
+
 - `fadeIn` 0.2s ease-in-out on pane activation.
 - `pulseAlert` 1.2s infinite on critical node dot.
+- `riseIn` 0.28s staggered 38ms across the architecture stack — the layers
+  assemble top-down, which is the order the screen's argument is made in. Runs
+  once, on first sight.
+- `riseIn` 0.24s staggered 45ms across a decision's five stages, on each deep
+  dive, because a decision is a sequence.
+- `seamDrift` 3.4s alternate on the stack's seam arrows — 2px, and the two
+  arrows move apart, which is the whole reason both are drawn. The only
+  continuous motion on the architecture screen.
+- `layerIn` 0.32s on the data graph once its layout settles, so it arrives
+  rather than snaps.
 - Hover lifts: `translateY(-1px)` + primary border + coloured shadow.
 - Particle canvas at 60fps over an SVG connector layer, `requestAnimationFrame`.
 
+Entry animations are applied by adding `.motion-playing` and **removing it when
+the run ends**. Left on, the rule's `opacity: 0` re-applies every time the pane
+is shown again — `display: none` restarts CSS animations — so the element
+replays and briefly vanishes on each visit.
+
+Everything above is switched off under `prefers-reduced-motion: reduce`,
+including the inherited `fadeIn` and `pulseAlert`: a guard that covers only the
+newest additions is not honouring the setting.
+
 ## Nav / routing contract
-Five tabs, hash-routed: `macro`, `schematic`, `personas`, `ecosystem`, `governance`.
+Five tabs, hash-routed: `macro`, `schematic`, `personas`, `ecosystem`, `architecture`.
+`#governance` is the fifth screen's former name and redirects to `#architecture`.
 Panes are `#pane-<id>`, tabs are `#tab-<id>`, `role="tab"` + `aria-selected`.
 `switchScreen(id)` validates against the whitelist and falls back to `macro`.
