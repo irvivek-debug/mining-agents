@@ -140,7 +140,8 @@ drivers:
     status: instrumented
     controllable: true
     sql: sql/agt14/clause_attribution.sql
-    params: {}
+    params:
+      clause_type: PRICE
     doc_query: contract clause price agreed unit price recoverable overpayment
     guard: >-
       This driver attributes ONE kind of breach: a unit price paid above the

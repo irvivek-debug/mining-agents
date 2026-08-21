@@ -59,7 +59,7 @@ DRIVER_STATUS = {
         "bid_to_contract_terms": "not_instrumented",
         "rebate_entitlement": "instrumented",
         "duplicate_payment": "instrumented",
-        "clause_attribution": "not_instrumented",
+        "clause_attribution": "instrumented",
     },
     "agt19": {
         "assumption_staleness": "instrumented",
@@ -77,7 +77,7 @@ DRIVER_STATUS = {
 # they are deliberately absent from this map.
 EXPECTED_TABLES_FOR_DECLARED = {
     "agt13": {"warranty_claims", "maintenance_logs"},
-    "agt14": {"procurement_bids", "rfp_items", "contracts"},
+    "agt14": {"procurement_bids", "rfp_items"},
     "agt19": {
         "site_plans",
         "group_plan",
