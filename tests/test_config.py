@@ -123,9 +123,13 @@ def test_no_raw_model_id_outside_model_policy():
     # per agent for a file that is legitimately exempt at its source. The rule
     # still bites where it matters — scripts/packages.py, which generates the
     # tree, remains in scope.
+    # `vendor` holds verbatim copies of upstream artefacts (see
+    # vendor/agent_registry/README.md). The model-ID rule governs what THIS
+    # repo hard-codes; editing a vendored file to satisfy it would destroy the
+    # verbatim property that makes the copy trustworthy in the first place.
     _SKIP_DIRS = {".git", ".superpowers", ".venv", "venv", "env", ".env",
                   "site-packages", "__pycache__", ".pytest_cache", ".mypy_cache",
-                  "docs", "packages"}
+                  "docs", "packages", "vendor"}
 
     def _should_skip(path: pathlib.Path) -> bool:
         for part in path.relative_to(root).parts[:-1]:
