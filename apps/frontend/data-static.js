@@ -6,11 +6,17 @@
  * two datasets have no upstream in the vault: they are the narrative the
  * design ships with. Stated here so nobody hunts for a generator that does not
  * exist, and so an edit here is understood as a content change, not a drift.
+ *
+ * Persona portraits are the URLs HTML 10 already shipped, copied from its own
+ * personaData.avatar fields. They load from images.unsplash.com, so a persona
+ * card falls back to its initials when the page is offline -- see the
+ * .persona-hero-img / .persona-avatar-fallback pair in app.css.
  */
 
 /* Screen 3 -- eight persona cockpits. */
 window.personaPRDData = {
   elena: {
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=320&q=80",
     code: "P8 • EXPLORATION",
     title: "Elena Ramos, Chief Mine Geologist",
     mandate: "Mandate: Geological Resource Certainty, JORC 2012 Compliance, & Mine-to-Mill Grade Reconciliation",
@@ -27,6 +33,7 @@ window.personaPRDData = {
     ]
   },
   marcus: {
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=320&q=80",
     code: "P1 • FIXED PLANT RELIABILITY",
     title: "Marcus Vance, Plant Reliability Superintendent",
     mandate: "Mandate: Eliminate Catastrophic Mill Outages & Maximize Asset Health Across Grinding Circuit",
@@ -43,6 +50,7 @@ window.personaPRDData = {
     ]
   },
   dave: {
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=320&q=80",
     code: "P5 • PIT DISPATCH & HAULAGE",
     title: "Dave Miller, Mine Dispatch & Fleet Superintendent",
     mandate: "Mandate: Real-Time Shovel-Truck Fleet Queue Optimization & Payload Compliance",
@@ -59,6 +67,7 @@ window.personaPRDData = {
     ]
   },
   sarah: {
+    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=320&q=80",
     code: "P7 • RAIL & PORT LOGISTICS",
     title: "Sarah Jenkins, Supply Chain & Port Logistics Director",
     mandate: "Mandate: Pit-to-Port Synchronization, Demurrage Elimination & TML Safety Compliance",
@@ -75,6 +84,7 @@ window.personaPRDData = {
     ]
   },
   tariq: {
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=320&q=80",
     code: "P2 • DYNAMIC THROUGHPUT BALANCING",
     title: "Tariq Al-Mansoor, Shift Operations Controller",
     mandate: "Mandate: Mine-to-Mill Mass Balance, Surge Bin Equilibrium, & Bond Energy Optimization",
@@ -91,6 +101,7 @@ window.personaPRDData = {
     ]
   },
   priya: {
+    avatar: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=320&q=80",
     code: "P3 • MINERAL PROCESSING & FLOTATION",
     title: "Dr. Priya Sharma, Chief Metallurgist & Flotation Specialist",
     mandate: "Mandate: Flotation Yield Recovery Uplift, Reagent Optimization & Concentrate Grade Compliance",
@@ -107,6 +118,7 @@ window.personaPRDData = {
     ]
   },
   chen: {
+    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=320&q=80",
     code: "P4 • TSF & ENVIRONMENTAL",
     title: "Chen Wei, Tailings & Environmental Compliance Lead",
     mandate: "Mandate: Global Industry Standard on Tailings Management (GISTM) Compliance & Zero Dam Failures",
@@ -123,6 +135,7 @@ window.personaPRDData = {
     ]
   },
   claire: {
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=320&q=80",
     code: "P6 • STRATEGIC CAPITAL & NPV",
     title: "Claire Dupont, Enterprise Financial Planning & Risk Officer",
     mandate: "Mandate: Dynamic Kenneth Lane Cut-Off Grade Optimization, Class A/B/C EBITDA Value Capture",
@@ -343,4 +356,124 @@ window.nodePRDData = {
       { key: "Recirculation Target", val: "SAG & Ball Milling Circuit" }
     ]
   }
+};
+
+/* ---------------------------------------------------------------------------
+ * Screen 5 -- the logical architecture, from the screen a person looks at down
+ * to the bytes in BigQuery.
+ *
+ * Chip labels may carry {tokens}. They are substituted at render time from the
+ * live catalogue and the generated data graph (see S5.tokens in app.js), so a
+ * count on this screen cannot drift from the data it describes. A token with no
+ * value renders as "—" rather than leaking its own braces.
+ *
+ * `request` is what travels down the stack; `evidence` is what comes back up.
+ * Both directions are drawn because the round trip is the point: a request
+ * descends to data, and what returns is not an answer but a cited one.
+ * ------------------------------------------------------------------------- */
+window.architectureModel = {
+  layers: [
+    {
+      key: "experience",
+      band: "Experience",
+      name: "Where a person meets the estate",
+      blurb: "Persona cockpits, the agent catalogue, and the Gemini Enterprise workspace. Every surface is read-and-approve; none of them writes to plant.",
+      chips: ["{personas} persona cockpits", "5 screens", "Gemini Enterprise workspace"],
+      request: "A question, asked in the persona's own language",
+      evidence: "A recommendation with its workings attached"
+    },
+    {
+      key: "access",
+      band: "Access",
+      name: "Who is allowed to ask",
+      blurb: "Identity-Aware Proxy fronts every screen. Each agent tier runs as its own service account, and an agent will only accept a caller on its allowlist.",
+      chips: ["IAP on all ingress", "Per-tier service accounts", "Caller allowlists"],
+      request: "An authenticated identity, carried the whole way down",
+      evidence: "An audit row naming who asked and who approved"
+    },
+    {
+      key: "orchestration",
+      band: "Orchestration",
+      name: "Routing the question to the right swarm",
+      blurb: "The registry resolves an agent by URN and the orchestrator dispatches it. Agents talk to each other over A2A, never by reaching into one another's state.",
+      chips: ["{agents} registered agents", "A2A protocol", "Invoke gateway"],
+      request: "A dispatch to a named coordinator",
+      evidence: "One consolidated answer per swarm"
+    },
+    {
+      key: "reasoning",
+      band: "Reasoning",
+      name: "The swarm that argues it out",
+      blurb: "A coordinator commissions its specialists, then an adversarial critic tries to break what they returned. A claim that cannot be traced to a cited table does not survive this layer.",
+      chips: ["{coordinators} coordinators", "{specialists} specialists", "{critics} adversarial critics"],
+      request: "Sub-questions, one per specialist",
+      evidence: "Findings that survived the critic"
+    },
+    {
+      key: "compute",
+      band: "Deterministic compute",
+      name: "The numbers nobody gets to argue with",
+      blurb: "Physics and operations-research solvers — Bond comminution, Kenneth Lane cut-off grade, ISO 10816 vibration severity, SAFTE fatigue, Little's Law queuing. Same inputs, same answer, every time.",
+      chips: ["{solvers} solvers", "Deterministic fallback", "No model in the path"],
+      request: "A well-posed numerical problem",
+      evidence: "A computed value, reproducible on demand"
+    },
+    {
+      key: "grounding",
+      band: "Grounding",
+      name: "Turning a question into a query",
+      blurb: "Driver trees decompose a governing metric into the things that move it. Each driver either carries a query or is declared uninstrumented — it is never quietly dropped.",
+      chips: ["Method packs & driver trees", "Document corpus", "Ontology property graph"],
+      request: "A driver tree walked top-down",
+      evidence: "Rows, with the driver that asked for them"
+    },
+    {
+      key: "platform",
+      band: "Data platform",
+      name: "BigQuery, and the joins that make it a system",
+      blurb: "One dataset holding operational records, the semantic graph, the document corpus and the agent control plane. The complexity is not the row count — it is the {edges} join paths between {tables} objects.",
+      chips: ["{tables} objects", "{columns} columns", "{rows} rows", "{edges} join paths", "{models} BQML models"],
+      request: "Parameterised SQL — never interpolated",
+      evidence: "Result sets, cited by table"
+    },
+    {
+      key: "sources",
+      band: "Sources",
+      name: "Where the truth originates",
+      blurb: "Operational telemetry crosses a one-way boundary out of the OT network. ERP and commercial documents arrive through their own ingest. Nothing travels back the other way.",
+      chips: ["OT telemetry — egress only", "ERP & maintenance", "Contracts & invoices"],
+      request: "Scheduled and streaming ingest",
+      evidence: "Raw, immutable, timestamped"
+    }
+  ],
+
+  /* Cross-cutting concerns. These are not a layer -- they bind every layer,
+     which is why they are drawn as a rail beside the stack rather than a block
+     inside it. */
+  controls: [
+    {
+      key: "boundary",
+      name: "OT boundary",
+      rule: "No agent holds write access to a PLC, a SCADA system or any physical control loop. Telemetry leaves the OT network; nothing returns.",
+      spans: "sources → platform"
+    },
+    {
+      key: "hitl",
+      name: "Human release",
+      rule: "An action that touches physical reality is staged in an ERP buffer and held. Two named humans must sign before it moves.",
+      spans: "reasoning → experience"
+    },
+    {
+      key: "evidence",
+      name: "Citation or silence",
+      rule: "Every claim carries the table it came from. The critic rejects what it cannot trace, and an uninstrumented driver is declared rather than dropped.",
+      spans: "grounding → reasoning"
+    },
+    {
+      key: "identity",
+      name: "Identity end to end",
+      rule: "The caller's identity travels with the request through every layer, so an audit row can name who asked, which agent answered, and who released it.",
+      spans: "access → platform"
+    }
+  ]
 };

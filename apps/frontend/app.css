@@ -462,13 +462,271 @@ main.main-content { max-width: 1200px; margin: 0 auto; padding: 36px 24px 80px 2
 #copy-toast { position: fixed; bottom: 24px; right: 24px; background: #202124; color: #FFFFFF; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 600; box-shadow: var(--shadow-md); display: none; z-index: 999; }
 
 /* --------------------------------------------------------------- responsive */
+/* =============================================================================
+   INCREMENT: persona portrait, agent launch links, business logic + decision
+   flow on the deep dive, and the Screen 5 logical / data architecture.
+   Same tokens throughout -- no new colour, font or radius is introduced here.
+   ========================================================================== */
+
+/* ---- Persona portrait (Screen 3) ---------------------------------------- */
+.persona-identity-row { display: flex; gap: 18px; align-items: flex-start; }
+.persona-hero-img {
+  width: 104px; height: 104px; flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background-size: cover; background-position: center top;
+  background-color: var(--m3-surface-variant);
+  border: 1px solid var(--m3-border);
+  box-shadow: var(--shadow-sm);
+  position: relative; overflow: hidden;
+}
+/* The portrait loads from a remote host. When it does not arrive the initials
+   sit underneath, so the card never renders as an empty grey square. */
+.persona-avatar-fallback {
+  position: absolute; inset: 0; z-index: -1;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-serif); font-size: 30px; font-weight: 700;
+  color: var(--m3-text-tertiary); background: var(--m3-surface-variant);
+}
+.persona-portrait-caption {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--m3-text-tertiary); margin-top: 6px; text-align: center;
+}
+.persona-tab-btn { display: inline-flex; align-items: center; gap: 8px; padding-left: 8px; }
+.persona-tab-btn .tab-avatar {
+  width: 22px; height: 22px; border-radius: var(--radius-full);
+  background-size: cover; background-position: center top;
+  background-color: var(--m3-surface-variant); flex-shrink: 0;
+}
+
+/* ---- Agent launch links ------------------------------------------------- */
+.agent-launch-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.agent-launch-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-sans); font-size: 10.5px; font-weight: 700;
+  padding: 3px 8px; border-radius: var(--radius-full);
+  border: 1px solid var(--m3-border); background: var(--m3-surface);
+  color: var(--m3-text-secondary); text-decoration: none; line-height: 1.5;
+  transition: all 0.15s;
+}
+.agent-launch-chip:hover {
+  border-color: var(--m3-primary); color: var(--m3-primary);
+  background: var(--m3-primary-container);
+}
+.agent-launch-chip.chip-unregistered { border-style: dashed; color: var(--m3-text-tertiary); cursor: default; }
+.eco-agent-card.card-unregistered { cursor: default; border-style: dashed; }
+.eco-agent-card.card-unregistered:hover { border-color: var(--m3-border); box-shadow: none; transform: none; }
+.agent-launch-chip.chip-gemini { border-color: #C6DAFC; color: var(--m3-primary); background: var(--m3-primary-container); }
+.agent-launch-chip.chip-gemini:hover { background: #D7E5FD; }
+.btn-gemini-launch {
+  background: var(--m3-primary); color: #FFFFFF; border: none;
+  font-weight: 700; font-size: 13.5px; padding: 12px 16px; text-decoration: none;
+}
+.btn-gemini-launch:hover { background: var(--m3-primary-hover); }
+.btn-invoke-endpoint {
+  background: var(--m3-surface); color: var(--m3-primary);
+  border: 1.5px solid var(--m3-primary); text-decoration: none;
+}
+.btn-invoke-endpoint:hover { background: var(--m3-primary-container); }
+/* The right column now leads with a real launch, so the simulation -- which
+   plays back a run rather than starting one -- steps down to the secondary
+   treatment. Two filled primary buttons stacked read as two equal choices. */
+.btn-launch-sim { background: var(--m3-surface); color: var(--m3-text-primary); border: 1px solid var(--m3-border-strong); font-weight: 600; }
+.btn-launch-sim:hover { background: var(--m3-surface-subtle); border-color: var(--m3-text-tertiary); }
+.launch-divider {
+  border-top: 1px solid var(--m3-border); margin: 6px 0 2px 0; padding-top: 8px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--m3-text-tertiary);
+}
+.launch-note {
+  font-size: 10.5px; line-height: 1.45; color: var(--m3-text-tertiary);
+  padding: 2px 2px 6px 2px;
+}
+
+/* ---- Business logic card (deep dive) ------------------------------------ */
+.business-logic-card {
+  background: var(--m3-surface); border: 1px solid var(--m3-border);
+  border-left: 4px solid var(--m3-primary);
+  border-radius: var(--radius-md); padding: 18px 20px;
+}
+.biz-stake-line {
+  font-family: var(--font-serif); font-size: 16px; font-weight: 700;
+  line-height: 1.35; margin-bottom: 14px; color: var(--m3-text-primary);
+}
+.biz-row { display: grid; grid-template-columns: 132px 1fr; gap: 12px; padding: 9px 0; border-top: 1px solid var(--m3-border-subtle); }
+.biz-row:first-of-type { border-top: none; padding-top: 0; }
+.biz-row-label {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.4px;
+  text-transform: uppercase; color: var(--m3-text-tertiary); padding-top: 1px;
+}
+.biz-row-value { font-size: 12.5px; line-height: 1.55; color: var(--m3-text-secondary); }
+.biz-row-value strong { color: var(--m3-text-primary); font-weight: 700; }
+.biz-row.biz-row-limit .biz-row-label { color: var(--m3-on-critical); }
+
+/* ---- Per-agent decision flow -------------------------------------------- */
+.decision-flow-card {
+  background: var(--m3-surface); border: 1px solid var(--m3-border);
+  border-radius: var(--radius-md); padding: 18px 20px;
+}
+.decision-flow { display: flex; flex-direction: column; }
+.flow-stage { display: grid; grid-template-columns: 30px 1fr; gap: 12px; }
+.flow-rail { display: flex; flex-direction: column; align-items: center; }
+.flow-marker {
+  width: 26px; height: 26px; border-radius: var(--radius-full); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+  background: var(--m3-primary-container); color: var(--m3-on-primary-container);
+  border: 1px solid #C6DAFC;
+}
+.flow-stage[data-stage="approval"] .flow-marker { background: var(--m3-critical-container); color: var(--m3-on-critical); border-color: #FAD2CF; }
+.flow-stage[data-stage="lands"] .flow-marker { background: var(--m3-success-container); color: #137333; border-color: #CEEAD6; }
+.flow-connector { flex: 1; width: 2px; background: var(--m3-border); min-height: 14px; }
+.flow-stage:last-child .flow-connector { background: transparent; }
+.flow-body { padding-bottom: 14px; min-width: 0; }
+.flow-stage:last-child .flow-body { padding-bottom: 0; }
+.flow-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--m3-text-tertiary); margin-bottom: 2px;
+}
+.flow-value {
+  font-size: 12.5px; font-weight: 700; color: var(--m3-text-primary);
+  line-height: 1.4; word-break: break-word;
+}
+.flow-stage[data-stage="decides"] .flow-value { font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; }
+.flow-detail { font-size: 11.5px; color: var(--m3-text-secondary); line-height: 1.5; margin-top: 3px; }
+.flow-stage[data-stage="reads"] .flow-detail { font-family: var(--font-mono); font-size: 11px; }
+
+/* =============================================================================
+   SCREEN 5 -- logical architecture stack
+   ========================================================================== */
+.arch-legend-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; font-size: 11.5px; color: var(--m3-text-secondary); }
+.arch-legend-item { display: flex; align-items: center; gap: 6px; }
+.arch-legend-swatch { width: 20px; height: 3px; border-radius: 2px; }
+
+.arch-stack-grid { display: grid; grid-template-columns: 1fr 268px; gap: 20px; align-items: start; margin-bottom: 32px; }
+.arch-stack { display: flex; flex-direction: column; gap: 0; }
+
+.arch-block {
+  background: var(--m3-surface); border: 1px solid var(--m3-border);
+  border-radius: var(--radius-md); padding: 16px 18px;
+  display: grid; grid-template-columns: 96px 1fr 210px; gap: 16px; align-items: start;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.arch-block:hover { border-color: var(--m3-border-strong); box-shadow: var(--shadow-sm); }
+.arch-block-band {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--m3-primary); padding-top: 2px; line-height: 1.4;
+}
+.arch-block-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; line-height: 1.35; }
+.arch-block-blurb { font-size: 12px; color: var(--m3-text-secondary); line-height: 1.55; }
+.arch-chip-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+.arch-chip {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  background: var(--m3-surface-subtle); color: var(--m3-text-secondary);
+  padding: 3px 7px; border-radius: 4px; border: 1px solid var(--m3-border-subtle);
+}
+.arch-traffic { display: flex; flex-direction: column; gap: 8px; }
+.arch-traffic-line { display: grid; grid-template-columns: 14px 1fr; gap: 7px; font-size: 10.5px; line-height: 1.45; }
+.arch-traffic-arrow { font-weight: 700; text-align: center; }
+.arch-traffic-down .arch-traffic-arrow { color: var(--m3-primary); }
+.arch-traffic-up .arch-traffic-arrow { color: var(--m3-success); }
+.arch-traffic-down span:last-child { color: var(--m3-text-secondary); }
+.arch-traffic-up span:last-child { color: #137333; }
+
+/* The seam between two blocks: request descending, evidence ascending. */
+.arch-seam { display: flex; align-items: center; justify-content: center; gap: 26px; height: 26px; }
+.arch-seam-down, .arch-seam-up { display: flex; align-items: center; font-size: 12px; font-weight: 700; line-height: 1; }
+.arch-seam-down { color: var(--m3-primary); }
+.arch-seam-up { color: var(--m3-success); }
+
+.arch-control-rail { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 84px; }
+.arch-control-title { font-size: 12px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: var(--m3-text-tertiary); }
+.arch-control-card {
+  background: var(--m3-surface); border: 1px solid var(--m3-border);
+  border-left: 3px solid var(--m3-critical); border-radius: var(--radius-md);
+  padding: 13px 15px;
+}
+.arch-control-name { font-size: 12.5px; font-weight: 700; margin-bottom: 4px; }
+.arch-control-rule { font-size: 11.5px; color: var(--m3-text-secondary); line-height: 1.5; }
+.arch-control-spans {
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--m3-text-tertiary);
+  margin-top: 7px; text-transform: uppercase; letter-spacing: 0.3px;
+}
+
+/* =============================================================================
+   SCREEN 5 -- interactive data architecture graph
+   ========================================================================== */
+.datagraph-section { background: var(--m3-surface); border: 1px solid var(--m3-border); border-radius: var(--radius-md); padding: 22px 24px; }
+.datagraph-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.datagraph-stat-row { display: flex; gap: 22px; flex-wrap: wrap; }
+.datagraph-stat-value { font-family: var(--font-serif); font-size: 22px; font-weight: 700; line-height: 1.1; }
+.datagraph-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--m3-text-tertiary); margin-top: 2px; }
+
+.datagraph-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.datagraph-body { display: grid; grid-template-columns: 1fr 300px; gap: 18px; align-items: stretch; }
+.datagraph-canvas-wrap {
+  position: relative; background: var(--m3-canvas);
+  border: 1px solid var(--m3-border); border-radius: var(--radius-md);
+  overflow: hidden; min-height: 560px;
+}
+#datagraph-svg { display: block; width: 100%; height: 560px; cursor: grab; }
+#datagraph-svg.is-dragging { cursor: grabbing; }
+.dg-edge { stroke: var(--m3-border-strong); stroke-opacity: 0.5; fill: none; }
+.dg-edge.dg-dim { stroke-opacity: 0.08; }
+.dg-edge.dg-hot { stroke: var(--m3-primary); stroke-opacity: 0.9; }
+.dg-node { cursor: pointer; }
+.dg-node circle { stroke: var(--m3-surface); stroke-width: 1.5; transition: opacity 0.15s; }
+.dg-node.dg-dim { opacity: 0.16; }
+.dg-node.dg-selected circle { stroke: var(--m3-text-primary); stroke-width: 2.5; }
+.dg-node text { font-family: var(--font-mono); font-size: 8.5px; fill: var(--m3-text-secondary); pointer-events: none; transition: opacity 0.12s; }
+/* A quiet node keeps its name until it is worth reading -- on hover, on
+   selection, or when a neighbour is focused. 55 captions at once is a wall. */
+.dg-node.dg-quiet text { opacity: 0; }
+.dg-node.dg-quiet:hover text, .dg-node.dg-quiet.dg-selected text, .dg-node.dg-quiet.dg-named text { opacity: 1; }
+.dg-node.dg-selected text, .dg-node:hover text { fill: var(--m3-text-primary); font-weight: 700; }
+.datagraph-hint {
+  position: absolute; left: 12px; bottom: 10px;
+  font-size: 10.5px; color: var(--m3-text-tertiary); background: rgba(255,255,255,0.86);
+  padding: 3px 8px; border-radius: 4px; pointer-events: none;
+}
+.datagraph-legend { position: absolute; right: 12px; top: 10px; display: flex; flex-direction: column; gap: 4px; background: rgba(255,255,255,0.86); padding: 8px 10px; border-radius: var(--radius-sm); }
+.dg-legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--m3-text-secondary); cursor: pointer; }
+.dg-legend-item.dg-legend-off { opacity: 0.4; }
+.dg-legend-dot { width: 9px; height: 9px; border-radius: var(--radius-full); flex-shrink: 0; }
+
+.datagraph-detail { background: var(--m3-surface-subtle); border: 1px solid var(--m3-border); border-radius: var(--radius-md); padding: 16px; overflow-y: auto; max-height: 560px; }
+.dg-detail-empty { font-size: 12px; color: var(--m3-text-secondary); line-height: 1.55; }
+.dg-detail-title { font-family: var(--font-mono); font-size: 13px; font-weight: 700; word-break: break-all; margin-bottom: 6px; }
+.dg-detail-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.dg-detail-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.dg-detail-stat { background: var(--m3-surface); border: 1px solid var(--m3-border); border-radius: var(--radius-sm); padding: 8px 10px; }
+.dg-detail-stat-value { font-size: 15px; font-weight: 700; line-height: 1.2; }
+.dg-detail-stat-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--m3-text-tertiary); }
+.dg-detail-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--m3-text-tertiary); margin: 12px 0 6px 0; }
+.dg-col-row { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 10.5px; padding: 3px 0; border-bottom: 1px solid var(--m3-border-subtle); }
+.dg-col-type { color: var(--m3-text-tertiary); flex-shrink: 0; }
+.dg-join-row { font-family: var(--font-mono); font-size: 10.5px; padding: 4px 0; border-bottom: 1px solid var(--m3-border-subtle); cursor: pointer; }
+.dg-join-row:hover { color: var(--m3-primary); }
+.dg-join-keys { color: var(--m3-text-tertiary); font-size: 9.5px; }
+
 @media (max-width: 1100px) {
+  .arch-stack-grid { grid-template-columns: 1fr; }
+  .arch-control-rail { position: static; }
+  .datagraph-body { grid-template-columns: 1fr; }
+  .datagraph-detail { max-height: none; }
+  .arch-block { grid-template-columns: 88px 1fr; }
+  .arch-traffic { grid-column: 1 / -1; }
+
   .headwinds-grid, .telemetry-grid, .provenance-steps-row { grid-template-columns: repeat(2, 1fr); }
   .levers-grid, .outcomes-container { grid-template-columns: repeat(2, 1fr); }
   .arch-layout-grid, .deepdive-top-grid, .deepdive-main-grid, .persona-grid-2col, .diode-staging-grid { grid-template-columns: 1fr; }
   .schematic-zones-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
+  .arch-block { grid-template-columns: 1fr; gap: 8px; }
+  .persona-identity-row { flex-direction: column; }
+  .biz-row { grid-template-columns: 1fr; gap: 2px; }
+  .dg-detail-stats { grid-template-columns: 1fr; }
+
   nav.header-nav { gap: 12px; overflow-x: auto; }
   .headwinds-grid, .telemetry-grid, .levers-grid, .outcomes-container, .provenance-steps-row { grid-template-columns: 1fr; }
   .outcome-kpi-block { border-right: none; border-bottom: 1px solid var(--m3-border-subtle); padding-bottom: 12px; }

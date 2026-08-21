@@ -63,6 +63,38 @@
     };
   })();
 
+  /* Two addresses, and they are not interchangeable. geminiUrl is the ONE
+     Gemini Enterprise workspace the whole estate is published into -- it is the
+     same URL for all 101 agents. invokeUrl is that agent's own gateway
+     endpoint. Both are rendered wherever an agent is named, so "invoke it
+     directly" reaches the agent the card is about rather than a workspace that
+     merely contains it. stopPropagation keeps a launch click from also firing
+     the card's own open-deep-dive handler. */
+  function launchLinks(agent, compact) {
+    if (!agent) return "";
+    var gem = agent.geminiUrl || window.geminiEnterpriseUrl || "";
+    var inv = agent.invokeUrl || "";
+    var out = '<div class="agent-launch-row" data-launch-row="1">';
+    if (gem) {
+      out += '<a class="agent-launch-chip chip-gemini" href="' + esc(gem) + '" target="_blank" rel="noopener noreferrer"' +
+        ' title="Open the Gemini Enterprise workspace this agent is published into">&#10022; Gemini Enterprise</a>';
+    }
+    if (inv && !compact) {
+      out += '<a class="agent-launch-chip" href="' + esc(inv) + '" target="_blank" rel="noopener noreferrer"' +
+        ' title="' + esc(inv) + '">&#8599; Invoke ' + esc(agent.id) + "</a>";
+    }
+    return out + "</div>";
+  }
+
+  /* Launch anchors live inside clickable cards. Without this every launch
+     click would also open the deep dive behind the new tab. */
+  function bindLaunchRows(root) {
+    if (!root) return;
+    Array.prototype.forEach.call(root.querySelectorAll("[data-launch-row] a"), function (a) {
+      a.addEventListener("click", function (e) { e.stopPropagation(); });
+    });
+  }
+
   /* =========================================================== S1 — Macro */
   var S1 = (function () {
     var HEADWINDS = [
@@ -365,6 +397,14 @@
         b.setAttribute("aria-selected", on ? "true" : "false");
       });
 
+      /* The portrait is remote. Initials sit behind it so a blocked or slow
+         image degrades to a legible monogram, never an empty grey tile. */
+      var name = p.title.split(",")[0].trim();
+      var initials = name.split(/\s+/).map(function (w) { return w.charAt(0); }).join("").slice(0, 2).toUpperCase();
+      el("persona-hero-initials").textContent = initials;
+      el("persona-hero-img").style.backgroundImage = p.avatar ? "url('" + p.avatar + "')" : "";
+      el("persona-hero-caption").textContent = p.code.split("\u2022")[0].trim();
+
       el("persona-code-badge").textContent = p.code;
       el("persona-title-display").textContent = p.title;
       el("persona-mandate-display").textContent = p.mandate;
@@ -375,19 +415,29 @@
       el("squad-list-container").innerHTML =
         '<div class="agent-cards-grid">' + p.squad.map(function (s) {
           var critic = s.auth.indexOf("CRITIC") !== -1;
-          return '<div class="eco-agent-card" data-agent="' + esc(s.id) + '">' +
+          var registered = !!(window.agentCatalogData || {})[s.id];
+          return '<div class="eco-agent-card' + (registered ? "" : " card-unregistered") + '"' +
+            (registered ? ' data-agent="' + esc(s.id) + '"' : "") + ">" +
             "<div><div class=\"eco-agent-header\">" +
               '<span class="badge-agent-id">' + esc(s.id) + "</span>" +
               '<span class="badge ' + (critic ? "badge-critical" : "badge-optimal") + '">' + esc(s.auth) + "</span>" +
             "</div>" +
             '<div class="eco-agent-title">' + esc(s.name) + "</div>" +
             '<div class="eco-agent-desc">' + esc(s.desc) + "</div></div>" +
+            (registered
+              ? launchLinks((window.agentCatalogData || {})[s.id], true)
+              : '<div class="agent-launch-row"><span class="agent-launch-chip chip-unregistered" ' +
+                'title="This arbiter is named in the persona narrative but is not one of the registered agents.">' +
+                "Not in the agent registry</span></div>") +
             '<div class="eco-agent-footer">' +
               '<span style="font-size:11px; font-weight:700; color:#137333;">' + esc(s.val) + "</span>" +
-              '<span style="font-size:11.5px; font-weight:700; color:var(--m3-primary);">Open deep dive &rsaquo;</span>' +
+              (registered
+                ? '<span style="font-size:11.5px; font-weight:700; color:var(--m3-primary);">Open deep dive &rsaquo;</span>'
+                : '<span style="font-size:11.5px; font-weight:600; color:var(--m3-text-tertiary);">No card to open</span>') +
             "</div></div>";
         }).join("") + "</div>";
 
+      bindLaunchRows(el("squad-list-container"));
       Array.prototype.forEach.call(el("squad-list-container").querySelectorAll("[data-agent]"), function (c) {
         c.addEventListener("click", function () {
           App.go("ecosystem");
@@ -400,7 +450,8 @@
       el("persona-tabs").innerHTML = ORDER.map(function (k) {
         var p = window.personaPRDData[k];
         var label = p.code.split("•")[0].trim() + ": " + p.title.split(",")[0];
-        return '<button class="persona-tab-btn" role="tab" data-persona="' + k + '">' + esc(label) + "</button>";
+        var av = p.avatar ? '<span class="tab-avatar" style="background-image:url(\'' + p.avatar + '\');"></span>' : "";
+        return '<button class="persona-tab-btn" role="tab" data-persona="' + k + '">' + av + esc(label) + "</button>";
       }).join("");
 
       Array.prototype.forEach.call(document.querySelectorAll(".persona-tab-btn"), function (b) {
@@ -445,6 +496,7 @@
         "</div>" +
         '<div class="eco-agent-title">' + esc(a.name) + "</div>" +
         '<div class="eco-agent-desc">' + esc(String(a.mechanism || "").slice(0, 115)) + "…</div></div>" +
+        launchLinks(a, true) +
         '<div class="eco-agent-footer">' +
           '<span style="font-size:11px; font-weight:700; color:#137333;">' + esc(a.valueClass) + "</span>" +
           '<span style="font-size:11.5px; font-weight:700; color:var(--m3-primary);">Inspect &rsaquo;</span>' +
@@ -452,6 +504,7 @@
     }
 
     function bindCards(root) {
+      bindLaunchRows(root);
       Array.prototype.forEach.call(root.querySelectorAll("[data-agent]"), function (c) {
         c.addEventListener("click", function () { openDeepDive(c.getAttribute("data-agent")); });
       });
@@ -551,7 +604,10 @@
 
     function openDeepDive(agentId) {
       var all = agents();
-      var a = all[agentId] || all[ids[0]];
+      /* Falling back to ids[0] is right when nothing was asked for. When a
+         specific ID was asked for and is not in the registry, showing a
+         different agent's card under that ID is worse than showing nothing. */
+      var a = agentId ? all[agentId] : all[ids[0]];
       if (!a) return;
       active = a.id;
 
@@ -582,6 +638,45 @@
               '<span class="prov-badge">' + esc(p.type) + "</span></div>";
           }).join("")
         : '<div style="font-size:11.5px; color:var(--m3-text-secondary);">No grounding tables declared.</div>';
+
+      /* Business logic, in the language of the person who signs the cheque.
+         Every line is a catalogue field put into plain English by the
+         generator -- see build_frontend_data.py. Nothing is composed here. */
+      var b = a.business || {};
+      el("dd-biz-stake").textContent = b.boardStake || "";
+      el("dd-biz-owns").textContent = b.owns || "";
+      el("dd-biz-answers").textContent = b.answersTo || "";
+      el("dd-biz-pl").textContent = b.plMove || "";
+      el("dd-biz-cannot").textContent = b.cannot || "";
+      el("dd-biz-failure").textContent = b.onFailure || "";
+
+      el("dd-flow").innerHTML = (a.flow || []).map(function (st) {
+        return '<div class="flow-stage" data-stage="' + esc(st.key) + '">' +
+          '<div class="flow-rail"><div class="flow-marker">' + esc(st.label.charAt(0)) + "</div>" +
+          '<div class="flow-connector"></div></div>' +
+          '<div class="flow-body">' +
+            '<div class="flow-label">' + esc(st.label) + "</div>" +
+            '<div class="flow-value">' + esc(st.value) + "</div>" +
+            '<div class="flow-detail">' + esc(st.detail) + "</div>" +
+          "</div></div>";
+      }).join("");
+
+      var gemini = a.geminiUrl || window.geminiEnterpriseUrl || "";
+      var gemLink = el("dd-link-gemini");
+      gemLink.href = gemini || "#";
+      gemLink.style.display = gemini ? "" : "none";
+
+      var invLink = el("dd-link-invoke");
+      invLink.href = a.invokeUrl || "#";
+      invLink.style.display = a.invokeUrl ? "" : "none";
+      el("dd-invoke-label").textContent = "Invoke " + a.id + " directly";
+
+      /* Said out loud rather than left for someone to discover: the Gemini
+         Enterprise button opens the workspace all 101 agents share, so it is
+         not by itself a link to THIS agent. The endpoint button is. */
+      el("dd-launch-note").textContent = a.urn
+        ? "Gemini Enterprise opens the shared workspace. The endpoint button addresses this agent alone — " + a.urn
+        : "Gemini Enterprise opens the shared workspace for all agents in this estate.";
 
       el("agent-quick-select").value = a.id;
       el("view-ecosystem-overview").classList.remove("active");
@@ -654,56 +749,521 @@
     return { render: render, openDeepDive: openDeepDive, backToOverview: backToOverview };
   })();
 
-  /* ====================================================== S5 — Governance */
+  /* =========================================== S5 — Logical & data architecture
+   * Two halves. The upper half is the logical stack: eight layers between the
+   * screen a person looks at and the byte that answers them, with the request
+   * descending and evidence returning. The lower half is the data estate as an
+   * interactive graph, drawn from apps/frontend/data-graph.js -- real tables,
+   * real row counts, real shared join keys, generated against live BigQuery.
+   *
+   * The graph runs a force layout to settlement and then STOPS. It is not an
+   * animation: an architecture diagram that never stops moving is harder to
+   * read, and a permanent rAF loop on an off-screen pane burns frames nobody
+   * sees. Dragging re-heats it for a few steps and lets it settle again.
+   * ======================================================================== */
   var S5 = (function () {
-    var STACK = [
-      { tier: "L0", name: "Strategic Governance (AGT-19)", desc: "Dynamic cut-off grade and capital allocation optimizer." },
-      { tier: "L1", name: "ROC Central Arbiters",          desc: "Pit-to-port balancing across competing constraints." },
-      { tier: "L2", name: "Multi-Agent Swarms",            desc: "Coordinators, specialists and adversarial critics." },
-      { tier: "L3", name: "Deterministic Physics Solvers", desc: "Zero-hallucination microservices." },
-      { tier: "L4", name: "Enterprise Data Lakehouse",     desc: "BigQuery telemetry ingest and property graphs." }
-    ];
-    var STAGING = [
-      { n: "01", color: "var(--m3-primary)",  title: "Agent proposal",     sub: "Agent suggests a parameter change via API." },
-      { n: "02", color: "var(--m3-critical)", title: "ERP staging area",   sub: "Action held in an isolated ERP buffer." },
-      { n: "03", color: "#137333",            title: "Dual-key MFA release", sub: "Human operator plus shift boss token.", final: true }
-    ];
-    var PROVENANCE = [
-      { stage: "STAGE 1", title: "Raw telemetry",   desc: "Sensor data from heavy machinery streams via MQTT." },
-      { stage: "STAGE 2", title: "Ingest & cleanse", desc: "Optical diode validation and BigQuery staging tables." },
-      { stage: "STAGE 3", title: "Property graphs", desc: "GoogleSQL transformations construct entity relationships." },
-      { stage: "STAGE 4", title: "Agent inference", desc: "Swarms analyse state and output mediated ERP proposals." }
-    ];
+    /* One colour per layer, all of them already in the design language --
+       nothing new is introduced for this chart. */
+    var LAYER_COLOR = {
+      operational: "#1A73E8",
+      semantic:    "#3F51B5",
+      corpus:      "#80868B",
+      simulation:  "#F59E0B",
+      control:     "#D93025",
+      serving:     "#1E8E3E",
+      model:       "#137333"
+    };
+    var SVG_NS = "http://www.w3.org/2000/svg";
+
+    var nodes = [], edges = [], adjacency = {}, byId = {};
+    var svg = null, gEdges = null, gNodes = null;
+    var width = 900, height = 520;
+    var selectedId = null, hoveredId = null;
+    var domainFilter = "ALL", hiddenLayers = {};
+    var laidOut = false, dragging = null, pending = null, swallowNextClick = false;
+
+    /* ---------------------------------------------------- logical stack */
+
+    /* Chip labels carry {tokens} so a count on the architecture screen is read
+       from the same data the count describes. A token with no value renders as
+       an em dash rather than leaking its braces onto the page. */
+    function tokens() {
+      var cat = window.agentCatalogData || {};
+      var list = Object.keys(cat).map(function (k) { return cat[k]; });
+      var byPattern = function (pat) {
+        return list.filter(function (a) { return a.pattern === pat; }).length;
+      };
+      var g = window.dataGraph || { nodes: [], meta: {} };
+      var meta = g.meta || {};
+      var n = function (v) { return typeof v === "number" ? v.toLocaleString() : v; };
+      return {
+        personas: Object.keys(window.personaPRDData || {}).length,
+        agents: list.length,
+        coordinators: byPattern("A_COORDINATOR"),
+        specialists: byPattern("A_SPECIALIST"),
+        critics: byPattern("A_CRITIC"),
+        solvers: byPattern("B_DEEP"),
+        tables: meta.tableCount,
+        columns: meta.columnCount,
+        rows: n(meta.rowCount),
+        edges: meta.edgeCount,
+        models: (g.nodes || []).filter(function (x) { return x.layer === "model"; }).length
+      };
+    }
+
+    function fill(text, t) {
+      return String(text).replace(/\{(\w+)\}/g, function (_, key) {
+        var v = t[key];
+        return (v === undefined || v === null || v === "") ? "—" : String(v);
+      });
+    }
+
+    function renderStack() {
+      var model = window.architectureModel;
+      if (!model) return;
+      var t = tokens();
+
+      el("arch-stack").innerHTML = model.layers.map(function (layer, i) {
+        var block =
+          '<div class="arch-block" data-layer="' + esc(layer.key) + '">' +
+            '<div class="arch-block-band">' + esc(layer.band) + "</div>" +
+            "<div>" +
+              '<div class="arch-block-name">' + esc(layer.name) + "</div>" +
+              '<div class="arch-block-blurb">' + esc(fill(layer.blurb, t)) + "</div>" +
+              '<div class="arch-chip-row">' + layer.chips.map(function (c) {
+                return '<span class="arch-chip">' + esc(fill(c, t)) + "</span>";
+              }).join("") + "</div>" +
+            "</div>" +
+            '<div class="arch-traffic">' +
+              '<div class="arch-traffic-line arch-traffic-down"><span class="arch-traffic-arrow">&darr;</span><span>' + esc(layer.request) + "</span></div>" +
+              '<div class="arch-traffic-line arch-traffic-up"><span class="arch-traffic-arrow">&uarr;</span><span>' + esc(layer.evidence) + "</span></div>" +
+            "</div>" +
+          "</div>";
+        var seam = i < model.layers.length - 1
+          ? '<div class="arch-seam"><span class="arch-seam-down">&#9660;</span><span class="arch-seam-up">&#9650;</span></div>'
+          : "";
+        return block + seam;
+      }).join("");
+
+      el("arch-controls").innerHTML = model.controls.map(function (c) {
+        return '<div class="arch-control-card">' +
+          '<div class="arch-control-name">' + esc(c.name) + "</div>" +
+          '<div class="arch-control-rule">' + esc(c.rule) + "</div>" +
+          '<div class="arch-control-spans">' + esc(c.spans) + "</div>" +
+        "</div>";
+      }).join("");
+    }
+
+    /* ------------------------------------------------------- data graph */
+
+    function buildGraph() {
+      var g = window.dataGraph;
+      if (!g) return false;
+
+      byId = {};
+      /* Deterministic seeding: a golden-angle spiral, not a random scatter, so
+         the same dataset draws the same picture on every reload. */
+      var golden = Math.PI * (3 - Math.sqrt(5));
+      nodes = g.nodes.map(function (n, i) {
+        var r = 30 + 190 * Math.sqrt(i / Math.max(1, g.nodes.length));
+        var node = {
+          id: n.id, layer: n.layer, layerLabel: n.layerLabel,
+          domain: n.domain, domainLabel: n.domainLabel,
+          rows: n.rows, columns: n.columns, columnCount: n.columnCount,
+          readBy: n.readBy || [],
+          radius: 4.5 + (n.weight || 0) * 2.3,
+          x: r * Math.cos(i * golden), y: r * Math.sin(i * golden),
+          vx: 0, vy: 0, degree: 0
+        };
+        byId[n.id] = node;
+        return node;
+      });
+
+      adjacency = {};
+      edges = g.edges.filter(function (e) { return byId[e.source] && byId[e.target]; })
+        .map(function (e) {
+          byId[e.source].degree++; byId[e.target].degree++;
+          (adjacency[e.source] = adjacency[e.source] || []).push({ other: e.target, keys: e.keys });
+          (adjacency[e.target] = adjacency[e.target] || []).push({ other: e.source, keys: e.keys });
+          return { s: byId[e.source], t: byId[e.target], keys: e.keys, weight: e.weight };
+        });
+      return true;
+    }
+
+    /* Domain centroids sit on a circle so each part of the value chain forms a
+       visible neighbourhood; the join edges then show how much those
+       neighbourhoods actually depend on one another. */
+    function domainAnchors() {
+      var g = window.dataGraph || { domains: [] };
+      var list = g.domains || [];
+      var anchors = {};
+      var rx = width * 0.34, ry = height * 0.36;
+      list.forEach(function (d, i) {
+        var a = (i / Math.max(1, list.length)) * Math.PI * 2 - Math.PI / 2;
+        anchors[d.key] = { x: width / 2 + rx * Math.cos(a), y: height / 2 + ry * Math.sin(a) };
+      });
+      return anchors;
+    }
+
+    function step(anchors, alpha) {
+      var i, j, a, b, dx, dy, d2, d, f;
+
+      for (i = 0; i < nodes.length; i++) {
+        for (j = i + 1; j < nodes.length; j++) {
+          a = nodes[i]; b = nodes[j];
+          dx = b.x - a.x; dy = b.y - a.y;
+          d2 = dx * dx + dy * dy;
+          if (d2 < 1) { d2 = 1; dx = (i - j) * 0.5; dy = 0.5; }
+          f = 3000 / d2;
+          d = Math.sqrt(d2);
+          a.vx -= (dx / d) * f; a.vy -= (dy / d) * f;
+          b.vx += (dx / d) * f; b.vy += (dy / d) * f;
+        }
+      }
+
+      edges.forEach(function (e) {
+        dx = e.t.x - e.s.x; dy = e.t.y - e.s.y;
+        d = Math.sqrt(dx * dx + dy * dy) || 1;
+        f = (d - 92) * 0.030;
+        e.s.vx += (dx / d) * f; e.s.vy += (dy / d) * f;
+        e.t.vx -= (dx / d) * f; e.t.vy -= (dy / d) * f;
+      });
+
+      nodes.forEach(function (n) {
+        var anchor = anchors[n.domain] || { x: width / 2, y: height / 2 };
+        n.vx += (anchor.x - n.x) * 0.018;
+        n.vy += (anchor.y - n.y) * 0.018;
+        if (dragging === n) { n.vx = 0; n.vy = 0; return; }
+        n.x += n.vx * alpha; n.y += n.vy * alpha;
+        n.vx *= 0.82; n.vy *= 0.82;
+        var pad = n.radius + 14;
+        n.x = Math.max(pad, Math.min(width - pad, n.x));
+        n.y = Math.max(pad, Math.min(height - pad, n.y));
+      });
+    }
+
+    function layout(iterations) {
+      var anchors = domainAnchors();
+      for (var k = 0; k < iterations; k++) {
+        step(anchors, 0.55 * (1 - k / iterations) + 0.08);
+      }
+    }
+
+    function draw() {
+      if (!svg) return;
+      while (gEdges.firstChild) gEdges.removeChild(gEdges.firstChild);
+      while (gNodes.firstChild) gNodes.removeChild(gNodes.firstChild);
+
+      edges.forEach(function (e) {
+        var line = document.createElementNS(SVG_NS, "line");
+        line.setAttribute("class", "dg-edge");
+        line.setAttribute("stroke-width", String(Math.min(3, e.weight)));
+        line.setAttribute("x1", e.s.x); line.setAttribute("y1", e.s.y);
+        line.setAttribute("x2", e.t.x); line.setAttribute("y2", e.t.y);
+        e.node = line;
+        gEdges.appendChild(line);
+      });
+
+      nodes.forEach(function (n) {
+        var g = document.createElementNS(SVG_NS, "g");
+        g.setAttribute("class", "dg-node");
+        g.setAttribute("transform", "translate(" + n.x + "," + n.y + ")");
+
+        var c = document.createElementNS(SVG_NS, "circle");
+        c.setAttribute("r", String(n.radius));
+        c.setAttribute("fill", LAYER_COLOR[n.layer] || "#80868B");
+        g.appendChild(c);
+
+        var label = document.createElementNS(SVG_NS, "text");
+        label.setAttribute("y", String(n.radius + 8));
+        label.setAttribute("text-anchor", "middle");
+        label.textContent = n.id;
+        if (!(n.degree >= 4 || n.rows >= 900)) g.classList.add("dg-quiet");
+        g.appendChild(label);
+
+        var title = document.createElementNS(SVG_NS, "title");
+        title.textContent = n.id + " — " + n.layerLabel + " · " + n.domainLabel +
+          " · " + n.rows.toLocaleString() + " rows · " + n.columnCount + " columns";
+        g.appendChild(title);
+
+        g.addEventListener("mouseenter", function () { hoveredId = n.id; applyEmphasis(); });
+        g.addEventListener("mouseleave", function () { hoveredId = null; applyEmphasis(); });
+        g.addEventListener("pointerdown", function (ev) {
+          ev.preventDefault();
+          pending = { node: n, x: ev.clientX, y: ev.clientY, pointerId: ev.pointerId };
+        });
+
+        n.node = g;
+        gNodes.appendChild(g);
+      });
+
+      applyEmphasis();
+    }
+
+    function reposition() {
+      edges.forEach(function (e) {
+        if (!e.node) return;
+        e.node.setAttribute("x1", e.s.x); e.node.setAttribute("y1", e.s.y);
+        e.node.setAttribute("x2", e.t.x); e.node.setAttribute("y2", e.t.y);
+      });
+      nodes.forEach(function (n) {
+        if (n.node) n.node.setAttribute("transform", "translate(" + n.x + "," + n.y + ")");
+      });
+    }
+
+    function isFiltered(n) {
+      if (hiddenLayers[n.layer]) return true;
+      if (domainFilter !== "ALL" && n.domain !== domainFilter) return true;
+      return false;
+    }
+
+    /* Filtering dims rather than removes. Pulling nodes out would relayout the
+       whole picture on every chip click, and the shape of the estate is the
+       thing the chart is for. */
+    function applyEmphasis() {
+      var focus = hoveredId || selectedId;
+      if (focus && byId[focus] && isFiltered(byId[focus])) focus = null;
+      var near = {};
+      if (focus) {
+        near[focus] = true;
+        (adjacency[focus] || []).forEach(function (a) { near[a.other] = true; });
+      }
+      nodes.forEach(function (n) {
+        if (!n.node) return;
+        var dim = isFiltered(n) || (focus && !near[n.id]);
+        n.node.classList.toggle("dg-dim", !!dim);
+        n.node.classList.toggle("dg-selected", n.id === selectedId);
+        n.node.classList.toggle("dg-named", !!(focus && near[n.id]));
+      });
+      edges.forEach(function (e) {
+        if (!e.node) return;
+        var visible = !isFiltered(e.s) && !isFiltered(e.t);
+        var touches = focus && (e.s.id === focus || e.t.id === focus);
+        e.node.classList.toggle("dg-dim", !visible || (focus && !touches));
+        e.node.classList.toggle("dg-hot", !!(visible && touches));
+      });
+    }
+
+    function selectNode(id) {
+      selectedId = (selectedId === id) ? null : id;
+      applyEmphasis();
+      renderDetail(selectedId ? byId[selectedId] : null);
+    }
+
+    function renderDetail(n) {
+      var box = el("datagraph-detail");
+      if (!n) {
+        var t = tokens();
+        box.innerHTML = '<div class="dg-detail-empty"><strong>' + esc(String(t.tables)) +
+          " objects, " + esc(String(t.edges)) + " join paths.</strong><br><br>" +
+          "Each circle is a table, sized by row count and coloured by architectural layer. " +
+          "A line means the two tables share a key-shaped column, so the join is derived from " +
+          "the schema rather than asserted.<br><br>Click any table to read its columns and its joins.</div>";
+        return;
+      }
+      var joins = (adjacency[n.id] || []).slice().sort(function (a, b) {
+        return a.other < b.other ? -1 : 1;
+      });
+      box.innerHTML =
+        '<div class="dg-detail-title">' + esc(n.id) + "</div>" +
+        '<div class="dg-detail-meta">' +
+          '<span class="badge" style="background:' + (LAYER_COLOR[n.layer] || "#80868B") + '1A; color:' + (LAYER_COLOR[n.layer] || "#80868B") + ';">' + esc(n.layerLabel) + "</span>" +
+          '<span class="badge badge-stable">' + esc(n.domainLabel) + "</span>" +
+        "</div>" +
+        '<div class="dg-detail-stats">' +
+          '<div class="dg-detail-stat"><div class="dg-detail-stat-value">' + n.rows.toLocaleString() + '</div><div class="dg-detail-stat-label">Rows</div></div>' +
+          '<div class="dg-detail-stat"><div class="dg-detail-stat-value">' + n.columnCount + '</div><div class="dg-detail-stat-label">Columns</div></div>' +
+          '<div class="dg-detail-stat"><div class="dg-detail-stat-value">' + joins.length + '</div><div class="dg-detail-stat-label">Join paths</div></div>' +
+          '<div class="dg-detail-stat"><div class="dg-detail-stat-value">' + n.readBy.length + '</div><div class="dg-detail-stat-label">Declared by</div></div>' +
+        "</div>" +
+        (joins.length
+          ? '<div class="dg-detail-section-label">Joins to</div>' + joins.map(function (j) {
+              return '<div class="dg-join-row" data-jump="' + esc(j.other) + '">' + esc(j.other) +
+                '<div class="dg-join-keys">on ' + esc(j.keys.join(", ")) + "</div></div>";
+            }).join("")
+          : '<div class="dg-detail-section-label">Joins to</div><div class="dg-detail-empty">No shared key columns. This table stands alone in the schema.</div>') +
+        '<div class="dg-detail-section-label">Columns</div>' +
+        n.columns.map(function (c) {
+          return '<div class="dg-col-row"><span>' + esc(c.name) + '</span><span class="dg-col-type">' + esc(c.type) + "</span></div>";
+        }).join("") +
+        (n.readBy.length
+          ? '<div class="dg-detail-section-label">Declared by</div><div class="dg-detail-empty" style="font-family:var(--font-mono); font-size:10.5px;">' + esc(n.readBy.join(", ")) + "</div>"
+          : "");
+
+      Array.prototype.forEach.call(box.querySelectorAll("[data-jump]"), function (row) {
+        row.addEventListener("click", function () { selectNode(row.getAttribute("data-jump")); });
+      });
+    }
+
+    function renderChrome() {
+      var g = window.dataGraph;
+      if (!g) return;
+      var m = g.meta || {};
+
+      el("datagraph-subtitle").textContent =
+        "Every table in " + m.project + "." + m.dataset + ", sized by row count and joined on shared keys. " +
+        m.excludedCount + " snapshot and probe copies are set aside so the architecture reads as the architecture.";
+
+      el("datagraph-stats").innerHTML = [
+        { v: m.tableCount, l: "Objects" },
+        { v: m.columnCount, l: "Columns" },
+        { v: (m.rowCount || 0).toLocaleString(), l: "Rows" },
+        { v: m.edgeCount, l: "Join paths" }
+      ].map(function (s) {
+        return '<div><div class="datagraph-stat-value">' + esc(String(s.v)) + '</div>' +
+          '<div class="datagraph-stat-label">' + esc(s.l) + "</div></div>";
+      }).join("");
+
+      el("datagraph-toolbar").innerHTML =
+        '<button class="filter-chip active" data-domain="ALL">All domains</button>' +
+        (g.domains || []).map(function (d) {
+          var count = g.nodes.filter(function (n) { return n.domain === d.key; }).length;
+          return '<button class="filter-chip" data-domain="' + esc(d.key) + '">' + esc(d.label) + " (" + count + ")</button>";
+        }).join("");
+
+      Array.prototype.forEach.call(el("datagraph-toolbar").querySelectorAll("[data-domain]"), function (chip) {
+        chip.addEventListener("click", function () {
+          domainFilter = chip.getAttribute("data-domain");
+          Array.prototype.forEach.call(el("datagraph-toolbar").querySelectorAll("[data-domain]"), function (c) {
+            c.classList.toggle("active", c === chip);
+          });
+          if (selectedId && byId[selectedId] && isFiltered(byId[selectedId])) {
+            selectedId = null;
+            renderDetail(null);
+          }
+          applyEmphasis();
+        });
+      });
+
+      el("datagraph-legend").innerHTML = (g.layers || []).map(function (l) {
+        var count = g.nodes.filter(function (n) { return n.layer === l.key; }).length;
+        return '<div class="dg-legend-item" data-layer-toggle="' + esc(l.key) + '">' +
+          '<span class="dg-legend-dot" style="background:' + (LAYER_COLOR[l.key] || "#80868B") + ';"></span>' +
+          esc(l.label) + " (" + count + ")</div>";
+      }).join("");
+
+      Array.prototype.forEach.call(el("datagraph-legend").querySelectorAll("[data-layer-toggle]"), function (item) {
+        item.addEventListener("click", function () {
+          var key = item.getAttribute("data-layer-toggle");
+          hiddenLayers[key] = !hiddenLayers[key];
+          item.classList.toggle("dg-legend-off", !!hiddenLayers[key]);
+          if (selectedId && byId[selectedId] && isFiltered(byId[selectedId])) {
+            selectedId = null;
+            renderDetail(null);
+          }
+          applyEmphasis();
+        });
+      });
+    }
+
+    function bindSurface() {
+      svg = el("datagraph-svg");
+      if (!svg) return;
+      gEdges = document.createElementNS(SVG_NS, "g");
+      gNodes = document.createElementNS(SVG_NS, "g");
+      svg.appendChild(gEdges);
+      svg.appendChild(gNodes);
+
+      svg.addEventListener("click", function () {
+        if (swallowNextClick) { swallowNextClick = false; return; }
+        selectNode(null);
+      });
+
+      /* 4px of travel separates a click from a drag. Below it the press is a
+         request to inspect the table; above it, to move it. */
+      var DRAG_THRESHOLD = 4;
+
+      svg.addEventListener("pointermove", function (ev) {
+        if (pending && !dragging) {
+          if (Math.abs(ev.clientX - pending.x) + Math.abs(ev.clientY - pending.y) < DRAG_THRESHOLD) return;
+          dragging = pending.node;
+          svg.classList.add("is-dragging");
+          if (svg.setPointerCapture) { try { svg.setPointerCapture(ev.pointerId); } catch (e) { /* no capture */ } }
+        }
+        if (!dragging) return;
+        var r = svg.getBoundingClientRect();
+        dragging.x = (ev.clientX - r.left) * (width / r.width);
+        dragging.y = (ev.clientY - r.top) * (height / r.height);
+        /* A few relaxation steps per move so neighbours follow the dragged
+           table instead of the line snapping across a static picture. */
+        var anchors = domainAnchors();
+        for (var i = 0; i < 3; i++) step(anchors, 0.25);
+        reposition();
+      });
+
+      var release = function (ev) {
+        if (!pending && !dragging) return;
+        var wasDragging = !!dragging;
+        var node = dragging || (pending && pending.node);
+        dragging = null;
+        pending = null;
+        svg.classList.remove("is-dragging");
+        if (ev && ev.pointerId !== undefined && svg.hasPointerCapture && svg.hasPointerCapture(ev.pointerId)) {
+          svg.releasePointerCapture(ev.pointerId);
+        }
+        if (wasDragging) {
+          var anchors = domainAnchors();
+          for (var i = 0; i < 40; i++) step(anchors, 0.2);
+          reposition();
+        } else if (node) {
+          selectNode(node.id);
+        }
+        /* Either way a click event follows this pointerup and would reach the
+           SVG's deselect handler. */
+        swallowNextClick = true;
+      };
+      svg.addEventListener("pointerup", release);
+      svg.addEventListener("pointercancel", release);
+    }
+
+    function measure() {
+      if (!svg) return;
+      var r = svg.getBoundingClientRect();
+      width = Math.max(320, Math.round(r.width) || 900);
+      height = Math.max(360, Math.round(r.height) || 520);
+      svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    }
+
+    function enter() {
+      if (!svg || laidOut) return;
+      measure();
+      if (!nodes.length) return;
+      layout(420);
+      draw();
+      laidOut = true;
+    }
+
+    function resize() {
+      if (!laidOut) return;
+      var before = width;
+      measure();
+      if (Math.abs(before - width) < 24) return;
+      layout(120);
+      reposition();
+    }
 
     function render() {
-      el("gov-stack-steps").innerHTML = STACK.map(function (s) {
-        return '<div class="stack-step"><div class="stack-step-icon">' + esc(s.tier) + "</div>" +
-          '<div><div style="font-size:12px; font-weight:700;">' + esc(s.name) + "</div>" +
-          '<div style="font-size:11px; color:var(--m3-text-secondary);">' + esc(s.desc) + "</div></div></div>";
-      }).join("");
+      renderStack();
 
-      el("gov-staging-steps").innerHTML = STAGING.map(function (s) {
-        return '<div class="staging-step' + (s.final ? " step-final" : "") + '">' +
-          '<span style="font-weight:700; color:' + s.color + ';">' + esc(s.n) + "</span>" +
-          "<div><strong>" + esc(s.title) + "</strong><br>" +
-          '<span style="color:var(--m3-text-secondary); font-size:10.5px;">' + esc(s.sub) + "</span></div></div>";
-      }).join("");
+      if (buildGraph()) {
+        renderChrome();
+        bindSurface();
+        renderDetail(null);
+      } else {
+        el("datagraph-detail").innerHTML =
+          '<div class="dg-detail-empty">The data graph has not been generated. ' +
+          "Run <code>python scripts/build_data_graph.py</code> to build it from the live dataset.</div>";
+      }
 
-      el("gov-provenance-steps").innerHTML = PROVENANCE.map(function (p) {
-        return '<div class="provenance-step-box">' +
-          '<div style="font-size:10.5px; font-weight:700; color:var(--m3-primary);">' + esc(p.stage) + "</div>" +
-          '<div style="font-weight:700; font-size:12px; margin:2px 0;">' + esc(p.title) + "</div>" +
-          '<div style="font-size:10.5px; color:var(--m3-text-secondary);">' + esc(p.desc) + "</div></div>";
-      }).join("");
-
-      /* The audit line is stamped at render, not hard-coded: a frozen date on a
-         security posture screen reads as a stale audit, which is worse than no
-         date at all. */
+      /* Stamped at render, not hard-coded: a frozen date on an architecture
+         screen reads as a stale audit, which is worse than no date at all. */
       var now = new Date();
       el("gov-audit-line").innerHTML =
         "LAST RENDER: " + now.toISOString().slice(0, 16).replace("T", " ") + "Z<br>POSTURE: ENFORCED";
     }
-    return { render: render };
+
+    return { render: render, enter: enter, resize: resize };
   })();
 
   /* ============================================================== ROUTER */
@@ -724,6 +1284,11 @@
          screen is showing burns a frame budget on a canvas nobody can see, so
          the router starts and stops it explicitly rather than letting it idle. */
       if (screen === "schematic") { setTimeout(S2.enter, 50); } else { S2.leave(); }
+
+      /* Screen 5's graph is laid out on first sight, not at init: a hidden pane
+         measures zero wide, and a force layout against a zero-width box puts
+         every node in the same place. */
+      if (screen === "governance") { setTimeout(S5.enter, 50); }
 
       try {
         if (window.history && window.history.pushState) {
@@ -753,6 +1318,7 @@
       });
       window.addEventListener("resize", function () {
         if (el("pane-schematic").classList.contains("active")) S2.resize();
+        if (el("pane-governance").classList.contains("active")) S5.resize();
       });
 
       var initial = (window.location.hash || "").replace(/^#/, "");

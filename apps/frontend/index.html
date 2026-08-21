@@ -229,13 +229,21 @@
 
     <div class="card" style="padding:28px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
-        <div>
-          <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
-            <span class="badge badge-primary" id="persona-code-badge"></span>
-            <span class="badge badge-optimal">Active cockpit</span>
+        <div class="persona-identity-row">
+          <div>
+            <div class="persona-hero-img" id="persona-hero-img">
+              <span class="persona-avatar-fallback" id="persona-hero-initials"></span>
+            </div>
+            <div class="persona-portrait-caption" id="persona-hero-caption"></div>
           </div>
-          <h2 style="font-family:var(--font-serif); font-size:24px; font-weight:700;" id="persona-title-display"></h2>
-          <div style="font-size:13px; color:var(--m3-text-secondary);" id="persona-mandate-display"></div>
+          <div>
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+              <span class="badge badge-primary" id="persona-code-badge"></span>
+              <span class="badge badge-optimal">Active cockpit</span>
+            </div>
+            <h2 style="font-family:var(--font-serif); font-size:24px; font-weight:700;" id="persona-title-display"></h2>
+            <div style="font-size:13px; color:var(--m3-text-secondary);" id="persona-mandate-display"></div>
+          </div>
         </div>
         <button class="btn btn-primary" id="btn-persona-studio">Open in Agent Studio &rsaquo;</button>
       </div>
@@ -332,6 +340,21 @@
 
       <div class="deepdive-main-grid">
         <div class="deepdive-left-col">
+          <div class="business-logic-card">
+            <div class="card-header-label" style="color:var(--m3-primary);"><span>What this agent is for</span></div>
+            <div class="biz-stake-line" id="dd-biz-stake"></div>
+            <div class="biz-row"><div class="biz-row-label">Decision it owns</div><div class="biz-row-value" id="dd-biz-owns"></div></div>
+            <div class="biz-row"><div class="biz-row-label">Answers to</div><div class="biz-row-value" id="dd-biz-answers"></div></div>
+            <div class="biz-row"><div class="biz-row-label">How it pays</div><div class="biz-row-value" id="dd-biz-pl"></div></div>
+            <div class="biz-row biz-row-limit"><div class="biz-row-label">What it cannot do</div><div class="biz-row-value" id="dd-biz-cannot"></div></div>
+            <div class="biz-row"><div class="biz-row-label">If it cannot answer</div><div class="biz-row-value" id="dd-biz-failure"></div></div>
+          </div>
+
+          <div class="decision-flow-card">
+            <div class="card-header-label"><span>How a decision moves through it</span></div>
+            <div class="decision-flow" id="dd-flow"></div>
+          </div>
+
           <div class="deepdive-problem-card">
             <div class="problem-card-header">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D93025" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -356,6 +379,16 @@
         </div>
 
         <div class="deepdive-right-col">
+          <a class="btn-block btn-gemini-launch" id="dd-link-gemini" href="#" target="_blank" rel="noopener noreferrer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.2 5.9L20 11l-5.8 2.1L12 19l-2.2-5.9L4 11l5.8-2.1z"/></svg>
+            Invoke in Gemini Enterprise
+          </a>
+          <a class="btn-block btn-invoke-endpoint" id="dd-link-invoke" href="#" target="_blank" rel="noopener noreferrer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span id="dd-invoke-label">Open this agent's endpoint</span>
+          </a>
+          <div class="launch-note" id="dd-launch-note"></div>
+          <div class="launch-divider">Inspect without invoking</div>
           <button class="btn-block btn-launch-sim" id="btn-launch-sim">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Launch Autonomous Simulation
@@ -387,9 +420,11 @@
   <div id="pane-governance" class="screen-pane">
     <div class="security-top-meta">
       <div>
-        <div class="eyebrow" style="color:var(--m3-success);">&block; Active security posture</div>
-        <h1 class="hero-title" style="margin-bottom:6px;">Enterprise &amp; Data Architecture</h1>
-        <p style="font-size:13.5px; color:var(--m3-text-secondary);">Comprehensive technical blueprint of the 5-Layer Cognitive Stack. Validated for IEC 62443 Security Level 4 compliance with unidirectional telemetry ingress.</p>
+        <div class="eyebrow" style="color:var(--m3-success);">&block; Logical &amp; data architecture</div>
+        <h1 class="hero-title" style="margin-bottom:6px;">From the Screen to the Byte</h1>
+        <p style="font-size:13.5px; color:var(--m3-text-secondary); max-width:760px;">
+          Eight logical layers between the question a person asks and the row that answers it. A request descends; evidence returns. Four controls bind every layer, and none of them is optional.
+        </p>
       </div>
       <div style="text-align:right;">
         <span class="badge badge-primary" style="margin-bottom:4px;">&#128737; IEC 62443 SL-4</span>
@@ -397,45 +432,43 @@
       </div>
     </div>
 
-    <div class="arch-layout-grid">
-      <div class="cognitive-stack-rail">
-        <div style="font-size:13px; font-weight:700; margin-bottom:4px;">Enterprise Cognitive Stack</div>
-        <div id="gov-stack-steps"></div>
+    <div class="arch-legend-row">
+      <div class="arch-legend-item"><span class="arch-legend-swatch" style="background:var(--m3-primary);"></span> Request descending</div>
+      <div class="arch-legend-item"><span class="arch-legend-swatch" style="background:var(--m3-success);"></span> Evidence returning</div>
+      <div class="arch-legend-item"><span class="arch-legend-swatch" style="background:var(--m3-critical);"></span> Binding control</div>
+    </div>
+
+    <div class="arch-stack-grid">
+      <div class="arch-stack" id="arch-stack"></div>
+      <div class="arch-control-rail">
+        <div class="arch-control-title">Controls that bind every layer</div>
+        <div id="arch-controls"></div>
+        <div class="strict-boundary-hero-card" style="padding:20px 16px; margin-bottom:0; text-align:left;">
+          <div class="shield-icon-circle" style="margin:0 0 10px 0; width:36px; height:36px; font-size:16px;">&#128737;</div>
+          <h2 class="boundary-headline" style="font-size:15px; margin-bottom:6px;">Zero write access to plant control</h2>
+          <p class="boundary-subtext" style="font-size:11.5px; max-width:none;">No agent in this estate can write to a PLC, a SCADA system or a physical control loop. The boundary is architectural, not a policy setting.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="datagraph-section">
+      <div class="datagraph-head">
+        <div>
+          <h2 style="font-family:var(--font-serif); font-size:21px; font-weight:700; margin-bottom:4px;">The data underneath</h2>
+          <p style="font-size:12.5px; color:var(--m3-text-secondary); max-width:620px;" id="datagraph-subtitle"></p>
+        </div>
+        <div class="datagraph-stat-row" id="datagraph-stats"></div>
       </div>
 
-      <div>
-        <div class="strict-boundary-hero-card">
-          <div class="shield-icon-circle">&#128737;</div>
-          <h2 class="boundary-headline">STRICT NON-SCADA<br>OT PHYSICAL BOUNDARY</h2>
-          <p class="boundary-subtext">AI Agents possess absolutely ZERO write-access to physical machinery, PLCs, or SCADA systems. The architecture enforces an absolute air-gap for control signals.</p>
-        </div>
+      <div class="datagraph-toolbar" id="datagraph-toolbar"></div>
 
-        <div class="diode-staging-grid">
-          <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-              <span style="font-size:13px; font-weight:700;">Unidirectional Telemetry Ingress</span><span>&#128225;</span>
-            </div>
-            <div class="diode-flow-strip">
-              <div style="text-align:center;">OT NETWORK<br><span style="color:var(--m3-critical);">TX ONLY</span></div>
-              <div style="color:var(--m3-primary); font-size:16px;">&blacktriangleright; &block; &blacktriangleright;</div>
-              <div style="text-align:center;">BIGQUERY<br><span style="color:var(--m3-success);">RX ONLY</span></div>
-            </div>
-            <div style="font-size:11.5px; color:var(--m3-text-secondary); line-height:1.45;">Physical optical isolation guarantees data can flow out of the mine for analysis, but makes it impossible for signals to travel back into operational technology.</div>
-          </div>
-
-          <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-              <span style="font-size:13px; font-weight:700;">Mediated Action Staging</span><span>&#128273;</span>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px; font-size:11.5px;" id="gov-staging-steps"></div>
-            <div style="font-size:11.5px; color:var(--m3-text-secondary); line-height:1.45;">Recommendations that affect physical reality must pass through an enterprise staging zone requiring multiparty human cryptographic authorization.</div>
-          </div>
+      <div class="datagraph-body">
+        <div class="datagraph-canvas-wrap">
+          <svg id="datagraph-svg" role="img" aria-label="Interactive graph of the BigQuery dataset: tables as nodes, shared join keys as edges."></svg>
+          <div class="datagraph-legend" id="datagraph-legend"></div>
+          <div class="datagraph-hint">Hover to isolate a table&rsquo;s joins &middot; click to inspect &middot; drag to reposition</div>
         </div>
-
-        <div class="data-provenance-4stage">
-          <div style="font-size:13.5px; font-weight:700;">Data Provenance: Sensor to Autonomous Decision</div>
-          <div class="provenance-steps-row" id="gov-provenance-steps"></div>
-        </div>
+        <div class="datagraph-detail" id="datagraph-detail"></div>
       </div>
     </div>
   </div>
@@ -479,6 +512,7 @@
 
 <script src="data.js"></script>
 <script src="data-static.js"></script>
+<script src="data-graph.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
