@@ -19,10 +19,18 @@
 # question asks for, so this driver is left declared rather than answering
 # a different question under the original one's name.
 #
-# clause_attribution stays not_instrumented: `contracts` carries a single
-# agreed_unit_price and a rebate_schedule, not a structured clause_id,
-# clause_type or recoverable_basis, so no query can cite which clause a
-# breach violates.
+# clause_attribution is now instrumented. It was blocked because `contracts`
+# carried a single agreed_unit_price and a rebate_schedule and no structured
+# clause identifiers, so nothing could name the obligation a breach violated.
+# `contract_clauses` now carries clause_id, clause_type, clause_text and
+# recoverable_basis for all ten agreements, extracted from the vendor
+# agreements under gs://mining-knowledge-base/vendor-contracts/ — which are
+# themselves generated from these contract rows, so a clause quotes the price
+# its own contract agreed. See scripts/generate_contract_corpus.py.
+#
+# Its total reconciles exactly with price_variance's leakage_usd (2979.93 on
+# this build, difference 0.00), which is the check that the attribution did not
+# invent or drop a breach on its way through the clause join.
 metric: recovered value from post-signature contract leakage
 root: transactions raised against terms nobody has read
 
@@ -129,9 +137,29 @@ drivers:
     question: >-
       When a transaction breaches its contract, which specific clause was
       breached and what is the recoverable amount tied to that clause?
-      Requires the `contracts` table to carry structured clause identifiers
-      (clause_id, clause_text, clause_type, recoverable_basis) rather than a
-      single agreed_unit_price field, so a flagged transaction can cite the
-      clause it violates instead of a bare price mismatch.
-    status: not_instrumented
-    controllable: false
+    status: instrumented
+    controllable: true
+    sql: sql/agt14/clause_attribution.sql
+    params: {}
+    doc_query: contract clause price agreed unit price recoverable overpayment
+    guard: >-
+      This driver attributes ONE kind of breach: a unit price paid above the
+      one the contract fixed, attributed to that contract's PRICE clause. It is
+      the only breach `contract_transactions` can evidence, because that table
+      records what was paid per unit and nothing else. A rebate never claimed,
+      a duplicate payment and a late delivery each breach a different clause
+      and are measured by rebate_entitlement, duplicate_payment and the
+      purchase-order lead-time data respectively; the absence of those clause
+      types from this driver's output is a statement about what this query
+      tested, not a finding that those clauses were honoured. recoverable_usd
+      is the arithmetic gap between paid and agreed price summed over
+      breaching transactions, not a legal opinion on recoverability: clause 7
+      of each agreement makes an overcharge recoverable, but whether it is
+      recovered depends on the audit window and the notice provisions in the
+      same document, which this query does not read. Report
+      breaching_transaction_count beside recoverable_usd — a total drawn from
+      one transaction carries more variance than the same total drawn from
+      several, and the row does not say which it is without both. The clause
+      text itself is not in this result; clause_id and source_uri are, so the
+      wording an agent quotes must come from retrieving the document rather
+      than from paraphrasing this row.
