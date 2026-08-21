@@ -30,3 +30,8 @@ __pycache__/
 /packages/
 /tests/
 /agent_manifest.json
+
+# Verbatim upstream copies read only by the generators in scripts/, never by
+# the running container -- the Dockerfile does not COPY it. Three megabytes
+# uploaded to Cloud Build on every deploy for nothing.
+/vendor/

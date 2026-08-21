@@ -439,3 +439,11 @@ test("prefers-reduced-motion switches off every class the motion section animate
   assert.match(guard, /animation-iteration-count:\s*1\s*!important/);
   assert.match(guard, /animation-duration:\s*0\.001ms\s*!important/);
 });
+
+test("the fourth screen is called Agent Ecosystem everywhere it is named", () => {
+  // "Agent Studio" was a second name for the same screen. One screen, one name.
+  const html = read("index.html");
+  assert.ok(!/Agent Studio/.test(html), "'Agent Studio' is still on a screen");
+  assert.match(html, /Open in Agent Ecosystem/);
+  assert.match(html, /id="tab-ecosystem"[^>]*>Agent Ecosystem</);
+});
