@@ -75,9 +75,24 @@ def main() -> int:
             "must_name": [table],
             "derived": [["average of " + col, "avg_val", 2.0]],
         })
+    # MERGE, never replace. This file was rewritten wholesale for each group,
+    # so after --group S08 ran, S01's probes no longer existed. Anything looking
+    # for an earlier agent found nothing and skipped it in silence -- a
+    # determinism trial exited with zero output and no error because all three
+    # of its agents had been erased from the test set.
+    #
+    # The probe set is the record of what we can verify. It should only ever
+    # grow.
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(probes, indent=1))
-    print(f"{len(probes)} probes -> {OUT.relative_to(ROOT)}")
+    existing = {}
+    if OUT.exists():
+        existing = {d["agent_id"]: d for d in json.loads(OUT.read_text())}
+    for pr in probes:
+        existing[pr["agent_id"]] = pr
+    merged = [existing[k] for k in sorted(existing)]
+    OUT.write_text(json.dumps(merged, indent=1))
+    print(f"{len(probes)} probes generated, {len(merged)} total on file "
+          f"-> {OUT.relative_to(ROOT)}")
     if skipped:
         print(f"  no numeric column to probe ({len(skipped)}): {skipped[:6]}")
     return 0
