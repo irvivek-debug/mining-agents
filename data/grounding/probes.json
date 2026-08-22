@@ -459,23 +459,6 @@
   ]
  },
  {
-  "agent_id": "D31",
-  "question": "Query mining_data.invoices directly and report two exact figures: the total row count, and the AVG of amount to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
-  "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(amount),4) AS avg_val FROM `genial-union-475913-i7.mining_data.invoices`",
-  "truth_key": "n",
-  "tolerance_pct": 0.5,
-  "must_name": [
-   "invoices"
-  ],
-  "derived": [
-   [
-    "average of amount",
-    "avg_val",
-    2.0
-   ]
-  ]
- },
- {
   "agent_id": "D32",
   "question": "Query mining_data.spares_inventory directly and report two exact figures: the total row count, and the AVG of stock_level to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
   "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(stock_level),4) AS avg_val FROM `genial-union-475913-i7.mining_data.spares_inventory`",

@@ -14,6 +14,8 @@ for e in paged(ENGINE_API, "reasoningEngines"):
 tok = subprocess.run(["gcloud","auth","print-access-token"],capture_output=True,text=True).stdout.strip()
 H = {"Authorization": f"Bearer {tok}", "X-Goog-User-Project": "genial-union-475913-i7",
      "Content-Type": "application/json"}
+OUT = __import__("pathlib").Path("data/grounding/results.jsonl")
+OUT.parent.mkdir(parents=True, exist_ok=True)
 results = []
 
 
@@ -90,13 +92,13 @@ for p in load_probes():
         r2["failure_kind"] = "transient" if r2.get("passed") else "persistent"
         r = r2
     results.append(r)
+    with OUT.open("a") as fh:
+        fh.write(json.dumps(r) + "\n")
+        fh.flush()
     bad = [k for k, v in r.get("checks", {}).items() if not v]
     kind = r.get("failure_kind", "")
     print(f"  {'PASS' if r.get('passed') else 'FAIL'} {p.agent_id:<18} "
           f"tools={r.get('tool_calls', 0):<2} {r.get('latency_s', 0):>5}s  "
           f"truth={r.get('truth')} got={r.get('matched_number')}  "
           f"{','.join(bad)}{' [' + kind + ']' if kind else ''}", flush=True)
-out = pathlib.Path if False else __import__("pathlib").Path("data/grounding/results.jsonl")
-with out.open("a") as fh:
-    for r in results: fh.write(json.dumps(r) + "\n")
 print(f"\n  {sum(r['passed'] for r in results)}/{len(results)} grounded")
