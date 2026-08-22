@@ -68,6 +68,11 @@ MODEL_LOCATION = "global"
 # the versions verified working, locally and then deployed.
 REQUIREMENTS = [
     "google-adk==2.6.3",
+    # BigQueryToolset imports google.cloud.dataplex_v1 transitively. Without
+    # this the toolset raises ImportError inside the engine at first tool use,
+    # which surfaces as an agent that mysteriously stops answering -- found
+    # locally before it could be found in production.
+    "google-cloud-dataplex",
     "google-genai==2.17.0",
     "google-cloud-aiplatform[agent_engines,adk]>=1.70.0",
     "pydantic>=2.0.0",
@@ -133,6 +138,70 @@ def current_state() -> tuple[dict, dict]:
     return engines, ge
 
 
+from google.adk.tools.base_toolset import BaseToolset  # noqa: E402
+
+
+class _LazyBigQueryTools(BaseToolset):
+    """Build the BigQuery toolset on the ENGINE, not on this laptop.
+
+    The obvious version -- constructing BigQueryToolset here and passing it to
+    the agent -- pickles a developer refresh token into the deployed artefact.
+    Verified rather than assumed: cloudpickling the app produced 3,117 bytes
+    with the local ADC refresh token inside it. Deploying that would put a
+    human's Google credential into a Cloud resource, which is the same class of
+    leak just scrubbed out of git history.
+
+    So only the CONFIGURATION travels. __getstate__/__setstate__ keep this
+    object credential-free through pickling, and the toolset is constructed on
+    first use inside the engine, where google.auth.default() resolves to the
+    engine's own service account. That is also what makes per-tier IAM mean
+    anything: the agent can read exactly what its identity is granted.
+    """
+
+    def __init__(self, project: str, max_bytes: int, max_rows: int):
+        super().__init__()
+        self._project, self._max_bytes, self._max_rows = project, max_bytes, max_rows
+        self._toolset = None
+
+    def __getstate__(self):
+        # Never carry a live toolset (and therefore never a credential).
+        return {"_project": self._project, "_max_bytes": self._max_bytes,
+                "_max_rows": self._max_rows, "_toolset": None}
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+    def _build(self):
+        import google.auth
+        from google.adk.integrations.bigquery import (
+            BigQueryToolset, BigQueryCredentialsConfig)
+        from google.adk.integrations.bigquery.config import BigQueryToolConfig, WriteMode
+        creds, _ = google.auth.default()
+        self._toolset = BigQueryToolset(
+            credentials_config=BigQueryCredentialsConfig(credentials=creds),
+            bigquery_tool_config=BigQueryToolConfig(
+                # No agent in this estate may write. Enforced by the toolset,
+                # not by asking the model nicely.
+                write_mode=WriteMode.BLOCKED,
+                compute_project_id=self._project,
+                maximum_bytes_billed=self._max_bytes,
+                max_query_result_rows=self._max_rows,
+            ),
+        )
+        return self._toolset
+
+    async def get_tools(self, readonly_context=None):
+        return await (self._toolset or self._build()).get_tools(readonly_context)
+
+    async def close(self):
+        if self._toolset:
+            await self._toolset.close()
+
+
+def _bigquery_tools(agent):
+    return _LazyBigQueryTools(PROJECT, 2_000_000_000, 200)
+
+
 def create_engine(agent) -> str:
     """Deploy one agent as an Agent Engine and return its resource name.
 
@@ -177,7 +246,34 @@ def create_engine(agent) -> str:
         name=agent.agent_id.replace("-", "_").lower(),
         model=agent.model_id,
         instruction=instruction,
+        # Without tools these agents cannot read anything. All 100 were
+        # registered that way and answered fluently from model knowledge --
+        # correct-sounding, ungrounded, and invisible to a UAT that only
+        # checked whether an answer looked right.
+        tools=[_bigquery_tools(agent)],
     ))
+    # Deleting an engine does not free its quota slot immediately. Rebuilding
+    # in place at the cap therefore 429s on the create, having already removed
+    # the old engine -- which is how AGT-19 ended up deleted with nothing in
+    # its place, twice. Retry with backoff so a transient lag cannot shrink the
+    # estate.
+    import time as _t
+    from google.api_core import exceptions as _gexc
+    last = None
+    for attempt in range(6):
+        try:
+            return _create(agent_engines, app, agent)
+        except _gexc.ResourceExhausted as e:
+            last = e
+            wait = 30 * (attempt + 1)
+            print(f"  quota not yet released; retrying in {wait}s "
+                  f"(attempt {attempt + 1}/6)", flush=True)
+            _t.sleep(wait)
+    raise SystemExit(f"create failed after retries — the estate may be short an "
+                     f"agent. Last error: {last}")
+
+
+def _create(agent_engines, app, agent) -> str:
     remote = agent_engines.create(
         agent_engine=app,
         display_name=f"{agent.name} ({agent.agent_id})",
