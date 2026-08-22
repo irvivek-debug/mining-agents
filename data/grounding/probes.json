@@ -1,108 +1,86 @@
 [
  {
-  "agent_id": "AGT-19",
-  "question": "Using ONLY the data in your source tables, what is the mean copper_grade_pct_est across geological_block_models, and how many blocks does that average cover? Then compute the contained copper tonnes if the average block weighs 2,500 t. Name the table you read.",
-  "truth_sql": "SELECT ROUND(AVG(copper_grade_pct_est),4) AS mean_grade, COUNT(*) AS n FROM `genial-union-475913-i7.mining_data.geological_block_models`",
-  "truth_key": "mean_grade",
-  "tolerance_pct": 2.0,
-  "must_name": [
-   "geological_block_models"
-  ],
-  "derived": [
-   [
-    "block count",
-    "n",
-    0.5
-   ],
-   [
-    "contained t per block",
-    "mean_grade/100*2500",
-    3.0
-   ]
-  ]
- },
- {
-  "agent_id": "S07-COORDINATOR",
-  "question": "From flotation_assays only: what is the mean recovery_rate_pct, and over how many records? State the table you read.",
-  "truth_sql": "SELECT ROUND(AVG(recovery_rate_pct),2) AS mean_recovery, COUNT(*) AS n FROM `genial-union-475913-i7.mining_data.flotation_assays`",
-  "truth_key": "mean_recovery",
-  "tolerance_pct": 1.0,
-  "must_name": [
-   "flotation_assays"
-  ],
-  "derived": [
-   [
-    "record count",
-    "n",
-    0.5
-   ]
-  ]
- },
- {
-  "agent_id": "S11-COORDINATOR",
-  "question": "From spares_inventory only: how many distinct part_numbers are held, and how many are at or below their reorder_point_limit? Name the table.",
-  "truth_sql": "SELECT COUNT(*) AS n_parts, COUNTIF(stock_level <= reorder_point_limit) AS at_reorder FROM `genial-union-475913-i7.mining_data.spares_inventory`",
-  "truth_key": "n_parts",
+  "agent_id": "S02-COORDINATOR",
+  "question": "Query mining_data.mine_production_schedule directly and report two exact figures: the total row count, and the AVG of assumed_value to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(assumed_value),4) AS avg_val FROM `genial-union-475913-i7.mining_data.mine_production_schedule`",
+  "truth_key": "n",
   "tolerance_pct": 0.5,
   "must_name": [
-   "spares_inventory"
+   "mine_production_schedule"
   ],
   "derived": [
    [
-    "parts at or below reorder",
-    "at_reorder",
-    0.5
+    "average of assumed_value",
+    "avg_val",
+    2.0
    ]
   ]
  },
  {
-  "agent_id": "S10-COORDINATOR",
-  "question": "From vendor_contracts and contract_transactions: how many contracts exist, and what is the total USD paid above the agreed unit price across all transactions? Name both tables.",
-  "truth_sql": "SELECT (SELECT COUNT(*) FROM `genial-union-475913-i7.mining_data.vendor_contracts`) AS n_contracts, ROUND((SELECT SUM(GREATEST(t.paid_unit_price - c.agreed_unit_price,0)) FROM `genial-union-475913-i7.mining_data.contract_transactions` t JOIN `genial-union-475913-i7.mining_data.contracts` c USING (contract_id)),2) AS leakage_usd",
-  "truth_key": "leakage_usd",
-  "tolerance_pct": 1.0,
-  "must_name": [
-   "vendor_contracts"
-  ],
-  "derived": [
-   [
-    "contract count",
-    "n_contracts",
-    0.5
-   ]
-  ]
- },
- {
-  "agent_id": "S09-COORDINATOR",
-  "question": "From assets only: how many assets are on the register, and how many carry a CRITICAL criticality_rating? Name the table.",
-  "truth_sql": "SELECT COUNT(*) AS n_assets, COUNTIF(criticality_rating='CRITICAL') AS n_critical FROM `genial-union-475913-i7.mining_data.assets`",
-  "truth_key": "n_assets",
+  "agent_id": "S02-1-GEOTECH",
+  "question": "Query mining_data.geotech_sensors directly and report two exact figures: the total row count, and the AVG of displacement_mm to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(displacement_mm),4) AS avg_val FROM `genial-union-475913-i7.mining_data.geotech_sensors`",
+  "truth_key": "n",
   "tolerance_pct": 0.5,
   "must_name": [
-   "assets"
+   "geotech_sensors"
   ],
   "derived": [
    [
-    "critical assets",
-    "n_critical",
-    0.5
+    "average of displacement_mm",
+    "avg_val",
+    2.0
    ]
   ]
  },
  {
-  "agent_id": "S12-COORDINATOR",
-  "question": "From stockpiles and rail_schedules: how many stockpile records exist and what total tonnage do they hold? Name both tables.",
-  "truth_sql": "SELECT COUNT(*) AS n_stock, ROUND(SUM(tonnes),1) AS total_tonnes FROM `genial-union-475913-i7.mining_data.stockpiles`",
-  "truth_key": "total_tonnes",
-  "tolerance_pct": 1.0,
+  "agent_id": "S02-2-SCHEDULE",
+  "question": "Query mining_data.mine_production_schedule directly and report two exact figures: the total row count, and the AVG of assumed_value to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(assumed_value),4) AS avg_val FROM `genial-union-475913-i7.mining_data.mine_production_schedule`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
   "must_name": [
-   "stockpiles"
+   "mine_production_schedule"
   ],
   "derived": [
    [
-    "stockpile records",
-    "n_stock",
-    0.5
+    "average of assumed_value",
+    "avg_val",
+    2.0
+   ]
+  ]
+ },
+ {
+  "agent_id": "S02-3-DUMP",
+  "question": "Query mining_data.pit_designs directly and report two exact figures: the total row count, and the AVG of centroid_x to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(centroid_x),4) AS avg_val FROM `genial-union-475913-i7.mining_data.pit_designs`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
+  "must_name": [
+   "pit_designs"
+  ],
+  "derived": [
+   [
+    "average of centroid_x",
+    "avg_val",
+    2.0
+   ]
+  ]
+ },
+ {
+  "agent_id": "S02-R-CRITIC",
+  "question": "Query mining_data.survey_scans directly and report two exact figures: the total row count, and the AVG of point_count to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(point_count),4) AS avg_val FROM `genial-union-475913-i7.mining_data.survey_scans`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
+  "must_name": [
+   "survey_scans"
+  ],
+  "derived": [
+   [
+    "average of point_count",
+    "avg_val",
+    2.0
    ]
   ]
  }
