@@ -1,7 +1,7 @@
 """Rebuild the Agent Engines that 404 on their own model.
 
 THE FAULT
-All 101 agents specify model_id "gemini-3.7-flash". That model is real and
+All 101 agents specify model_id "the catalogue's model". That model is real and
 reachable from this project, but only on the `global` endpoint -- probed across
 twelve locations, global returns 200 and eleven regions return 404. An Agent
 Engine deployed in us-central1 resolves publisher models regionally, so it asks

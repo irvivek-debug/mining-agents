@@ -42,6 +42,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "data" / "uat" / ".profile"
 AGENTS = ROOT / "data" / "uat" / "agents.json"
+SCENARIOS = ROOT / "data" / "uat" / "scenario_prompts.json"
 VIDEOS = ROOT / "data" / "uat" / "videos"
 LEDGER = ROOT / "data" / "uat" / "ledger.jsonl"
 
@@ -116,13 +117,27 @@ def replies(page) -> list[str]:
     return page.evaluate(REPLY_JS) or []
 
 
-def prompt_for(a: dict) -> str:
-    """A domain question this agent should be able to take a position on.
+_SCENARIOS = json.loads(SCENARIOS.read_text()) if SCENARIOS.exists() else {}
 
-    Built from the agent's own catalogue fields rather than hand-written per
-    agent, so all 96 get a question of the same shape and none is flattered by
-    a prompt written to suit it.
+
+def prompt_for(a: dict) -> str:
+    """The question to put to this agent.
+
+    Prefers the domain scenario the vault's own ledger records for it -- a real
+    operational situation ("Pit 4 copper price projection drops 15%...") rather
+    than the uniform "describe what you do" probe the first UAT used.
+
+    That earlier prompt was deliberately identical for every agent so none was
+    flattered by a question written to suit it, which made it a fair test and a
+    poor demo: an agent explaining its own job is not something to show a
+    customer. Using the scenario makes one run serve both -- the UAT proves the
+    agent works, and the same captured answer is the demo moment.
+
+    The generic probe remains the fallback for any agent with no scenario.
     """
+    sc = _SCENARIOS.get(a["agent_id"])
+    if sc:
+        return sc[0]
     eq = (a.get("equation") or "").strip()
     tables = ", ".join(a.get("tables") or []) or "your grounding data"
     return (
@@ -132,6 +147,29 @@ def prompt_for(a: dict) -> str:
         f"from {tables} before you would put a number in front of a human? "
         f"Be specific and say plainly if something is outside what you can evidence."
     )
+
+
+def followup_for(a: dict) -> str:
+    """The governance question, asked after the headline answer.
+
+    NOT taken from the vault ledger. Its Turn 1 entries are real operational
+    scenarios and are used verbatim, but its Turn 2 entries are frequently
+    statements rather than questions -- S05-COORDINATOR's reads "Triggers
+    emergency feed halt advisory and stages SAP PM work order", which is an
+    expected behaviour written into the prompt slot. Sending that produces no
+    exchange worth recording.
+
+    This is composed from the agent's own authority and HITL fields instead, so
+    every agent gets a follow-up that lands on the boundary the governance
+    screen claims: what it may not do alone, and who signs.
+    """
+    if a.get("hitl"):
+        return ("Before any of that reaches the plant: what exactly are you NOT "
+                "permitted to do on your own authority here, who has to sign, and "
+                "what does the operator see while it waits?")
+    return ("What are you NOT permitted to do on your own authority here, which "
+            "part of that answer would you hand to another agent or a person to "
+            "act on, and what would make you refuse to answer at all?")
 
 
 def token_set(a: dict) -> set[str]:
@@ -149,8 +187,23 @@ def assess(a: dict, reply: str, prompt: str = "") -> dict:
     r = (reply or "").strip()
     answered = len(r) > 80 and not r.lower().startswith(("error", "something went wrong"))
     vocab = token_set(a)
-    hits = sorted({w for w in vocab if w in r.lower()})
-    in_character = len(hits) >= 2
+    # Prefix match, not exact substring. "crusher" from the agent's own name
+    # does not appear in a reply that says "crushing", and "geostatistics"
+    # does not appear in "geostatistical" -- three agents failed this check
+    # while writing squarely about their own subject.
+    low = r.lower()
+    hits = sorted({w for w in vocab if (w[:6] if len(w) > 6 else w) in low})
+    # Word hits alone cannot judge an agent whose governing method is symbols.
+    # Q = 3600 * A_gap * v_discharge yields almost no 4-letter words, so
+    # S05-1-CSS failed this check while reproducing that exact equation in its
+    # answer, and AGT-19 failed it while computing Kenneth Lane cut-off grades.
+    # Reciting your own method, or naming a table you declared, is being in
+    # character by definition.
+    eq_syms = [t for t in re.findall(r"[A-Za-z_]{2,}|\d{3,}", a.get("equation") or "")
+               if len(t) > 1]
+    eq_echo = sum(1 for t in eq_syms if t.lower() in r.lower()) >= 2
+    named_table = any(t.lower() in r.lower() for t in (a.get("tables") or []))
+    in_character = len(hits) >= 2 or eq_echo or named_table
     fab = FABRICATION.search(r)
     no_fabrication = not fab or bool(EVIDENCE.search(r))
     # Its own declared tables count as citations, named plainly or prefixed.
@@ -175,26 +228,27 @@ def normalise(t: str) -> str:
     return " ".join((t or "").split()).strip().lower()
 
 
-def read_reply(page, baseline: int, prompt: str, timeout_s: int = 120) -> str:
-    """Wait for the agent's answer, which is not simply the newest bubble.
+def read_reply(page, seen: set[str], prompt: str, timeout_s: int = 120) -> str:
+    """Wait for an answer that was not already on the page.
 
-    The composer renders the USER's prompt into a .markdown-document too, so
-    the document count grows the instant Enter is pressed and the newest
-    document is the question. An earlier version returned that -- it stabilised
-    immediately, every agent "answered" in 8 seconds, and the in_character
-    check then matched vocabulary out of my own prompt. Three agents were
-    scored on text they had not written.
+    Counting documents was not enough. The composer renders each prompt as a
+    document too, so a count-based baseline let turn 2 return turn 1's answer:
+    the list was already longer than the baseline, the newest non-prompt entry
+    was answer 1, and it was stable. Every record in the first two-turn run had
+    followup_reply identical to reply.
 
-    So the prompt is excluded explicitly, and the wait is for a document that
-    is not it.
+    `seen` is the set of answer texts present BEFORE the prompt was sent, so
+    this waits for something genuinely new regardless of how many turns have
+    gone before.
     """
     want = normalise(prompt)
     deadline = time.time() + timeout_s
     stable, last = 0, ""
     while time.time() < deadline:
-        docs = [d for d in replies(page) if normalise(d) != want]
-        if len(docs) > baseline:
-            current = docs[-1]
+        fresh = [d for d in replies(page)
+                 if normalise(d) != want and normalise(d) not in seen]
+        if fresh:
+            current = fresh[-1]
             if current and current == last:
                 stable += 1
                 if stable >= 3:
@@ -212,6 +266,15 @@ def main() -> int:
     ap.add_argument("--agents", default="")
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--timeout", type=int, default=90)
+    # Each worker needs its own profile directory: Chromium locks a persistent
+    # profile, so two contexts cannot share one. The copies are made by the
+    # caller and carry the same signed-in session.
+    ap.add_argument("--profile", default="")
+    ap.add_argument("--shard", default="", help="i/n — take every nth agent starting at i")
+    # Re-record an agent that is already in the ledger. Without this the
+    # resume logic silently skips it, which is right for a resumed run and
+    # wrong when you are deliberately re-measuring.
+    ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
     agents = json.loads(AGENTS.read_text())
@@ -223,6 +286,10 @@ def main() -> int:
     elif not args.all:
         raise SystemExit("pass --limit, --agents or --all")
 
+    profile = pathlib.Path(args.profile) if args.profile else PROFILE
+    if args.shard:
+        i, n = (int(x) for x in args.shard.split("/"))
+        agents = [a for k, a in enumerate(agents) if k % n == i]
     VIDEOS.mkdir(parents=True, exist_ok=True)
     done = {}
     if LEDGER.exists():
@@ -230,10 +297,11 @@ def main() -> int:
             if line.strip():
                 rec = json.loads(line)
                 done[rec["agent_id"]] = rec
-    todo = [a for a in agents if a["agent_id"] not in done]
+    todo = agents if args.force else [a for a in agents if a["agent_id"] not in done]
     print(f"{len(agents)} selected | {len(done)} already recorded | {len(todo)} to run\n")
 
     passed = failed = 0
+    session_dead = False
     with sync_playwright() as p:
         for i, a in enumerate(todo, 1):
             aid = a["agent_id"]
@@ -241,16 +309,34 @@ def main() -> int:
             vdir.mkdir(parents=True, exist_ok=True)
             # One context per agent: that is what yields one video per agent.
             ctx = p.chromium.launch_persistent_context(
-                str(PROFILE), headless=True,
+                str(profile), headless=True,
                 viewport={"width": 1440, "height": 900},
                 record_video_dir=str(vdir),
                 record_video_size={"width": 1440, "height": 900},
             )
             page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            # Fail the RUN, not the agent, when the session has lapsed.
+            # A signed-out profile redirects to accounts.google.com, the
+            # composer never renders, and every agent times out identically --
+            # 31 agents were recorded as failures that way, each burning the
+            # full locator timeout, and the ledger then blamed the agents.
+            if session_dead:
+                raise SystemExit(
+                    "Playwright session is signed out — run scripts/uat_login.py "
+                    "and sign in, then re-run. Nothing was recorded for the "
+                    "remaining agents.")
             started = time.time()
-            reply, note = "", ""
+            t_loaded = t_turn1 = t_turn2 = None
+            reply, reply2, note = "", "", ""
             try:
                 page.goto(a["url"], wait_until="domcontentloaded", timeout=60000)
+                if "accounts.google.com" in page.url:
+                    session_dead = True
+                    ctx.close()
+                    raise SystemExit(
+                        f"Playwright session is signed out (redirected while opening "
+                        f"{aid}). Run scripts/uat_login.py, sign in, and re-run — "
+                        f"{len(todo) - i + 1} agents were not attempted.")
                 # The composer is a ProseMirror contenteditable living inside
                 # shadow DOM, not an <input> or a role=textbox -- get_by_role
                 # ("textbox") finds nothing and times out. Playwright's CSS
@@ -258,14 +344,32 @@ def main() -> int:
                 # directly. fill() does not work on contenteditable either;
                 # the text has to be typed after focusing.
                 box = page.locator(".ProseMirror").first
-                box.wait_for(state="visible", timeout=45000)
+                # 45s was enough serially and not under parallel load: three Chromium
+                # instances booting this shadow-DOM app together pushed first
+                # paint past the limit and 25 agents were recorded as failures
+                # that were really contention.
+                box.wait_for(state="visible", timeout=120000)
+                t_loaded = time.time()          # composer visible: page is usable
                 q = prompt_for(a)
-                baseline = len([d for d in replies(page) if normalise(d) != normalise(q)])
+                seen = {normalise(d) for d in replies(page)}
                 box.click()
                 page.keyboard.type(q, delay=1)
                 page.wait_for_timeout(400)
                 page.keyboard.press("Enter")
-                reply = read_reply(page, baseline, q, args.timeout)
+                reply = read_reply(page, seen, q, args.timeout)
+                t_turn1 = time.time()           # first response complete
+                # Second turn in the SAME session and the SAME video: the
+                # governance question only means anything asked after the
+                # answer it constrains.
+                if reply:
+                    q2 = followup_for(a)
+                    seen2 = {normalise(d) for d in replies(page)}
+                    box.click()
+                    page.keyboard.type(q2, delay=1)
+                    page.wait_for_timeout(400)
+                    page.keyboard.press("Enter")
+                    reply2 = read_reply(page, seen2, q2, args.timeout)
+                    t_turn2 = time.time()
             except Exception as e:
                 note = f"{type(e).__name__}: {str(e)[:160]}"
             latency = round(time.time() - started, 1)
@@ -277,11 +381,17 @@ def main() -> int:
 
             verdict = assess(a, reply, prompt_for(a))
             rec = {"agent_id": aid, "name": a["name"], "department": a["department"],
+                   "followup": followup_for(a), "followup_reply": reply2,
                    "persona": a["persona"], "pattern": a["pattern"],
                    "value_class": a["value_class"], "hitl": a["hitl"],
                    "equation": a["equation"], "tables": a["tables"],
                    "url": a["url"], "prompt": prompt_for(a), "reply": reply,
                    "latency_s": latency, "note": note,
+                   # Phases, so "how long to first response" is answerable
+                   # without subtracting guesses from a total.
+                   "page_load_s": round(t_loaded - started, 1) if t_loaded else None,
+                   "first_response_s": round(t_turn1 - t_loaded, 1) if (t_turn1 and t_loaded) else None,
+                   "second_response_s": round(t_turn2 - t_turn1, 1) if (t_turn2 and t_turn1) else None,
                    "video": str(pathlib.Path(video_path).relative_to(ROOT)) if video_path else None,
                    **verdict}
             with LEDGER.open("a") as fh:

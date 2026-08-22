@@ -49,7 +49,7 @@ CONFIRM_PHRASE = "yes-register-for-real"
 STAGING_BUCKET = "gs://cloud-ai-platform-64c9fb58-d407-4705-8327-380b795ae33f"
 
 # WHY EVERY EXISTING ENGINE 404s ON ITS OWN MODEL
-# The catalogue gives all 101 agents model_id "gemini-3.7-flash". That model is
+# The catalogue gives all 101 agents model_id "the catalogue's model". That model is
 # real and this project can reach it -- but ONLY on the global endpoint.
 # Probed across twelve locations: global returns 200, and us-central1,
 # us-east1/4/5, us-west1/4, northamerica-northeast1, europe-west1/4,
@@ -148,10 +148,31 @@ def create_engine(agent) -> str:
     vertexai.init(project=PROJECT, location=REGION, staging_bucket=STAGING_BUCKET)
     # 99 of the 101 carry an empty system_instruction, so a usable one is
     # composed from the fields that are populated rather than shipping a blank.
-    instruction = (agent.system_instruction
-                   or f"You are {agent.name}. {agent.description or ''} "
-                      f"Ground every decision in {agent.governing_equation}, and cite the "
-                      f"table or clause behind every figure you report.").strip()
+    # WHY THE INSTRUCTION NAMES THE TABLES AND DEMANDS RECONCILIATION
+    # AGT-19 answered a cut-off grade question with flawless arithmetic --
+    # every figure recomputed exactly -- but took recovery, price and costs
+    # straight from the question and never opened its own data. The prompt
+    # assumed 89.5% recovery; metallurgical_recovery averages 92.21%. A
+    # correct answer to a hypothetical, presented as strategic guidance.
+    #
+    # "cite the table behind every figure" was not enough, because the model
+    # can satisfy it by citing nothing when it cites nothing. So the tables are
+    # named, and reconciling supplied assumptions against them is made an
+    # explicit step with a required disclosure when they diverge.
+    tables = ", ".join(agent.source_tables) or "your declared sources"
+    instruction = (agent.system_instruction or (
+        f"You are {agent.name}. {agent.description or ''}\n"
+        f"Your governing method is {agent.governing_equation}.\n"
+        f"Your data is {tables}. Read it before you answer.\n"
+        f"If the question supplies its own assumptions — a price, a recovery, a "
+        f"cost, a rate — reconcile each one against {tables} and state plainly "
+        f"where they differ and which you used. Never present a figure computed "
+        f"only from numbers in the question as if it were grounded in the "
+        f"operation.\n"
+        f"Cite the table behind every figure you report. Where you cannot "
+        f"evidence something, say so explicitly rather than omitting it."
+    )).strip()
+
     app = AdkApp(agent=llm_agent.LlmAgent(
         name=agent.agent_id.replace("-", "_").lower(),
         model=agent.model_id,

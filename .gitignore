@@ -2,3 +2,11 @@ data/generated/*.parquet
 __pycache__/
 *.pyc
 packages/
+
+# Playwright browser profiles used by the UAT harness. These hold a live
+# Google session -- Cookies, Login Data, tokens -- and were committed once by
+# an over-broad `git add -A`. They are machine-local state, never source.
+data/uat/.profile*/
+
+# UAT recordings: ~500MB of .webm, regenerable by re-running scripts/uat_run.py.
+data/uat/videos/

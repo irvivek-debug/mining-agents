@@ -3,7 +3,7 @@
   "agent_id": "AGT-19",
   "name": "Strategic Planning Advisor",
   "display_name": "Strategic Planning Advisor (AGT-19)",
-  "ge_id": "15013516607463230816",
+  "ge_id": "7276554738455376119",
   "department": "Commercial/Finance/Strategy",
   "persona": "CEO / CFO / Executive Committee",
   "pattern": "L0_STRATEGIC",
@@ -15,7 +15,7 @@
    "financial_ledger",
    "mine_production_schedule"
   ],
-  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/15013516607463230816/session/-?hl=en_US"
+  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/7276554738455376119/session/-?hl=en_US"
  },
  {
   "agent_id": "D01",
@@ -502,22 +502,6 @@
    "lube_samples"
   ],
   "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/7606046256219000476/session/-?hl=en_US"
- },
- {
-  "agent_id": "D31",
-  "name": "Duplicate Invoice Match",
-  "display_name": "Duplicate Invoice Match (D31)",
-  "ge_id": "8770424597207861315",
-  "department": "Commercial/Finance/Strategy",
-  "persona": "Accounts Payable Lead",
-  "pattern": "B_DEEP",
-  "value_class": "Class A (Cash)",
-  "hitl": true,
-  "equation": "Levenshtein Distance & Exact Amount Hash Match",
-  "tables": [
-   "invoices"
-  ],
-  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/8770424597207861315/session/-?hl=en_US"
  },
  {
   "agent_id": "D32",
@@ -1569,5 +1553,88 @@
    "spares_inventory"
   ],
   "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/4142544630493986299/session/-?hl=en_US"
+ },
+ {
+  "agent_id": "S12-1-RAIL",
+  "name": "Train Cycle Dispatch Specialist",
+  "display_name": "Train Cycle Dispatch Specialist (S12-1-RAIL)",
+  "ge_id": "10522790755961993838",
+  "department": "Supply Chain/Logistics",
+  "persona": "Rail Controller",
+  "pattern": "A_SPECIALIST",
+  "value_class": "Class B (Metric)",
+  "hitl": false,
+  "equation": "Railway Headway & Velocity Optimization",
+  "tables": [
+   "rail_schedules"
+  ],
+  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/10522790755961993838/session/-?hl=en_US"
+ },
+ {
+  "agent_id": "S12-2-BLEND",
+  "name": "Port Stockpile Blend Specialist",
+  "display_name": "Port Stockpile Blend Specialist (S12-2-BLEND)",
+  "ge_id": "3582702966902442957",
+  "department": "Supply Chain/Logistics",
+  "persona": "Port Metallurgist",
+  "pattern": "A_SPECIALIST",
+  "value_class": "Class B (Metric)",
+  "hitl": false,
+  "equation": "Linear Blend Optimization: min ||A*x - b||",
+  "tables": [
+   "stockpiles"
+  ],
+  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/3582702966902442957/session/-?hl=en_US"
+ },
+ {
+  "agent_id": "S12-3-BERTH",
+  "name": "Marine Laytime & Demurrage Specialist",
+  "display_name": "Marine Laytime & Demurrage Specialist (S12-3-BERTH)",
+  "ge_id": "64609840442616576",
+  "department": "Supply Chain/Logistics",
+  "persona": "Marine Broker",
+  "pattern": "A_SPECIALIST",
+  "value_class": "Class A (Cash)",
+  "hitl": false,
+  "equation": "BIMCO Laytime Pro-Rata & Demurrage Liability",
+  "tables": [
+   "port_vessels"
+  ],
+  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/64609840442616576/session/-?hl=en_US"
+ },
+ {
+  "agent_id": "S12-COORDINATOR",
+  "name": "Supply Chain & Port Coordinator",
+  "display_name": "Supply Chain & Port Coordinator (S12-COORDINATOR)",
+  "ge_id": "5628148401887864417",
+  "department": "Supply Chain/Logistics",
+  "persona": "Logistics Manager",
+  "pattern": "A_COORDINATOR",
+  "value_class": "Class A (Cash)",
+  "hitl": true,
+  "equation": "Dynamic Network Sim: min sum(Rail + Port + Demurrage)",
+  "tables": [
+   "rail_schedules",
+   "port_vessels",
+   "stockpiles"
+  ],
+  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/5628148401887864417/session/-?hl=en_US"
+ },
+ {
+  "agent_id": "S12-R-CRITIC",
+  "name": "Moisture & TML Critic (Red Team)",
+  "display_name": "Moisture & TML Critic (Red Team) (S12-R-CRITIC)",
+  "ge_id": "2546716084414801403",
+  "department": "Supply Chain/Logistics",
+  "persona": "Cargo Surveyor",
+  "pattern": "A_CRITIC",
+  "value_class": "Class C (Risk)",
+  "hitl": true,
+  "equation": "IMSBC Transportable Moisture Limit (TML) Interlock",
+  "tables": [
+   "port_vessels",
+   "stockpiles"
+  ],
+  "url": "https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/2546716084414801403/session/-?hl=en_US"
  }
 ]

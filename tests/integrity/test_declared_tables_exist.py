@@ -116,7 +116,7 @@ def test_the_front_end_publishes_only_real_provenance():
 def test_the_catalogue_model_resolves_in_this_project():
     """Every Agent Engine was built on a model the project could not reach.
 
-    gemini-3.7-flash is real and correct, but it is served ONLY from the global
+    the catalogue's model is real and correct, but it is served ONLY from the global
     endpoint — eleven regions return 404. Engines in us-central1 resolve
     publisher models regionally, so all 91 failed on every invocation and
     nothing caught it. This asserts the model the catalogue names can actually

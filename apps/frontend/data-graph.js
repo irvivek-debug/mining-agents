@@ -270,13 +270,33 @@ window.dataGraph = {
    "layerLabel": "Operational records",
    "domain": "maintenance",
    "domainLabel": "Asset & maintenance",
-   "rows": 5,
-   "bytes": 1213,
+   "rows": 88,
+   "bytes": 19003,
    "columnCount": 8,
    "columns": [
     {
+     "name": "asset_id",
+     "type": "STRING"
+    },
+    {
+     "name": "asset_name",
+     "type": "STRING"
+    },
+    {
+     "name": "asset_type",
+     "type": "STRING"
+    },
+    {
      "name": "current_state",
      "type": "STRING"
+    },
+    {
+     "name": "criticality_rating",
+     "type": "STRING"
+    },
+    {
+     "name": "installation_date",
+     "type": "DATE"
     },
     {
      "name": "location_gis",
@@ -285,29 +305,9 @@ window.dataGraph = {
     {
      "name": "physics_parameters",
      "type": "STRING"
-    },
-    {
-     "name": "criticality_rating",
-     "type": "STRING"
-    },
-    {
-     "name": "asset_id",
-     "type": "STRING"
-    },
-    {
-     "name": "installation_date",
-     "type": "DATE"
-    },
-    {
-     "name": "asset_type",
-     "type": "STRING"
-    },
-    {
-     "name": "asset_name",
-     "type": "STRING"
     }
    ],
-   "weight": 1.176,
+   "weight": 1.991,
    "readBy": [
     "D22",
     "D23",
@@ -1581,36 +1581,36 @@ window.dataGraph = {
    "layerLabel": "Operational records",
    "domain": "plant",
    "domainLabel": "Processing plant",
-   "rows": 105,
-   "bytes": 9772,
+   "rows": 140,
+   "bytes": 12384,
    "columnCount": 6,
    "columns": [
     {
-     "name": "lead_time_days",
-     "type": "INT64"
+     "name": "part_number",
+     "type": "STRING"
     },
     {
      "name": "part_description",
      "type": "STRING"
     },
     {
+     "name": "stock_level",
+     "type": "INT64"
+    },
+    {
      "name": "reorder_point_limit",
      "type": "INT64"
     },
     {
-     "name": "stock_level",
+     "name": "lead_time_days",
      "type": "INT64"
     },
     {
      "name": "unit_price_usd",
      "type": "FLOAT64"
-    },
-    {
-     "name": "part_number",
-     "type": "STRING"
     }
    ],
-   "weight": 2.061,
+   "weight": 2.176,
    "readBy": []
   },
   {
@@ -2818,8 +2818,8 @@ window.dataGraph = {
    "layerLabel": "Operational records",
    "domain": "platform",
    "domainLabel": "Platform & ontology",
-   "rows": 8,
-   "bytes": 588,
+   "rows": 60,
+   "bytes": 4543,
    "columnCount": 8,
    "columns": [
     {
@@ -2855,7 +2855,7 @@ window.dataGraph = {
      "type": "FLOAT64"
     }
    ],
-   "weight": 1.255,
+   "weight": 1.845,
    "readBy": [
     "S12-2-BLEND",
     "S12-COORDINATOR",
@@ -5126,7 +5126,7 @@ window.dataGraph = {
   "tableCount": 85,
   "edgeCount": 204,
   "columnCount": 511,
-  "rowCount": 44127,
+  "rowCount": 44297,
   "excludedCount": 12,
   "excluded": [
    "__mutation_probe",
