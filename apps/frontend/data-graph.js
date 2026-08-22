@@ -10,8 +10,8 @@ window.dataGraph = {
    "layerLabel": "Agent control plane",
    "domain": "platform",
    "domainLabel": "Platform & ontology",
-   "rows": 704,
-   "bytes": 141813,
+   "rows": 746,
+   "bytes": 149597,
    "columnCount": 11,
    "columns": [
     {
@@ -59,7 +59,7 @@ window.dataGraph = {
      "type": "ARRAY<STRING>"
     }
    ],
-   "weight": 2.854,
+   "weight": 2.879,
    "readBy": []
   },
   {
@@ -126,8 +126,8 @@ window.dataGraph = {
    "layerLabel": "Agent control plane",
    "domain": "platform",
    "domainLabel": "Platform & ontology",
-   "rows": 855,
-   "bytes": 104215,
+   "rows": 918,
+   "bytes": 111894,
    "columnCount": 10,
    "columns": [
     {
@@ -171,8 +171,55 @@ window.dataGraph = {
      "type": "INT64"
     }
    ],
-   "weight": 2.937,
+   "weight": 2.968,
    "readBy": []
+  },
+  {
+   "id": "assay_logs",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 7,
+   "columns": [
+    {
+     "name": "drill_hole_id",
+     "type": "STRING"
+    },
+    {
+     "name": "depth_start_meters",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "depth_end_meters",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "geology_code",
+     "type": "STRING"
+    },
+    {
+     "name": "copper_grade_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "gold_grade_gpt",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "logged_at",
+     "type": "TIMESTAMP"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D02",
+    "S01-2-GEOSTAT",
+    "S01-COORDINATOR",
+    "S01-R-CRITIC"
+   ]
   },
   {
    "id": "asset_clustering_model",
@@ -343,6 +390,75 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "blast_designs",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 180,
+   "bytes": 21025,
+   "columnCount": 12,
+   "columns": [
+    {
+     "name": "blast_id",
+     "type": "STRING"
+    },
+    {
+     "name": "block_id",
+     "type": "STRING"
+    },
+    {
+     "name": "design_date",
+     "type": "DATE"
+    },
+    {
+     "name": "bench_location",
+     "type": "STRING"
+    },
+    {
+     "name": "burden_m",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "spacing_m",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "hole_diameter_mm",
+     "type": "INT64"
+    },
+    {
+     "name": "hole_depth_m",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "powder_factor_kg_per_m3",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "explosive_type",
+     "type": "STRING"
+    },
+    {
+     "name": "designed_by",
+     "type": "STRING"
+    },
+    {
+     "name": "approved",
+     "type": "BOOL"
+    }
+   ],
+   "weight": 2.279,
+   "readBy": [
+    "D04",
+    "D05",
+    "D06",
+    "S03-1-GEOMETRY",
+    "S03-COORDINATOR",
+    "S03-R-CRITIC"
+   ]
+  },
+  {
    "id": "capital_options",
    "layer": "simulation",
    "layerLabel": "Scenario & simulation",
@@ -388,6 +504,48 @@ window.dataGraph = {
     }
    ],
    "weight": 1.851,
+   "readBy": []
+  },
+  {
+   "id": "contract_clauses",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 100,
+   "bytes": 52786,
+   "columnCount": 7,
+   "columns": [
+    {
+     "name": "contract_id",
+     "type": "STRING"
+    },
+    {
+     "name": "clause_id",
+     "type": "STRING"
+    },
+    {
+     "name": "clause_type",
+     "type": "STRING"
+    },
+    {
+     "name": "clause_text",
+     "type": "STRING"
+    },
+    {
+     "name": "recoverable_basis",
+     "type": "STRING"
+    },
+    {
+     "name": "doc_id",
+     "type": "STRING"
+    },
+    {
+     "name": "source_uri",
+     "type": "STRING"
+    }
+   ],
+   "weight": 2.041,
    "readBy": []
   },
   {
@@ -513,13 +671,125 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "crusher_telemetry",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 6,
+   "columns": [
+    {
+     "name": "asset_id",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "gap_size_setting_mm",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "feed_rate_tph",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "rotational_torque_nm",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "bypass_valve_open",
+     "type": "BOOL"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "S05-1-CSS",
+    "S05-2-FEED",
+    "S05-3-WEAR",
+    "S05-COORDINATOR",
+    "S05-R-CRITIC",
+    "S09-1-VIBRATION",
+    "S09-3-THERMAL",
+    "S09-COORDINATOR"
+   ]
+  },
+  {
+   "id": "dispatch_routes",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 12,
+   "columns": [
+    {
+     "name": "route_id",
+     "type": "STRING"
+    },
+    {
+     "name": "source_location",
+     "type": "STRING"
+    },
+    {
+     "name": "destination_location",
+     "type": "STRING"
+    },
+    {
+     "name": "distance_meters",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "average_cycle_time_mins",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "congestion_factor",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "trip_count",
+     "type": "INT64"
+    },
+    {
+     "name": "mean_cycle_time_mins",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "mean_queue_wait_mins",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "mean_payload_tons",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "congestion_index",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "S04-2-ROUTE",
+    "S04-COORDINATOR"
+   ]
+  },
+  {
    "id": "doc_chunks",
    "layer": "corpus",
    "layerLabel": "Unstructured corpus",
    "domain": "platform",
    "domainLabel": "Platform & ontology",
-   "rows": 78,
-   "bytes": 64057,
+   "rows": 178,
+   "bytes": 110203,
    "columnCount": 5,
    "columns": [
     {
@@ -543,7 +813,7 @@ window.dataGraph = {
      "type": "STRING"
     }
    ],
-   "weight": 1.944,
+   "weight": 2.274,
    "readBy": []
   },
   {
@@ -552,8 +822,8 @@ window.dataGraph = {
    "layerLabel": "Unstructured corpus",
    "domain": "platform",
    "domainLabel": "Platform & ontology",
-   "rows": 78,
-   "bytes": 544147,
+   "rows": 178,
+   "bytes": 1205793,
    "columnCount": 8,
    "columns": [
     {
@@ -589,7 +859,7 @@ window.dataGraph = {
      "type": "STRING"
     }
    ],
-   "weight": 1.944,
+   "weight": 2.274,
    "readBy": []
   },
   {
@@ -742,6 +1012,55 @@ window.dataGraph = {
    ]
   },
   {
+   "id": "explosives_inventory",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 7,
+   "bytes": 576,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "part_number",
+     "type": "STRING"
+    },
+    {
+     "name": "part_description",
+     "type": "STRING"
+    },
+    {
+     "name": "stock_level",
+     "type": "INT64"
+    },
+    {
+     "name": "reorder_point_limit",
+     "type": "INT64"
+    },
+    {
+     "name": "lead_time_days",
+     "type": "INT64"
+    },
+    {
+     "name": "unit_price_usd",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "un_class",
+     "type": "STRING"
+    },
+    {
+     "name": "magazine",
+     "type": "STRING"
+    }
+   ],
+   "weight": 1.23,
+   "readBy": [
+    "S03-2-EXPLOSIVE",
+    "S03-COORDINATOR"
+   ]
+  },
+  {
    "id": "fatigue_logs_node",
    "layer": "semantic",
    "layerLabel": "Semantic / property graph",
@@ -784,6 +1103,131 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "fatigue_monitoring_logs",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 6,
+   "columns": [
+    {
+     "name": "operator_id",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "heart_rate_bpm",
+     "type": "INT64"
+    },
+    {
+     "name": "sleep_deficit_hours",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "microsleep_events_detected",
+     "type": "INT64"
+    },
+    {
+     "name": "fatigue_alert_triggered",
+     "type": "BOOL"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D37"
+   ]
+  },
+  {
+   "id": "financial_ledger",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 4,
+   "columns": [
+    {
+     "name": "ledger_date",
+     "type": "DATE"
+    },
+    {
+     "name": "line_item",
+     "type": "STRING"
+    },
+    {
+     "name": "amount_usd",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "source_system",
+     "type": "STRING"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "AGT-19"
+   ]
+  },
+  {
+   "id": "fleet_telemetry",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 7,
+   "columns": [
+    {
+     "name": "vehicle_id",
+     "type": "STRING"
+    },
+    {
+     "name": "metric_name",
+     "type": "STRING"
+    },
+    {
+     "name": "metric_value",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "model",
+     "type": "STRING"
+    },
+    {
+     "name": "payload_capacity_tons",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "operational_status",
+     "type": "STRING"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D10",
+    "D11",
+    "D12",
+    "D13",
+    "D27",
+    "D39",
+    "S04-1-SHOVEL",
+    "S04-3-PAYLOAD",
+    "S04-COORDINATOR",
+    "S04-R-CRITIC"
+   ]
+  },
+  {
    "id": "fleet_vehicles",
    "layer": "operational",
    "layerLabel": "Operational records",
@@ -824,6 +1268,49 @@ window.dataGraph = {
    ],
    "weight": 1.398,
    "readBy": []
+  },
+  {
+   "id": "flotation_assays",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 6,
+   "columns": [
+    {
+     "name": "concentrator_id",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "feed_grade_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "concentrate_grade_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "tailings_grade_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "recovery_rate_pct",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D18",
+    "S07-3-GRADE",
+    "S07-COORDINATOR",
+    "S07-R-CRITIC"
+   ]
   },
   {
    "id": "geological_block_models",
@@ -874,6 +1361,56 @@ window.dataGraph = {
     "D03",
     "S01-3-STRUCTURAL",
     "S01-COORDINATOR"
+   ]
+  },
+  {
+   "id": "geotech_sensors",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 240,
+   "bytes": 18458,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "reading_id",
+     "type": "STRING"
+    },
+    {
+     "name": "sensor_id",
+     "type": "STRING"
+    },
+    {
+     "name": "bench_location",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "displacement_mm",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "pore_pressure_kpa",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "slope_angle_deg",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "alarm_state",
+     "type": "STRING"
+    }
+   ],
+   "weight": 2.398,
+   "readBy": [
+    "D07",
+    "D08",
+    "S02-1-GEOTECH"
    ]
   },
   {
@@ -1115,6 +1652,71 @@ window.dataGraph = {
    ]
   },
   {
+   "id": "lube_samples",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 220,
+   "bytes": 24462,
+   "columnCount": 12,
+   "columns": [
+    {
+     "name": "sample_id",
+     "type": "STRING"
+    },
+    {
+     "name": "asset_id",
+     "type": "STRING"
+    },
+    {
+     "name": "work_order_id",
+     "type": "STRING"
+    },
+    {
+     "name": "sampled_at",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "lubricant_grade",
+     "type": "STRING"
+    },
+    {
+     "name": "iron_ppm",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "copper_ppm",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "silicon_ppm",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "water_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "viscosity_cst_40c",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "iso_4406_code",
+     "type": "STRING"
+    },
+    {
+     "name": "verdict",
+     "type": "STRING"
+    }
+   ],
+   "weight": 2.362,
+   "readBy": [
+    "D30",
+    "S09-2-TRIBOLOGY"
+   ]
+  },
+  {
    "id": "maintenance_logs",
    "layer": "operational",
    "layerLabel": "Operational records",
@@ -1189,6 +1791,57 @@ window.dataGraph = {
    ],
    "weight": 2.248,
    "readBy": []
+  },
+  {
+   "id": "mine_production_schedule",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "plan_version_id",
+     "type": "STRING"
+    },
+    {
+     "name": "published_date",
+     "type": "DATE"
+    },
+    {
+     "name": "next_review_date",
+     "type": "DATE"
+    },
+    {
+     "name": "assumption_id",
+     "type": "STRING"
+    },
+    {
+     "name": "metric_name",
+     "type": "STRING"
+    },
+    {
+     "name": "assumed_value",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "effective_date",
+     "type": "DATE"
+    },
+    {
+     "name": "superseded_date",
+     "type": "DATE"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "AGT-19",
+    "S02-2-SCHEDULE",
+    "S02-COORDINATOR",
+    "S02-R-CRITIC"
+   ]
   },
   {
    "id": "ontology_concepts",
@@ -1303,6 +1956,56 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "pit_designs",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "block_id",
+     "type": "STRING"
+    },
+    {
+     "name": "centroid_x",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "centroid_y",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "centroid_z",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "lithology_type",
+     "type": "STRING"
+    },
+    {
+     "name": "specific_gravity",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "copper_grade_pct_est",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "gold_grade_gpt_est",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D09",
+    "S02-3-DUMP",
+    "S02-COORDINATOR"
+   ]
+  },
+  {
    "id": "plan_assumptions",
    "layer": "simulation",
    "layerLabel": "Scenario & simulation",
@@ -1401,6 +2104,120 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "plant_telemetry",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 5,
+   "columns": [
+    {
+     "name": "asset_id",
+     "type": "STRING"
+    },
+    {
+     "name": "metric_name",
+     "type": "STRING"
+    },
+    {
+     "name": "metric_value",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "asset_class",
+     "type": "STRING"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D14",
+    "D15",
+    "D16",
+    "D17",
+    "D18",
+    "D29",
+    "D39",
+    "S06-1-SAG",
+    "S06-2-BALL",
+    "S06-3-CYCLONE",
+    "S06-COORDINATOR",
+    "S06-R-CRITIC",
+    "S07-2-AIR",
+    "S07-COORDINATOR",
+    "S08-3-THICK"
+   ]
+  },
+  {
+   "id": "port_vessels",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 40,
+   "bytes": 5026,
+   "columnCount": 11,
+   "columns": [
+    {
+     "name": "vessel_id",
+     "type": "STRING"
+    },
+    {
+     "name": "vessel_name",
+     "type": "STRING"
+    },
+    {
+     "name": "berth",
+     "type": "STRING"
+    },
+    {
+     "name": "laycan_start",
+     "type": "DATE"
+    },
+    {
+     "name": "arrival_date",
+     "type": "DATE"
+    },
+    {
+     "name": "departure_date",
+     "type": "DATE"
+    },
+    {
+     "name": "consist_ids",
+     "type": "ARRAY<STRING>"
+    },
+    {
+     "name": "loaded_tonnes",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "moisture_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "tml_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "demurrage_days",
+     "type": "INT64"
+    }
+   ],
+   "weight": 1.699,
+   "readBy": [
+    "D33",
+    "D36",
+    "S12-3-BERTH",
+    "S12-COORDINATOR",
+    "S12-R-CRITIC"
+   ]
+  },
+  {
    "id": "procurement_bids",
    "layer": "operational",
    "layerLabel": "Operational records",
@@ -1443,6 +2260,124 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "purchase_orders",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 180,
+   "bytes": 29604,
+   "columnCount": 13,
+   "columns": [
+    {
+     "name": "po_id",
+     "type": "STRING"
+    },
+    {
+     "name": "part_number",
+     "type": "STRING"
+    },
+    {
+     "name": "part_description",
+     "type": "STRING"
+    },
+    {
+     "name": "vendor_name",
+     "type": "STRING"
+    },
+    {
+     "name": "contract_id",
+     "type": "STRING"
+    },
+    {
+     "name": "order_date",
+     "type": "DATE"
+    },
+    {
+     "name": "promised_date",
+     "type": "DATE"
+    },
+    {
+     "name": "received_date",
+     "type": "DATE"
+    },
+    {
+     "name": "quoted_lead_time_days",
+     "type": "INT64"
+    },
+    {
+     "name": "actual_lead_time_days",
+     "type": "INT64"
+    },
+    {
+     "name": "qty_ordered",
+     "type": "INT64"
+    },
+    {
+     "name": "unit_price_usd",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "line_value_usd",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 2.279,
+   "readBy": [
+    "D28",
+    "S11-2-LEADTIME",
+    "S11-COORDINATOR"
+   ]
+  },
+  {
+   "id": "qaqc_standards",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "drill_hole_id",
+     "type": "STRING"
+    },
+    {
+     "name": "depth_start_meters",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "depth_end_meters",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "geology_code",
+     "type": "STRING"
+    },
+    {
+     "name": "copper_grade_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "gold_grade_gpt",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "logged_at",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "both_elements_assayed",
+     "type": "BOOL"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "S01-R-CRITIC"
+   ]
+  },
+  {
    "id": "radio_communications",
    "layer": "operational",
    "layerLabel": "Operational records",
@@ -1479,6 +2414,110 @@ window.dataGraph = {
    ],
    "weight": 2.766,
    "readBy": []
+  },
+  {
+   "id": "rail_schedules",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 120,
+   "bytes": 11220,
+   "columnCount": 10,
+   "columns": [
+    {
+     "name": "consist_id",
+     "type": "STRING"
+    },
+    {
+     "name": "origin_stockpile_id",
+     "type": "STRING"
+    },
+    {
+     "name": "origin_location",
+     "type": "STRING"
+    },
+    {
+     "name": "destination_port",
+     "type": "STRING"
+    },
+    {
+     "name": "departure_date",
+     "type": "DATE"
+    },
+    {
+     "name": "arrival_date",
+     "type": "DATE"
+    },
+    {
+     "name": "wagons",
+     "type": "INT64"
+    },
+    {
+     "name": "payload_tonnes",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "cycle_time_hours",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "delayed",
+     "type": "BOOL"
+    }
+   ],
+   "weight": 2.114,
+   "readBy": [
+    "D35",
+    "S12-1-RAIL",
+    "S12-COORDINATOR"
+   ]
+  },
+  {
+   "id": "reagent_inventory",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 10,
+   "bytes": 840,
+   "columnCount": 7,
+   "columns": [
+    {
+     "name": "part_number",
+     "type": "STRING"
+    },
+    {
+     "name": "part_description",
+     "type": "STRING"
+    },
+    {
+     "name": "stock_level",
+     "type": "INT64"
+    },
+    {
+     "name": "reorder_point_limit",
+     "type": "INT64"
+    },
+    {
+     "name": "lead_time_days",
+     "type": "INT64"
+    },
+    {
+     "name": "unit_price_usd",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "reagent_class",
+     "type": "STRING"
+    }
+   ],
+   "weight": 1.301,
+   "readBy": [
+    "D19",
+    "D34",
+    "S07-1-REAGENT"
+   ]
   },
   {
    "id": "rebate_claims",
@@ -1596,6 +2635,89 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "safety_permits",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 6,
+   "columns": [
+    {
+     "name": "permit_reference",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "location_description",
+     "type": "STRING"
+    },
+    {
+     "name": "severity_level",
+     "type": "STRING"
+    },
+    {
+     "name": "investigation_status",
+     "type": "STRING"
+    },
+    {
+     "name": "cleared",
+     "type": "BOOL"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D40",
+    "S03-R-CRITIC",
+    "S08-R-CRITIC"
+   ]
+  },
+  {
+   "id": "safety_telemetry",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 6,
+   "columns": [
+    {
+     "name": "incident_id",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "gps_location",
+     "type": "STRING"
+    },
+    {
+     "name": "location_description",
+     "type": "STRING"
+    },
+    {
+     "name": "severity_level",
+     "type": "STRING"
+    },
+    {
+     "name": "investigation_status",
+     "type": "STRING"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D38",
+    "S04-R-CRITIC"
+   ]
+  },
+  {
    "id": "simulation_runs",
    "layer": "simulation",
    "layerLabel": "Scenario & simulation",
@@ -1632,6 +2754,169 @@ window.dataGraph = {
    ],
    "weight": 2.204,
    "readBy": []
+  },
+  {
+   "id": "spares_inventory",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 9,
+   "columns": [
+    {
+     "name": "part_number",
+     "type": "STRING"
+    },
+    {
+     "name": "part_description",
+     "type": "STRING"
+    },
+    {
+     "name": "stock_level",
+     "type": "INT64"
+    },
+    {
+     "name": "reorder_point_limit",
+     "type": "INT64"
+    },
+    {
+     "name": "lead_time_days",
+     "type": "INT64"
+    },
+    {
+     "name": "unit_price_usd",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "stock_value_usd",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "units_above_reorder",
+     "type": "INT64"
+    },
+    {
+     "name": "at_or_below_reorder",
+     "type": "BOOL"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D29",
+    "D32",
+    "S11-1-STOCK",
+    "S11-3-HOLDING",
+    "S11-COORDINATOR",
+    "S11-R-CRITIC"
+   ]
+  },
+  {
+   "id": "stockpiles",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 8,
+   "bytes": 588,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "stockpile_id",
+     "type": "STRING"
+    },
+    {
+     "name": "location",
+     "type": "STRING"
+    },
+    {
+     "name": "as_at",
+     "type": "DATE"
+    },
+    {
+     "name": "material_class",
+     "type": "STRING"
+    },
+    {
+     "name": "tonnes",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "contained_grade_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "moisture_pct",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "reclaim_rate_tph",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 1.255,
+   "readBy": [
+    "S12-2-BLEND",
+    "S12-COORDINATOR",
+    "S12-R-CRITIC"
+   ]
+  },
+  {
+   "id": "survey_scans",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 120,
+   "bytes": 11547,
+   "columnCount": 10,
+   "columns": [
+    {
+     "name": "scan_id",
+     "type": "STRING"
+    },
+    {
+     "name": "block_id",
+     "type": "STRING"
+    },
+    {
+     "name": "scan_date",
+     "type": "DATE"
+    },
+    {
+     "name": "scanner_type",
+     "type": "STRING"
+    },
+    {
+     "name": "point_count",
+     "type": "INT64"
+    },
+    {
+     "name": "designed_volume_m3",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "measured_volume_m3",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "centroid_x",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "centroid_y",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "centroid_z",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 2.114,
+   "readBy": [
+    "S02-R-CRITIC"
+   ]
   },
   {
    "id": "telemetry_alarm_risk_model",
@@ -1677,6 +2962,66 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "tenement_leases",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 6,
+   "bytes": 718,
+   "columnCount": 11,
+   "columns": [
+    {
+     "name": "tenement_id",
+     "type": "STRING"
+    },
+    {
+     "name": "holder",
+     "type": "STRING"
+    },
+    {
+     "name": "status",
+     "type": "STRING"
+    },
+    {
+     "name": "grant_date",
+     "type": "DATE"
+    },
+    {
+     "name": "expiry_date",
+     "type": "DATE"
+    },
+    {
+     "name": "area_hectares",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "min_x",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "max_x",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "min_y",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "max_y",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "annual_rent_usd",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 1.204,
+   "readBy": [
+    "D40"
+   ]
+  },
+  {
    "id": "text_embedding_model",
    "layer": "model",
    "layerLabel": "BQML models",
@@ -1690,13 +3035,64 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "tsf_piezometers",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 200,
+   "bytes": 15600,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "reading_id",
+     "type": "STRING"
+    },
+    {
+     "name": "piezometer_id",
+     "type": "STRING"
+    },
+    {
+     "name": "tsf_location",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "pore_pressure_kpa",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "phreatic_surface_m",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "factor_of_safety",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "beach_width_m",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 2.322,
+   "readBy": [
+    "D21",
+    "S08-2-PORE",
+    "S08-COORDINATOR",
+    "S08-R-CRITIC"
+   ]
+  },
+  {
    "id": "unstructured_docs_metadata",
    "layer": "corpus",
    "layerLabel": "Unstructured corpus",
    "domain": "platform",
    "domainLabel": "Platform & ontology",
-   "rows": 50,
-   "bytes": 6756,
+   "rows": 60,
+   "bytes": 8242,
    "columnCount": 6,
    "columns": [
     {
@@ -1724,7 +3120,7 @@ window.dataGraph = {
      "type": "STRING"
     }
    ],
-   "weight": 1.778,
+   "weight": 1.845,
    "readBy": []
   },
   {
@@ -1752,6 +3148,103 @@ window.dataGraph = {
    ],
    "weight": 1.0,
    "readBy": []
+  },
+  {
+   "id": "vendor_contracts",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 12,
+   "columns": [
+    {
+     "name": "contract_id",
+     "type": "STRING"
+    },
+    {
+     "name": "vendor_name",
+     "type": "STRING"
+    },
+    {
+     "name": "part_number",
+     "type": "STRING"
+    },
+    {
+     "name": "agreed_unit_price",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "effective_from",
+     "type": "DATE"
+    },
+    {
+     "name": "effective_to",
+     "type": "DATE"
+    },
+    {
+     "name": "bid_id",
+     "type": "STRING"
+    },
+    {
+     "name": "rebate_schedule",
+     "type": "STRING"
+    },
+    {
+     "name": "clause_count",
+     "type": "INT64"
+    },
+    {
+     "name": "recoverable_clause_count",
+     "type": "INT64"
+    },
+    {
+     "name": "doc_id",
+     "type": "STRING"
+    },
+    {
+     "name": "source_uri",
+     "type": "STRING"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "D27",
+    "S10-1-CONTRACT",
+    "S10-2-ESCALATE",
+    "S10-3-WARRANTY",
+    "S10-COORDINATOR",
+    "S10-R-CRITIC"
+   ]
+  },
+  {
+   "id": "vibration_monitors",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 0,
+   "bytes": 0,
+   "columnCount": 3,
+   "columns": [
+    {
+     "name": "asset_id",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "vibration_hz",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 1.0,
+   "readBy": [
+    "S03-3-VIBRATION"
+   ]
   },
   {
    "id": "warranty_claims",
@@ -1834,6 +3327,56 @@ window.dataGraph = {
    "readBy": []
   },
   {
+   "id": "water_balance_logs",
+   "layer": "operational",
+   "layerLabel": "Operational records",
+   "domain": "platform",
+   "domainLabel": "Platform & ontology",
+   "rows": 167,
+   "bytes": 11189,
+   "columnCount": 8,
+   "columns": [
+    {
+     "name": "log_id",
+     "type": "STRING"
+    },
+    {
+     "name": "timestamp",
+     "type": "TIMESTAMP"
+    },
+    {
+     "name": "concentrator_id",
+     "type": "STRING"
+    },
+    {
+     "name": "inflow_m3",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "evaporation_m3",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "seepage_m3",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "process_return_m3",
+     "type": "FLOAT64"
+    },
+    {
+     "name": "net_storage_change_m3",
+     "type": "FLOAT64"
+    }
+   ],
+   "weight": 2.248,
+   "readBy": [
+    "D20",
+    "S08-1-WATER",
+    "S08-COORDINATOR"
+   ]
+  },
+  {
    "id": "work_order_parts_edge",
    "layer": "semantic",
    "layerLabel": "Semantic / property graph",
@@ -1894,8 +3437,42 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "assay_logs",
+   "target": "drill_assay_logs",
+   "keys": [
+    "drill_hole_id",
+    "geology_code"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "assay_logs",
+   "target": "drill_holes",
+   "keys": [
+    "drill_hole_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "assay_logs",
+   "target": "qaqc_standards",
+   "keys": [
+    "drill_hole_id",
+    "geology_code"
+   ],
+   "weight": 2
+  },
+  {
    "source": "assets",
    "target": "crusher_states",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "assets",
+   "target": "crusher_telemetry",
    "keys": [
     "asset_id"
    ],
@@ -1911,7 +3488,23 @@ window.dataGraph = {
   },
   {
    "source": "assets",
+   "target": "lube_samples",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "assets",
    "target": "maintenance_logs",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "assets",
+   "target": "plant_telemetry",
    "keys": [
     "asset_id"
    ],
@@ -1928,6 +3521,14 @@ window.dataGraph = {
   {
    "source": "assets",
    "target": "telemetry_stream",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "assets",
+   "target": "vibration_monitors",
    "keys": [
     "asset_id"
    ],
@@ -1960,6 +3561,14 @@ window.dataGraph = {
   },
   {
    "source": "bid_parts_edge",
+   "target": "explosives_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "bid_parts_edge",
    "target": "inventory_levels",
    "keys": [
     "part_number"
@@ -1976,11 +3585,44 @@ window.dataGraph = {
   },
   {
    "source": "bid_parts_edge",
+   "target": "purchase_orders",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "bid_parts_edge",
+   "target": "reagent_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "bid_parts_edge",
    "target": "rfp_items",
    "keys": [
     "part_number"
    ],
    "weight": 1
+  },
+  {
+   "source": "bid_parts_edge",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "bid_parts_edge",
+   "target": "vendor_contracts",
+   "keys": [
+    "bid_id",
+    "part_number"
+   ],
+   "weight": 2
   },
   {
    "source": "bid_parts_edge",
@@ -1994,6 +3636,14 @@ window.dataGraph = {
   {
    "source": "biometric_fatigue_logs",
    "target": "fatigue_logs_node",
+   "keys": [
+    "operator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "biometric_fatigue_logs",
+   "target": "fatigue_monitoring_logs",
    "keys": [
     "operator_id"
    ],
@@ -2032,6 +3682,38 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "blast_designs",
+   "target": "geological_block_models",
+   "keys": [
+    "block_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "blast_designs",
+   "target": "pit_designs",
+   "keys": [
+    "block_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "blast_designs",
+   "target": "survey_scans",
+   "keys": [
+    "block_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "capital_options",
+   "target": "mine_production_schedule",
+   "keys": [
+    "plan_version_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "capital_options",
    "target": "plan_assumptions",
    "keys": [
@@ -2056,6 +3738,71 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "contract_clauses",
+   "target": "contract_transactions",
+   "keys": [
+    "contract_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_clauses",
+   "target": "contracts",
+   "keys": [
+    "contract_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_clauses",
+   "target": "doc_chunks",
+   "keys": [
+    "doc_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_clauses",
+   "target": "doc_chunks_embedded",
+   "keys": [
+    "doc_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_clauses",
+   "target": "purchase_orders",
+   "keys": [
+    "contract_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_clauses",
+   "target": "rebate_claims",
+   "keys": [
+    "contract_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_clauses",
+   "target": "unstructured_docs_metadata",
+   "keys": [
+    "doc_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_clauses",
+   "target": "vendor_contracts",
+   "keys": [
+    "contract_id",
+    "doc_id"
+   ],
+   "weight": 2
+  },
+  {
    "source": "contract_transactions",
    "target": "contracts",
    "keys": [
@@ -2066,7 +3813,32 @@ window.dataGraph = {
   },
   {
    "source": "contract_transactions",
+   "target": "explosives_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_transactions",
    "target": "inventory_levels",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_transactions",
+   "target": "purchase_orders",
+   "keys": [
+    "contract_id",
+    "part_number"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "contract_transactions",
+   "target": "reagent_inventory",
    "keys": [
     "part_number"
    ],
@@ -2090,7 +3862,32 @@ window.dataGraph = {
   },
   {
    "source": "contract_transactions",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contract_transactions",
+   "target": "vendor_contracts",
+   "keys": [
+    "contract_id",
+    "part_number"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "contract_transactions",
    "target": "work_order_parts_edge",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contracts",
+   "target": "explosives_inventory",
    "keys": [
     "part_number"
    ],
@@ -2114,6 +3911,23 @@ window.dataGraph = {
   },
   {
    "source": "contracts",
+   "target": "purchase_orders",
+   "keys": [
+    "contract_id",
+    "part_number"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "contracts",
+   "target": "reagent_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contracts",
    "target": "rebate_claims",
    "keys": [
     "contract_id"
@@ -2130,9 +3944,35 @@ window.dataGraph = {
   },
   {
    "source": "contracts",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "contracts",
+   "target": "vendor_contracts",
+   "keys": [
+    "bid_id",
+    "contract_id",
+    "part_number"
+   ],
+   "weight": 3
+  },
+  {
+   "source": "contracts",
    "target": "work_order_parts_edge",
    "keys": [
     "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_states",
+   "target": "crusher_telemetry",
+   "keys": [
+    "asset_id"
    ],
    "weight": 1
   },
@@ -2146,7 +3986,23 @@ window.dataGraph = {
   },
   {
    "source": "crusher_states",
+   "target": "lube_samples",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_states",
    "target": "maintenance_logs",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_states",
+   "target": "plant_telemetry",
    "keys": [
     "asset_id"
    ],
@@ -2170,9 +4026,97 @@ window.dataGraph = {
   },
   {
    "source": "crusher_states",
+   "target": "vibration_monitors",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_states",
    "target": "warranty_entitlements",
    "keys": [
     "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "erp_work_orders",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "lube_samples",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "maintenance_logs",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "plant_telemetry",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "simulation_runs",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "telemetry_stream",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "vibration_monitors",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "crusher_telemetry",
+   "target": "warranty_entitlements",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "dispatch_routes",
+   "target": "haul_cycle_log",
+   "keys": [
+    "route_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "dispatch_routes",
+   "target": "haulage_routes",
+   "keys": [
+    "route_id"
    ],
    "weight": 1
   },
@@ -2193,8 +4137,24 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "doc_chunks",
+   "target": "vendor_contracts",
+   "keys": [
+    "doc_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "doc_chunks_embedded",
    "target": "unstructured_docs_metadata",
+   "keys": [
+    "doc_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "doc_chunks_embedded",
+   "target": "vendor_contracts",
    "keys": [
     "doc_id"
    ],
@@ -2209,6 +4169,32 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "drill_assay_logs",
+   "target": "qaqc_standards",
+   "keys": [
+    "drill_hole_id",
+    "geology_code"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "drill_holes",
+   "target": "qaqc_standards",
+   "keys": [
+    "drill_hole_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "erp_work_orders",
+   "target": "lube_samples",
+   "keys": [
+    "asset_id",
+    "work_order_id"
+   ],
+   "weight": 2
+  },
+  {
    "source": "erp_work_orders",
    "target": "maintenance_logs",
    "keys": [
@@ -2216,6 +4202,14 @@ window.dataGraph = {
     "work_order_id"
    ],
    "weight": 2
+  },
+  {
+   "source": "erp_work_orders",
+   "target": "plant_telemetry",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
   },
   {
    "source": "erp_work_orders",
@@ -2228,6 +4222,14 @@ window.dataGraph = {
   {
    "source": "erp_work_orders",
    "target": "telemetry_stream",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "erp_work_orders",
+   "target": "vibration_monitors",
    "keys": [
     "asset_id"
    ],
@@ -2258,6 +4260,70 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "explosives_inventory",
+   "target": "inventory_levels",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "explosives_inventory",
+   "target": "purchase_orders",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "explosives_inventory",
+   "target": "reagent_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "explosives_inventory",
+   "target": "rfp_items",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "explosives_inventory",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "explosives_inventory",
+   "target": "vendor_contracts",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "explosives_inventory",
+   "target": "work_order_parts_edge",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fatigue_logs_node",
+   "target": "fatigue_monitoring_logs",
+   "keys": [
+    "operator_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "fatigue_logs_node",
    "target": "incident_involvements",
    "keys": [
@@ -2290,6 +4356,70 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "fatigue_logs_node",
+   "target": "water_balance_logs",
+   "keys": [
+    "log_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fatigue_monitoring_logs",
+   "target": "incident_involvements",
+   "keys": [
+    "operator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fatigue_monitoring_logs",
+   "target": "operator_vehicle_assignments",
+   "keys": [
+    "operator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fatigue_monitoring_logs",
+   "target": "operators_node",
+   "keys": [
+    "operator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fatigue_monitoring_logs",
+   "target": "v_fatigue_scored",
+   "keys": [
+    "operator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fleet_telemetry",
+   "target": "fleet_vehicles",
+   "keys": [
+    "vehicle_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fleet_telemetry",
+   "target": "incident_involvements",
+   "keys": [
+    "vehicle_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "fleet_telemetry",
+   "target": "operator_vehicle_assignments",
+   "keys": [
+    "vehicle_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "fleet_vehicles",
    "target": "incident_involvements",
    "keys": [
@@ -2302,6 +4432,46 @@ window.dataGraph = {
    "target": "operator_vehicle_assignments",
    "keys": [
     "vehicle_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "flotation_assays",
+   "target": "metallurgical_recovery",
+   "keys": [
+    "concentrator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "flotation_assays",
+   "target": "water_balance_logs",
+   "keys": [
+    "concentrator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "geological_block_models",
+   "target": "pit_designs",
+   "keys": [
+    "block_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "geological_block_models",
+   "target": "survey_scans",
+   "keys": [
+    "block_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "geotech_sensors",
+   "target": "tsf_piezometers",
+   "keys": [
+    "reading_id"
    ],
    "weight": 1
   },
@@ -2340,6 +4510,14 @@ window.dataGraph = {
   },
   {
    "source": "incident_involvements",
+   "target": "safety_telemetry",
+   "keys": [
+    "incident_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "incident_involvements",
    "target": "v_fatigue_scored",
    "keys": [
     "operator_id"
@@ -2348,7 +4526,39 @@ window.dataGraph = {
   },
   {
    "source": "inventory_levels",
+   "target": "purchase_orders",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "inventory_levels",
+   "target": "reagent_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "inventory_levels",
    "target": "rfp_items",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "inventory_levels",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "inventory_levels",
+   "target": "vendor_contracts",
    "keys": [
     "part_number"
    ],
@@ -2363,6 +4573,79 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "lube_samples",
+   "target": "maintenance_logs",
+   "keys": [
+    "asset_id",
+    "work_order_id"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "lube_samples",
+   "target": "plant_telemetry",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "lube_samples",
+   "target": "simulation_runs",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "lube_samples",
+   "target": "telemetry_stream",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "lube_samples",
+   "target": "vibration_monitors",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "lube_samples",
+   "target": "warranty_claims",
+   "keys": [
+    "work_order_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "lube_samples",
+   "target": "warranty_entitlements",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "lube_samples",
+   "target": "work_order_parts_edge",
+   "keys": [
+    "work_order_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "maintenance_logs",
+   "target": "plant_telemetry",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "maintenance_logs",
    "target": "simulation_runs",
    "keys": [
@@ -2373,6 +4656,14 @@ window.dataGraph = {
   {
    "source": "maintenance_logs",
    "target": "telemetry_stream",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "maintenance_logs",
+   "target": "vibration_monitors",
    "keys": [
     "asset_id"
    ],
@@ -2399,6 +4690,39 @@ window.dataGraph = {
    "target": "work_order_parts_edge",
    "keys": [
     "work_order_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "metallurgical_recovery",
+   "target": "water_balance_logs",
+   "keys": [
+    "concentrator_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "mine_production_schedule",
+   "target": "plan_assumptions",
+   "keys": [
+    "assumption_id",
+    "plan_version_id"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "mine_production_schedule",
+   "target": "plan_scenarios",
+   "keys": [
+    "plan_version_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "mine_production_schedule",
+   "target": "plan_versions",
+   "keys": [
+    "plan_version_id"
    ],
    "weight": 1
   },
@@ -2427,6 +4751,14 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "pit_designs",
+   "target": "survey_scans",
+   "keys": [
+    "block_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "plan_assumptions",
    "target": "plan_scenarios",
    "keys": [
@@ -2451,10 +4783,139 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "plant_telemetry",
+   "target": "simulation_runs",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "plant_telemetry",
+   "target": "telemetry_stream",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "plant_telemetry",
+   "target": "vibration_monitors",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "plant_telemetry",
+   "target": "warranty_entitlements",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "procurement_bids",
    "target": "rfp_items",
    "keys": [
     "rfp_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "procurement_bids",
+   "target": "vendor_contracts",
+   "keys": [
+    "bid_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "purchase_orders",
+   "target": "reagent_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "purchase_orders",
+   "target": "rebate_claims",
+   "keys": [
+    "contract_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "purchase_orders",
+   "target": "rfp_items",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "purchase_orders",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "purchase_orders",
+   "target": "vendor_contracts",
+   "keys": [
+    "contract_id",
+    "part_number"
+   ],
+   "weight": 2
+  },
+  {
+   "source": "purchase_orders",
+   "target": "work_order_parts_edge",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "reagent_inventory",
+   "target": "rfp_items",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "reagent_inventory",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "reagent_inventory",
+   "target": "vendor_contracts",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "reagent_inventory",
+   "target": "work_order_parts_edge",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "rebate_claims",
+   "target": "vendor_contracts",
+   "keys": [
+    "contract_id"
    ],
    "weight": 1
   },
@@ -2468,6 +4929,22 @@ window.dataGraph = {
   },
   {
    "source": "rfp_items",
+   "target": "spares_inventory",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "rfp_items",
+   "target": "vendor_contracts",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "rfp_items",
    "target": "work_order_parts_edge",
    "keys": [
     "part_number"
@@ -2475,8 +4952,24 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "safety_incidents",
+   "target": "safety_telemetry",
+   "keys": [
+    "incident_id"
+   ],
+   "weight": 1
+  },
+  {
    "source": "simulation_runs",
    "target": "telemetry_stream",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "simulation_runs",
+   "target": "vibration_monitors",
    "keys": [
     "asset_id"
    ],
@@ -2491,7 +4984,55 @@ window.dataGraph = {
    "weight": 1
   },
   {
+   "source": "spares_inventory",
+   "target": "vendor_contracts",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "spares_inventory",
+   "target": "work_order_parts_edge",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
    "source": "telemetry_stream",
+   "target": "vibration_monitors",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "telemetry_stream",
+   "target": "warranty_entitlements",
+   "keys": [
+    "asset_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "unstructured_docs_metadata",
+   "target": "vendor_contracts",
+   "keys": [
+    "doc_id"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "vendor_contracts",
+   "target": "work_order_parts_edge",
+   "keys": [
+    "part_number"
+   ],
+   "weight": 1
+  },
+  {
+   "source": "vibration_monitors",
    "target": "warranty_entitlements",
    "keys": [
     "asset_id"
@@ -2582,12 +5123,13 @@ window.dataGraph = {
  "meta": {
   "project": "genial-union-475913-i7",
   "dataset": "mining_data",
-  "tableCount": 55,
-  "edgeCount": 81,
-  "columnCount": 265,
-  "rowCount": 42214,
-  "excludedCount": 11,
+  "tableCount": 85,
+  "edgeCount": 204,
+  "columnCount": 511,
+  "rowCount": 44127,
+  "excludedCount": 12,
   "excluded": [
+   "__mutation_probe",
    "biometric_fatigue_logs_original_20260810",
    "crusher_states_original_20260810",
    "drill_assay_logs_original_20260810",

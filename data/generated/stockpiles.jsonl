@@ -1,0 +1,8 @@
+{"stockpile_id": "SP-01-1", "location": "Stockpile East", "as_at": "2025-11-19", "material_class": "Oxide", "tonnes": 14948.3, "contained_grade_pct": 0.5841, "moisture_pct": 4.94, "reclaim_rate_tph": 483.6}
+{"stockpile_id": "SP-01-2", "location": "Stockpile East", "as_at": "2025-12-11", "material_class": "ROM Ore", "tonnes": 17008.2, "contained_grade_pct": 0.8333, "moisture_pct": 3.23, "reclaim_rate_tph": 728.8}
+{"stockpile_id": "SP-01-3", "location": "Stockpile East", "as_at": "2026-01-07", "material_class": "ROM Ore", "tonnes": 87064.3, "contained_grade_pct": 0.7552, "moisture_pct": 9.19, "reclaim_rate_tph": 1758.2}
+{"stockpile_id": "SP-01-4", "location": "Stockpile East", "as_at": "2026-06-23", "material_class": "ROM Ore", "tonnes": 6297.4, "contained_grade_pct": 0.9861, "moisture_pct": 6.4, "reclaim_rate_tph": 1453.6}
+{"stockpile_id": "SP-02-1", "location": "Stockpile North", "as_at": "2026-05-06", "material_class": "Oxide", "tonnes": 87407.9, "contained_grade_pct": 0.8987, "moisture_pct": 4.65, "reclaim_rate_tph": 1675.8}
+{"stockpile_id": "SP-02-2", "location": "Stockpile North", "as_at": "2025-12-07", "material_class": "ROM Ore", "tonnes": 12272.4, "contained_grade_pct": 0.9056, "moisture_pct": 5.07, "reclaim_rate_tph": 982.2}
+{"stockpile_id": "SP-02-3", "location": "Stockpile North", "as_at": "2026-04-23", "material_class": "Oxide", "tonnes": 78721.7, "contained_grade_pct": 0.9011, "moisture_pct": 2.74, "reclaim_rate_tph": 558.6}
+{"stockpile_id": "SP-02-4", "location": "Stockpile North", "as_at": "2025-10-13", "material_class": "Waste", "tonnes": 45343.3, "contained_grade_pct": 0.6298, "moisture_pct": 6.98, "reclaim_rate_tph": 1625.7}

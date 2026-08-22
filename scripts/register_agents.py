@@ -97,9 +97,22 @@ def api(url: str, method: str = "GET", body: dict | None = None) -> dict:
 
 
 def paged(url: str, key: str) -> list[dict]:
+    """List every page, raising rather than returning an empty list on error.
+
+    This used to do `out += d.get(key, [])` unconditionally. An expired
+    credential returns {"_http": 401, ...}, which has no `key`, so the function
+    returned [] and the caller read it as "there are no agents registered" --
+    an auth failure wearing the costume of a legitimate empty result. It
+    reported "0 agents mapped" against an estate of 96.
+    """
     out, page = [], None
     while True:
         d = api(url + (("&" if "?" in url else "?") + f"pageToken={page}" if page else ""))
+        if "_http" in d:
+            raise SystemExit(
+                f"listing {key} failed with HTTP {d['_http']}: {d['_body'][:200]}\n"
+                f"If this is 401, the credential has expired — run `gcloud auth login`."
+            )
         out += d.get(key, [])
         page = d.get("nextPageToken")
         if not page:
