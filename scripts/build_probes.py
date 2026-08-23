@@ -50,15 +50,49 @@ def main() -> int:
     ap.add_argument("--group", default="", help="e.g. S01 — restrict to one swarm")
     args = ap.parse_args()
 
+    # Deregistered by decision, not lost: D31 was retired as redundant, so it
+    # has no engine and must not reappear in the probe set. Deleting it by hand
+    # after each build only lasted until the next one.
+    DEREGISTERED = {"D31"}
+
     nums = numeric_columns()
+    # Every readable relation, views included -- a view is as real to an agent
+    # as a table, and `safety_telemetry` is one.
+    all_tables = {r["table_name"] for r in bq(
+        f"SELECT table_name FROM `{PROJECT}.mining_data.INFORMATION_SCHEMA.TABLES`")}
     probes = []
     skipped = []
     for a in C.CATALOG:
+        if a.agent_id in DEREGISTERED:
+            continue
         if args.group and not a.agent_id.startswith(args.group):
             continue
         table = next((t for t in a.source_tables if t in nums and nums[t]), None)
         if not table:
-            skipped.append(a.agent_id)
+            # No numeric column means no AVG to ask for -- but a row count is
+            # still a fact only the warehouse knows. Skipping these left five
+            # registered agents (D22-D25 on `assets`, all-STRING; D38 on the
+            # `safety_telemetry` view) with no probe at all, so nothing could
+            # ever verify they read data. An agent that cannot be checked is
+            # not the same as an agent that passed.
+            countable = next((t for t in a.source_tables if t in all_tables), None)
+            if not countable:
+                skipped.append(a.agent_id)
+                continue
+            probes.append({
+                "agent_id": a.agent_id,
+                "question": (
+                    f"Query mining_data.{countable} directly and report one exact "
+                    f"figure: the total row count. State the fully-qualified table "
+                    f"you read. Do not estimate — if you cannot run the query, "
+                    f"say so."),
+                "truth_sql": (f"SELECT COUNT(*) AS n FROM "
+                              f"`{PROJECT}.mining_data.{countable}`"),
+                "truth_key": "n",
+                "tolerance_pct": 0.5,
+                "must_name": [countable],
+                "derived": [],
+            })
             continue
         col = nums[table][0]
         probes.append({

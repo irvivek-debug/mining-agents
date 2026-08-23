@@ -374,6 +374,50 @@
   ]
  },
  {
+  "agent_id": "D22",
+  "question": "Query mining_data.assets directly and report one exact figure: the total row count. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n FROM `genial-union-475913-i7.mining_data.assets`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
+  "must_name": [
+   "assets"
+  ],
+  "derived": []
+ },
+ {
+  "agent_id": "D23",
+  "question": "Query mining_data.assets directly and report one exact figure: the total row count. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n FROM `genial-union-475913-i7.mining_data.assets`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
+  "must_name": [
+   "assets"
+  ],
+  "derived": []
+ },
+ {
+  "agent_id": "D24",
+  "question": "Query mining_data.assets directly and report one exact figure: the total row count. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n FROM `genial-union-475913-i7.mining_data.assets`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
+  "must_name": [
+   "assets"
+  ],
+  "derived": []
+ },
+ {
+  "agent_id": "D25",
+  "question": "Query mining_data.assets directly and report one exact figure: the total row count. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n FROM `genial-union-475913-i7.mining_data.assets`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
+  "must_name": [
+   "assets"
+  ],
+  "derived": []
+ },
+ {
   "agent_id": "D26",
   "question": "Query mining_data.erp_work_orders directly and report two exact figures: the total row count, and the AVG of repair_cost to four decimal places. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
   "truth_sql": "SELECT COUNT(*) AS n, ROUND(AVG(repair_cost),4) AS avg_val FROM `genial-union-475913-i7.mining_data.erp_work_orders`",
@@ -559,6 +603,17 @@
     2.0
    ]
   ]
+ },
+ {
+  "agent_id": "D38",
+  "question": "Query mining_data.safety_telemetry directly and report one exact figure: the total row count. State the fully-qualified table you read. Do not estimate \u2014 if you cannot run the query, say so.",
+  "truth_sql": "SELECT COUNT(*) AS n FROM `genial-union-475913-i7.mining_data.safety_telemetry`",
+  "truth_key": "n",
+  "tolerance_pct": 0.5,
+  "must_name": [
+   "safety_telemetry"
+  ],
+  "derived": []
  },
  {
   "agent_id": "D39",

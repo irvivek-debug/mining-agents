@@ -144,3 +144,43 @@ def test_chunks_cover_every_item_exactly_once():
     batched = probe_set.chunks(ids, 8)
     assert [x for b in batched for x in b] == ids
     assert len(batched) == 5 and len(batched[-1]) == 3
+
+
+# --- every registered agent must be verifiable --------------------------------
+
+def test_count_only_probe_when_a_table_has_no_numeric_column(tmp_path):
+    """D22-D25 declare `assets`, which is entirely STRING and DATE columns,
+    and D38 declares the `safety_telemetry` view. All five were skipped, so
+    nothing could ever verify they read data. A row count is still a fact
+    only the warehouse knows."""
+    src = (ROOT / "scripts" / "build_probes.py").read_text()
+    assert "countable" in src, "agents without a numeric column are skipped again"
+    assert "the total row count" in src
+
+
+def test_views_count_as_readable_relations():
+    """A view is as real to an agent as a table; safety_telemetry is one."""
+    src = (ROOT / "scripts" / "build_probes.py").read_text()
+    assert "INFORMATION_SCHEMA.TABLES" in src, \
+        "only base tables are considered, so view-backed agents stay unverifiable"
+
+
+def test_a_deregistered_agent_does_not_reappear():
+    """D31 was retired by decision. Deleting it by hand lasted until the next
+    build, so the decision is encoded rather than repeatedly undone."""
+    src = (ROOT / "scripts" / "build_probes.py").read_text()
+    assert "DEREGISTERED" in src
+    import json
+    probes = json.loads((ROOT / "data" / "grounding" / "probes.json").read_text())
+    assert "D31" not in {p["agent_id"] for p in probes}
+
+
+def test_every_probe_has_a_truth_query_and_a_table_to_name():
+    """A probe that asserts nothing would pass silently."""
+    import json
+    probes = json.loads((ROOT / "data" / "grounding" / "probes.json").read_text())
+    assert len(probes) >= 100, f"probe set shrank to {len(probes)}"
+    for p in probes:
+        assert p["truth_sql"].strip().upper().startswith("SELECT"), p["agent_id"]
+        assert p["must_name"], f"{p['agent_id']} names no table to cite"
+        assert p["truth_key"] in p["truth_sql"], p["agent_id"]
