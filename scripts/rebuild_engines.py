@@ -49,11 +49,27 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "vendor" / "agent_registry"))
 sys.path.insert(0, str(ROOT / "scripts"))
 import catalog_definitions as C  # noqa: E402
+import verify_grounded  # noqa: E402
 from register_agents import (  # noqa: E402
     GE_AGENTS, PROJECT, REGION, api, create_engine, create_ge_entry, paged,
 )
 
 CONFIRM = "yes-rebuild-for-real"
+
+
+def health(agent_id: str, resource: str) -> tuple[bool, str]:
+    """Is this engine grounded? Falls back to liveness only when unverifiable.
+
+    An agent with no probe cannot be checked for grounding. Saying so out loud
+    matters: silently treating it as healthy is how untested agents get
+    counted as passes.
+    """
+    try:
+        verify_grounded.probe_for(agent_id)
+    except verify_grounded.NoProbe:
+        good, detail = invoke(resource)
+        return good, f"{detail} (LIVENESS ONLY — no probe; grounding unverified)"
+    return verify_grounded.verify(agent_id, resource)
 ENGINE_API = (f"https://{REGION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT}"
               f"/locations/{REGION}/reasoningEngines")
 CATALOGUE_ID = re.compile(r"\(([A-Z0-9][A-Z0-9\-]*)\)\s*$")
@@ -121,27 +137,32 @@ def main() -> int:
     if args.check:
         broken, ok = [], []
         for aid, e in sorted(engines.items()):
-            good, detail = invoke(e["name"])
+            good, detail = health(aid, e["name"])
             (ok if good else broken).append((aid, detail))
             print(f"  {'OK  ' if good else 'FAIL'} {aid:<20} {detail}")
-        print(f"\nworking {len(ok)} | broken {len(broken)} | total {len(engines)}")
+        print(f"\ngrounded {len(ok)} | not grounded {len(broken)} | total {len(engines)}")
         return 0
 
     if args.all:
-        # Probe before selecting. An engine that already answers is left alone:
-        # --all means "every broken one", not "every one". Rebuilding a working
-        # agent would delete a good engine to replace it with an identical one,
-        # and would burn a quota slot mid-run for nothing.
-        print("probing to find which engines are actually broken…")
+        # Probe before selecting. An engine that is already grounded is left
+        # alone: --all means "every broken one", not "every one". Rebuilding a
+        # working agent would delete a good engine to replace it with an
+        # identical one, and would burn a quota slot mid-run for nothing.
+        #
+        # This selection used the liveness ping, which a toolless agent passes.
+        # Run against an estate of toolless agents it printed
+        # "already answering" for every one of them and reported broken: 0 --
+        # the repair tool was blind to the defect it exists to repair.
+        print("probing to find which engines are not grounded…")
         targets = []
         for aid in sorted(engines):
             if aid not in by_id:
                 continue
-            good, detail = invoke(engines[aid]["name"])
+            good, detail = health(aid, engines[aid]["name"])
             if not good:
                 targets.append(aid)
             else:
-                print(f"  skipping {aid} — already answering ({detail[:40]})")
+                print(f"  skipping {aid} — grounded ({detail[:48]})")
         print(f"broken: {len(targets)}\n")
     else:
         targets = [a.strip() for a in args.agents.split(",") if a.strip()]
@@ -181,15 +202,19 @@ def main() -> int:
             failed += 1
             continue
 
-        good, detail = invoke(res)
-        print(f"  {'verified' if good else 'BUILT BUT NOT ANSWERING'}: {detail}")
+        # Verify the property the rebuild exists to restore: that the agent
+        # reads data. The old check sent "Reply with the single word: ok",
+        # which a toolless agent -- the exact defect being rebuilt away --
+        # passes cleanly, and then logged "verified".
+        good, detail = verify_grounded.verify(agent.agent_id, res)
+        print(f"  {'GROUNDED' if good else 'BUILT BUT NOT GROUNDED'}: {detail}")
         g = create_ge_entry(agent, res)
         print("  gemini enterprise repointed" if "_http" not in g
               else f"  GE FAILED {g['_http']}: {g['_body'][:120]}")
         done += good
         failed += (not good)
 
-    print(f"\nrebuilt and verified {done} | failed {failed} | of {len(targets)}")
+    print(f"\nrebuilt and grounded {done} | failed {failed} | of {len(targets)}")
     return 0
 
 
