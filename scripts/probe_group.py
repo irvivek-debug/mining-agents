@@ -11,9 +11,28 @@ for e in paged(ENGINE_API, "reasoningEngines"):
     m = re.search(r"\(([A-Z0-9][A-Z0-9\-]*)\)\s*$", e.get("displayName", ""))
     if m:
         eng[m.group(1)] = e["name"].split("/")[-1]
-tok = subprocess.run(["gcloud","auth","print-access-token"],capture_output=True,text=True).stdout.strip()
-H = {"Authorization": f"Bearer {tok}", "X-Goog-User-Project": "genial-union-475913-i7",
-     "Content-Type": "application/json"}
+# Google access tokens last about an hour. This was fetched once at startup
+# and reused for the whole run, so any run longer than the token's life 401'd
+# partway through -- which is what killed the deep-solver rebuild overnight
+# and failed D39/D40 here at 1.3s. Re-fetch on a TTL well inside that hour.
+_TOKEN_TTL_S = 45 * 60
+_tok_cache: dict[str, float | str] = {}
+
+
+def auth_headers() -> dict:
+    now = time.time()
+    if not _tok_cache or now - _tok_cache.get("at", 0) > _TOKEN_TTL_S:
+        t = subprocess.run(["gcloud", "auth", "print-access-token"],
+                           capture_output=True, text=True).stdout.strip()
+        if not t:
+            raise RuntimeError("no access token — run `gcloud auth login`")
+        _tok_cache.update({"tok": t, "at": now})
+    return {"Authorization": f"Bearer {_tok_cache['tok']}",
+            "X-Goog-User-Project": "genial-union-475913-i7",
+            "Content-Type": "application/json"}
+
+
+H = auth_headers()
 OUT = __import__("pathlib").Path("data/grounding/results.jsonl")
 OUT.parent.mkdir(parents=True, exist_ok=True)
 results = []
@@ -28,7 +47,8 @@ def probe_once(p, eng, H):
     t0 = time.time()
     try:
         raw = urllib.request.urlopen(urllib.request.Request(
-            url, data=json.dumps(body).encode(), headers=H, method="POST"),
+            url, data=json.dumps(body).encode(), headers=auth_headers(),
+            method="POST"),
             timeout=300).read().decode()
     except Exception as e:
         return {"agent_id": p.agent_id, "passed": False,
