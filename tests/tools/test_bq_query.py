@@ -43,7 +43,15 @@ def test_enveloped_tool_reports_the_declared_tables():
     Envelope.model_validate(env)
     assert env["success"] is True
     assert env["meta"]["tables_read"] == ["mining_data.assets"]
-    assert env["data"]["rows"][0]["n_assets"] == 5
+    # 88, not 5: `assets` was deepened from 5 rows to 88 to give the fleet and
+    # maintenance agents enough depth to reason over. This asserts the envelope
+    # carries the warehouse's real count, so pinning it to a literal means
+    # repinning whenever the fixture data changes on purpose. What is being
+    # tested is that the count is reported faithfully, not that it is any
+    # particular number -- so assert against the live table instead.
+    live = q("SELECT COUNT(*) AS n FROM `mining_data.assets`", {})["data"]["rows"][0]["n"]
+    assert env["data"]["rows"][0]["n_assets"] == live
+    assert live > 0, "assets is empty; the fixture is not loaded"
 
 
 def test_interpolated_sql_fails_inside_the_envelope_not_as_a_crash():
