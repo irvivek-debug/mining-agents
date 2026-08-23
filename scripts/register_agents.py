@@ -39,6 +39,7 @@ sys.path.insert(0, str(ROOT / "vendor" / "agent_registry"))
 import catalog_definitions as C  # noqa: E402
 
 PROJECT = "genial-union-475913-i7"
+DATASET = "mining_data"
 PROJECT_NUMBER = "297934069315"
 REGION = "us-central1"
 CONFIRM_PHRASE = "yes-register-for-real"
@@ -219,7 +220,29 @@ def create_engine(agent) -> str:
     # named, and reconciling supplied assumptions against them is made an
     # explicit step with a required disclosure when they diverge.
     tables = ", ".join(agent.source_tables) or "your declared sources"
-    instruction = (agent.system_instruction or (
+
+    # WHY THE INSTRUCTION NAMES THE PROJECT
+    # No agent was ever told which BigQuery project it lives in, so every
+    # query began with a guessing game: passing the dataset name `mining_data`
+    # as a project id (400, invalid project), calling search_catalog without
+    # its mandatory project_id, trying a project literally named `test`
+    # (refused -- the toolset is locked to one project). All 95 agents did
+    # this on every run. Most recovered after burning three or four calls,
+    # which inflated latency; occasionally one exhausted its budget and
+    # returned nothing at all.
+    #
+    # This is prepended to BOTH branches below. The two agents that carry
+    # their own system_instruction would otherwise skip it and keep guessing.
+    data_access = (
+        f"Your data lives in BigQuery project `{PROJECT}`, dataset "
+        f"`{DATASET}`. Fully qualified, a table is "
+        f"`{PROJECT}.{DATASET}.<table>`.\n"
+        f"`{DATASET}` is the dataset, never the project. Tools that require a "
+        f"project_id take `{PROJECT}`. Do not guess a project name and do not "
+        f"omit project_id -- both fail, and the retries cost you the answer.\n"
+    )
+
+    instruction = data_access + (agent.system_instruction or (
         f"You are {agent.name}. {agent.description or ''}\n"
         f"Your governing method is {agent.governing_equation}.\n"
         f"Your data is {tables}. Read it before you answer.\n"
