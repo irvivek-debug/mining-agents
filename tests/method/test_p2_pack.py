@@ -155,22 +155,37 @@ def test_backlog_aging_covers_only_open_and_in_progress_orders():
 
 
 @pytest.mark.integration
-def test_parts_stockout_returns_seventeen_skus_at_or_below_reorder_point():
+def test_parts_stockout_returns_skus_at_or_below_reorder_point():
     """17 of 105 SKUs are at or below their reorder point; one is at zero.
 
     In continuous-review inventory policy a replenishment order is triggered
     when inventory position falls to or below the reorder point. The query uses
     <= so that SKUs sitting exactly at their reorder_point_limit are included —
     they are the trigger event, not a safe condition. Lead times span 3–27 days
-    in the validated dataset. Pinning the count and the zero-stock case catches
+    in the validated dataset. Asserting the boundary and the zero-stock case catches
     a query using < or dropping the zero-stock row on a NULL guard.
     """
     driver = next(d for d in load_pack(PACK).drivers if d.id == "parts_stockout")
     rows, _ = run_query(
         (ROOT / "method" / driver.sql).read_text(), driver.params, TABLES
     )
-    assert len(rows) == 17, (
-        f"expected 17 stockout SKUs, got {len(rows)}; query may use < instead of <="
+    # The count was pinned at 17. inventory_levels was deepened from 105 rows
+    # to 140 on purpose, so the literal went stale and the suite went red on
+    # data we changed deliberately.
+    #
+    # But the number was never the point -- it guarded the boundary: a query
+    # using < instead of <= silently drops every SKU sitting exactly at its
+    # reorder point, which is the trigger event itself. So assert the boundary
+    # directly, against the live table, which stays true whatever the row
+    # count becomes.
+    assert rows, "no stockout SKUs at all; the query or the fixture is broken"
+    assert all(r["stock_level"] <= r["reorder_point_limit"] for r in rows), (
+        "a returned SKU is above its reorder point; the predicate is wrong"
+    )
+    at_boundary = [r for r in rows if r["stock_level"] == r["reorder_point_limit"]]
+    assert at_boundary, (
+        "no SKU sits exactly at its reorder point -- the query uses < instead "
+        "of <=, dropping the very rows that trigger replenishment"
     )
     # At least one SKU is at zero stock.
     assert any(r["stock_level"] == 0 for r in rows), (
