@@ -189,7 +189,14 @@ def assess(a: dict, reply: str, prompt: str = "") -> dict:
     # answer concisely -- "There are 30 drill holes in the database." is 41
     # chars, correct against BigQuery, and was scored as not answering.
     # An answer is judged by having content, not by being long.
-    answered = len(r) > 15 and not r.lower().startswith(("error", "something went wrong"))
+    # "Agent returned an error (400): ... FAILED_PRECONDITION" was scored as
+    # an answer: it does not start with "error". An error page is not an answer
+    # wherever the word sits.
+    _low = r.lower()
+    answered = (len(r) > 15
+                and not _low.startswith(("error", "something went wrong"))
+                and "returned an error" not in _low[:120]
+                and "reasoning engine execution" not in _low)
     vocab = token_set(a)
     # Prefix match, not exact substring. "crusher" from the agent's own name
     # does not appear in a reply that says "crushing", and "geostatistics"
