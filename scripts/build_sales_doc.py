@@ -159,11 +159,11 @@ def paragraph(agent, scen_q: str, reply: str, tables: list[str]) -> str:
     figures = (f" It reports real figures — {', '.join(nums)} — pulled from "
                f"the data during the recording." if nums else "")
     return (
-        f"**The ask.** {scen_q.strip()} "
-        f"**What the agent does.** It looks up {plain_tables(tables)} — the "
+        f"**Situation.** {scen_q.strip()} "
+        f"**Agent Action.** It looks up {plain_tables(tables)} — the "
         f"operation's live data, not a briefing pack — and answers in its own "
         f"words: “{clean_opening(reply)}”{figures} "
-        f"**Why you can trust it.** Before answering it runs "
+        f"**Logic.** Before answering it runs "
         f"{method_phrase(agent.governing_equation if agent else '')}, checks "
         f"any numbers given in the question against what the records actually "
         f"say, points out any difference, and names the records behind every "
