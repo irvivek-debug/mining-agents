@@ -21,7 +21,11 @@ import time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-PROFILE = ROOT / "data" / "uat" / ".profile"
+import sys
+# Optional target dir: a second parallel worker needs its own independently
+# minted session — Google invalidates cloned profiles, and signing in again
+# to the same account can rotate older sessions out.
+PROFILE = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "data" / "uat" / ".profile"
 HOME = ("https://vertexaisearch.cloud.google.com/home/cid/"
         "af13d38d-d69f-4dce-9076-f12625444a86?hl=en_US")
 DEADLINE_SECONDS = 900

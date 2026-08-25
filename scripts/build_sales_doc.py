@@ -29,12 +29,20 @@ OUT = ROOT / "reports" / "sales_recordings_companion.md"
 
 
 def first_numbers(text: str, n: int = 3) -> list[str]:
-    """The most salient figures the agent actually reported."""
-    hits = re.findall(r"\b\d[\d,]*\.?\d*\s*(?:%|mm|kPa|t|tph|days?|hours?)?", text)
+    """The most salient figures the agent actually reported.
+
+    Only numbers that read as findings: carrying a unit/% or a real decimal.
+    Bare integers are skipped -- the first draft surfaced '475913' (a chunk
+    of the project id) and '1.' (a list marker) as "key figures".
+    """
+    hits = re.findall(
+        r"\b\d[\d,]*\.\d+\s*(?:%|mm|kPa|t\b|tph|days?|hours?)?"    # decimals
+        r"|\b\d[\d,]*\s*(?:%|mm|kPa|tph|days?|hours?)\b",            # int + unit
+        text)
     seen, out = set(), []
     for h in hits:
-        h = h.strip()
-        if len(h) < 2 or h in seen:
+        h = " ".join(h.split())
+        if h in seen or "475913" in h:
             continue
         seen.add(h); out.append(h)
         if len(out) == n:
