@@ -185,7 +185,11 @@ def token_set(a: dict) -> set[str]:
 
 def assess(a: dict, reply: str, prompt: str = "") -> dict:
     r = (reply or "").strip()
-    answered = len(r) > 80 and not r.lower().startswith(("error", "something went wrong"))
+    # >80 chars dated from agents that wrote reports. The rebuilt agents
+    # answer concisely -- "There are 30 drill holes in the database." is 41
+    # chars, correct against BigQuery, and was scored as not answering.
+    # An answer is judged by having content, not by being long.
+    answered = len(r) > 15 and not r.lower().startswith(("error", "something went wrong"))
     vocab = token_set(a)
     # Prefix match, not exact substring. "crusher" from the agent's own name
     # does not appear in a reply that says "crushing", and "geostatistics"
@@ -226,6 +230,57 @@ def assess(a: dict, reply: str, prompt: str = "") -> dict:
 
 def normalise(t: str) -> str:
     return " ".join((t or "").split()).strip().lower()
+
+
+
+REVIEW_SCROLL_JS = r"""async () => {
+  // Find the chat scroller inside the shadow tree.
+  let scroller = null;
+  const walk = (root) => {
+    for (const el of root.querySelectorAll('*')) {
+      const c = (el.className || '').toString();
+      if (/chat-mode-scroller|panel-container|scroller/.test(c)
+          && el.scrollHeight > el.clientHeight + 50) scroller = el;
+      if (el.shadowRoot) walk(el.shadowRoot);
+    }
+  };
+  walk(document);
+  if (!scroller) {
+    scroller = document.scrollingElement || document.documentElement;
+  }
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  // 1. Settle at the top: the viewer sees the question first.
+  scroller.scrollTo({top: 0, behavior: 'smooth'});
+  await sleep(2500);
+  // 2. Read the answer: steady 100px steps at reading pace to the bottom.
+  const bottom = scroller.scrollHeight - scroller.clientHeight;
+  for (let y = 0; y <= bottom; y += 100) {
+    scroller.scrollTo({top: y, behavior: 'smooth'});
+    await sleep(650);
+  }
+  scroller.scrollTo({top: bottom, behavior: 'smooth'});
+  // 3. Hold on the conclusion.
+  await sleep(3500);
+  return true;
+}"""
+
+
+def review_scroll(page) -> None:
+    """A guided review pass at the end of each recording.
+
+    The GE UI auto-scrolls erratically while an answer streams, so the raw
+    capture jumps around and a viewer cannot follow the reply. After the
+    conversation completes: settle at the top so the question is seen, then
+    scroll the answer at reading pace, then hold on the conclusion. This is
+    what makes the video a sales asset rather than a test artefact.
+    """
+    import time as _t
+    t0 = _t.time()
+    try:
+        page.evaluate(REVIEW_SCROLL_JS)
+        print(f"    review pass: {_t.time()-t0:.0f}s", flush=True)
+    except Exception as e:
+        print(f"    review pass FAILED: {type(e).__name__}", flush=True)
 
 
 def read_reply(page, seen: set[str], prompt: str, timeout_s: int = 120) -> str:
@@ -352,10 +407,27 @@ def main() -> int:
                 t_loaded = time.time()          # composer visible: page is usable
                 q = prompt_for(a)
                 seen = {normalise(d) for d in replies(page)}
-                box.click()
-                page.keyboard.type(q, delay=1)
-                page.wait_for_timeout(400)
+                # The composer renders before its editor wiring is live; typing
+                # into it then is silently lost, Enter submits nothing, and
+                # read_reply times out on an empty page -- both shards failed
+                # their first agent this way at ~100s while a probe that
+                # waited 8s captured the reply. Type-and-verify instead of
+                # type-and-hope.
+                page.wait_for_timeout(5000)
+                for attempt in range(3):
+                    box.click()
+                    page.keyboard.type(q, delay=1)
+                    page.wait_for_timeout(500)
+                    typed = box.text_content() or ""
+                    if q[:40].strip() in typed:
+                        break
+                    page.wait_for_timeout(3000)   # app not ready; settle and retype
+                else:
+                    raise RuntimeError("composer never accepted the prompt text")
                 page.keyboard.press("Enter")
+                page.wait_for_timeout(1000)
+                if q[:40].strip() in (box.text_content() or ""):
+                    page.keyboard.press("Enter")   # first Enter didn't submit
                 reply = read_reply(page, seen, q, args.timeout)
                 t_turn1 = time.time()           # first response complete
                 # Second turn in the SAME session and the SAME video: the
@@ -370,6 +442,8 @@ def main() -> int:
                     page.keyboard.press("Enter")
                     reply2 = read_reply(page, seen2, q2, args.timeout)
                     t_turn2 = time.time()
+                if reply:
+                    review_scroll(page)
             except Exception as e:
                 note = f"{type(e).__name__}: {str(e)[:160]}"
             latency = round(time.time() - started, 1)
