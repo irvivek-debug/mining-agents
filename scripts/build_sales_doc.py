@@ -56,20 +56,119 @@ def first_sentence(text: str, limit: int = 220) -> str:
     return t[:limit].rsplit(" ", 1)[0] + ("…" if len(t) > limit else "")
 
 
+# Plain-English names for the data each agent reads. Mechanical lookup, not
+# generation: unknown tables fall back to humanising the identifier
+# (drill_holes -> "drill hole records"), never to invented descriptions.
+TABLE_PLAIN = {
+    "drill_holes": "drill hole records",
+    "assay_logs": "assay results",
+    "geological_block_models": "the geological block model",
+    "financial_ledger": "the financial ledger",
+    "mine_production_schedule": "the mine production schedule",
+    "fleet_telemetry": "live fleet telemetry",
+    "fleet_vehicles": "the fleet register",
+    "haul_cycle_log": "haul cycle logs",
+    "haulage_routes": "haulage routes",
+    "dispatch_routes": "dispatch routes",
+    "crusher_telemetry": "crusher telemetry",
+    "plant_telemetry": "plant telemetry",
+    "flotation_assays": "flotation assay results",
+    "metallurgical_recovery": "metallurgical recovery records",
+    "reagent_inventory": "reagent stock levels",
+    "water_balance_logs": "water balance logs",
+    "tsf_piezometers": "tailings dam sensor readings",
+    "geotech_sensors": "geotechnical sensor readings",
+    "vibration_monitors": "vibration monitor readings",
+    "maintenance_logs": "maintenance history",
+    "erp_work_orders": "open work orders",
+    "spares_inventory": "spare parts stock",
+    "inventory_levels": "inventory levels",
+    "purchase_orders": "purchase-order history",
+    "procurement_bids": "supplier bids",
+    "vendor_contracts": "supplier contracts",
+    "contracts": "contracts",
+    "contract_transactions": "contract transactions",
+    "warranty_claims": "warranty claims",
+    "rebate_claims": "rebate claims",
+    "invoices": "invoices",
+    "rail_schedules": "rail schedules",
+    "port_vessels": "vessel movements at the port",
+    "stockpiles": "stockpile records",
+    "blast_designs": "blast designs",
+    "explosives_inventory": "explosives inventory",
+    "pit_designs": "pit designs",
+    "survey_scans": "survey scans",
+    "safety_telemetry": "safety telemetry",
+    "assets": "the asset register",
+    "lube_samples": "oil sample analyses",
+    "qaqc_standards": "QA/QC standards",
+    "contained_metal_price_deck": "the contained-metal price deck",
+    "plan_assumptions": "planning assumptions",
+    "plan_scenarios": "planning scenarios",
+}
+
+MEMO_NOISE = re.compile(
+    r"^(memorandum|to:|from:|subject:|agent:|governing method:|date:|re:)", re.I)
+
+
+def plain_tables(tables: list[str]) -> str:
+    names = []
+    for t in tables[:3]:
+        short = t.split(".")[-1]
+        names.append(TABLE_PLAIN.get(short, short.replace("_", " ") + " records"))
+    if not names:
+        return "the operation's own records"
+    if len(names) == 1:
+        return names[0]
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def method_phrase(equation: str) -> str:
+    """The method only if it reads as a name; formulas stay off the sales page."""
+    eq = (equation or "").strip()
+    # Anything that smells like maths stays off the sales page: symbols,
+    # operator words, or a colon introducing a formula.
+    mathy = any(ch in eq for ch in "=^{}\\+*/:()[]") or \
+            any(w in eq.lower() for w in ("min ", "max ", "sum", "sigma", "delta"))
+    if not eq or mathy or len(eq) > 60:
+        return "its governing calculation"
+    return f"its {eq} method"
+
+
+def clean_opening(text: str, limit: int = 200) -> str:
+    """First substantive line of the real reply, memo boilerplate skipped.
+
+    Selection and trimming only -- every word is the agent's own.
+    """
+    for raw in re.sub(r"[#*|`]+", " ", text).splitlines():
+        line = re.sub(r"\s+", " ", raw).strip()
+        if len(line) < 25 or MEMO_NOISE.match(line):
+            continue
+        return line[:limit].rsplit(" ", 1)[0] + ("…" if len(line) > limit else "")
+    return first_sentence(text, limit)
+
+
 def paragraph(agent, scen_q: str, reply: str, tables: list[str]) -> str:
-    """~100 words: input, output, logic — from real material only."""
+    """~100 words a salesperson can read aloud.
+
+    Nothing is generated: the question is verbatim, the quoted line and the
+    figures are lifted from the recorded reply, the data names come from a
+    fixed lookup, and the connecting sentences are a fixed template.
+    """
     nums = first_numbers(reply)
-    opening = first_sentence(reply)
-    t = ", ".join(f"`{x}`" for x in tables[:3]) or "its declared sources"
-    method = (agent.governing_equation or "its governing method").strip()
+    figures = (f" It reports real figures — {', '.join(nums)} — pulled from "
+               f"the data during the recording." if nums else "")
     return (
-        f"**Input.** {scen_q.strip()} "
-        f"**Output.** The agent answers from live data — opening: “{opening}”"
-        f"{' — key figures ' + ', '.join(nums) if nums else ''}. "
-        f"**Logic.** It reads {t} in BigQuery, applies {method}, reconciles "
-        f"any figures supplied in the question against what the data actually "
-        f"says, and cites the tables behind every number — so the answer is "
-        f"traceable, not plausible."
+        f"**The ask.** {scen_q.strip()} "
+        f"**What the agent does.** It looks up {plain_tables(tables)} — the "
+        f"operation's live data, not a briefing pack — and answers in its own "
+        f"words: “{clean_opening(reply)}”{figures} "
+        f"**Why you can trust it.** Before answering it runs "
+        f"{method_phrase(agent.governing_equation if agent else '')}, checks "
+        f"any numbers given in the question against what the records actually "
+        f"say, points out any difference, and names the records behind every "
+        f"figure. If it cannot back something with data, it says so instead "
+        f"of guessing."
     )
 
 
