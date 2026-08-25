@@ -242,18 +242,28 @@ def create_engine(agent) -> str:
         f"omit project_id -- both fail, and the retries cost you the answer.\n"
     )
 
-    instruction = data_access + (agent.system_instruction or (
-        f"You are {agent.name}. {agent.description or ''}\n"
-        f"Your governing method is {agent.governing_equation}.\n"
-        f"Your data is {tables}. Read it before you answer.\n"
-        f"If the question supplies its own assumptions — a price, a recovery, a "
-        f"cost, a rate — reconcile each one against {tables} and state plainly "
-        f"where they differ and which you used. Never present a figure computed "
-        f"only from numbers in the question as if it were grounded in the "
-        f"operation.\n"
-        f"Cite the table behind every figure you report. Where you cannot "
-        f"evidence something, say so explicitly rather than omitting it."
-    )).strip()
+    # The reconciliation demand must reach BOTH branches. It lived only in
+    # the composed branch, so the two agents carrying a custom
+    # system_instruction (AGT-19, S01-COORDINATOR) never received it -- and
+    # they were exactly the two UAT content failures: fluent answers computed
+    # from the question's own numbers, citing nothing.
+    grounding_demand = (
+        f"\nIf the question supplies its own assumptions — a price, a "
+        f"recovery, a cost, a rate — reconcile each one against {tables} and "
+        f"state plainly where they differ and which you used. Never present "
+        f"a figure computed only from numbers in the question as if it were "
+        f"grounded in the operation. Cite the table behind every figure you "
+        f"report; where you cannot evidence something, say so explicitly."
+    )
+    custom = (agent.system_instruction or "").strip()
+    if custom:
+        instruction = (data_access + custom + grounding_demand).strip()
+    else:
+        instruction = (data_access +
+            f"You are {agent.name}. {agent.description or ''}\n"
+            f"Your governing method is {agent.governing_equation}.\n"
+            f"Your data is {tables}. Read it before you answer."
+            + grounding_demand).strip()
 
     app = AdkApp(agent=llm_agent.LlmAgent(
         name=agent.agent_id.replace("-", "_").lower(),

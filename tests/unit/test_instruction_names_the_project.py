@@ -65,5 +65,47 @@ def test_source_is_wired_not_just_this_test_file():
     """Guards the real composition path, not this file's copy of it."""
     src = (ROOT / "scripts" / "register_agents.py").read_text()
     assert "data_access" in src
-    assert "instruction = data_access + (" in src, \
+    assert src.count("data_access +") >= 2, \
         "preamble is no longer prepended to both branches"
+
+
+# --- the reconciliation demand must reach every agent -------------------------
+# It lived only in the composed branch. The two agents carrying a custom
+# system_instruction (AGT-19, S01-COORDINATOR) never received it, and they
+# were exactly the two UAT content failures: fluent answers computed from the
+# question's own numbers, citing nothing.
+
+def _built(agent) -> str:
+    """The instruction exactly as register_agents composes it."""
+    import re
+    src = (ROOT / "scripts" / "register_agents.py").read_text()
+    # execute the real assembly block against this agent, not a paraphrase
+    ns = {"agent": agent, "PROJECT": R.PROJECT, "DATASET": R.DATASET}
+    block = src[src.index("    tables = "):src.index("    app = AdkApp")]
+    import textwrap
+    exec(textwrap.dedent(block), ns)
+    return ns["instruction"]
+
+
+@pytest.mark.parametrize("agent",
+    [a for a in C.CATALOG if (a.system_instruction or "").strip()],
+    ids=lambda a: a.agent_id)
+def test_custom_instruction_agents_get_the_reconciliation_demand(agent):
+    built = _built(agent)
+    assert "reconcile each one against" in built
+    assert "Never present a figure computed only from numbers in the question" in built
+    assert agent.system_instruction[:40] in built, "custom instruction was dropped"
+
+
+def test_composed_agents_still_get_the_reconciliation_demand():
+    agent = next(a for a in C.CATALOG if not (a.system_instruction or "").strip())
+    built = _built(agent)
+    assert "reconcile each one against" in built
+    assert "Your governing method is" in built
+
+
+def test_the_demand_is_one_string_not_two_copies():
+    """Duplicated prose drifts; the demand must exist once and be shared."""
+    src = (ROOT / "scripts" / "register_agents.py").read_text()
+    assert src.count("reconcile each one against") == 1
+    assert src.count("grounding_demand") >= 3  # defined once, used in both branches
