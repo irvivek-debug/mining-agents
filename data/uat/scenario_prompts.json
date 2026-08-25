@@ -92,7 +92,7 @@
   "Triggers emergency feed halt advisory and stages SAP PM work order."
  ],
  "S05-1-CSS": [
-  "Calculate hydraulic pressure setpoint for closed-side setting 135mm.",
+  "Based on the crusher telemetry data, what hydraulic pressure setpoint does your governing method indicate for a closed-side setting of 135mm? Report the figures from the data and cite the table you read.",
   "CSS setpoint 135mm computed with hydraulic pressure 18.2 MPa."
  ],
  "S05-2-FEED": [
