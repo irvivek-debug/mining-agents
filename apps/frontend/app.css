@@ -821,3 +821,17 @@ main.main-content { max-width: 1200px; margin: 0 auto; padding: 36px 24px 80px 2
   .arch-seam-down, .arch-seam-up { opacity: 1; transform: none; }
   .arch-block:hover, .arch-control-card:hover, .agent-launch-chip:hover { transform: none; }
 }
+
+/* Recording + sales script card (replaces the simulated terminal). The video
+   is the proof — an agent recorded answering its real scenario — and the
+   script beneath it is what a salesperson says while it plays. */
+.agent-recording-card {
+  background: var(--m3-surface); border: 1px solid var(--m3-outline-variant);
+  border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px;
+}
+.sales-script { display: flex; flex-direction: column; gap: 10px; }
+.sales-script-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--m3-primary); margin-bottom: 3px;
+}
+.sales-script-text { font-size: 12.5px; line-height: 1.55; color: var(--m3-text-secondary); }

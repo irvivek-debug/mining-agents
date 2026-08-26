@@ -649,6 +649,26 @@
       el("dd-btn-urn").setAttribute("data-urn",
         "urn:agent:genial-union-475913-i7:us-central1:" + a.id.toLowerCase());
 
+      // The recording and its sales script replace the simulated terminal:
+      // a real agent answering its real scenario beats a fake one every time.
+      var asset = (window.SALES_ASSETS || {})[a.id];
+      var recCard = el("dd-recording-card");
+      if (recCard) {
+        if (asset && asset.video) {
+          recCard.style.display = "";
+          var v = el("dd-video");
+          if (v.getAttribute("src") !== asset.video) {
+            v.setAttribute("src", asset.video);
+            v.load();
+          }
+          el("dd-sales-situation").textContent = asset.situation || "";
+          el("dd-sales-action").textContent = asset.action || "";
+          el("dd-sales-logic").textContent = asset.logic || "";
+        } else {
+          recCard.style.display = "none";
+        }
+      }
+
       el("dd-provenance-list").innerHTML = (a.provenance || []).length
         ? a.provenance.map(function (p) {
             return '<div class="prov-item-row"><div class="prov-left">' +
@@ -733,21 +753,6 @@
       on("agent-quick-select", "change", function (e) { openDeepDive(e.target.value); });
       on("dd-btn-urn", "click", function (e) {
         Clip.copy(e.currentTarget.getAttribute("data-urn"), e.currentTarget);
-      });
-      on("btn-launch-sim", "click", function () {
-        var a = agents()[active];
-        if (!a) return;
-        el("sim-modal-title").textContent = "Simulation: " + a.name + " (" + a.id + ")";
-        el("sim-modal-desc").textContent = "Deterministic reasoning over " + a.department + " with zero-hallucination verification.";
-        el("sim-terminal-output").innerHTML =
-          "[INIT] Connecting to reasoning engine…<br>" +
-          "[GROUNDING] " + ((a.provenance || []).map(function (p) { return p.name; }).join(", ") || "no declared tables") + "<br>" +
-          "[SOLVER] " + esc(a.governingEquation) + "<br>" +
-          "[AUTHORITY] " + esc(a.authority) + (a.hitl ? " — dual-key human release required" : "") + "<br>" +
-          "[VALUE] " + esc(a.valueClass) + "<br>" +
-          "[STAGING] Emitting mediated non-SCADA advisory payload…<br>" +
-          "[DONE] 0 exceptions";
-        el("modal-sim").classList.add("active");
       });
       on("btn-lineage-trace", "click", function () {
         var a = agents()[active];

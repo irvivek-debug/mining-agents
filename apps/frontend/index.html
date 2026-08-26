@@ -389,10 +389,25 @@
           </a>
           <div class="launch-note" id="dd-launch-note"></div>
           <div class="launch-divider">Inspect without invoking</div>
-          <button class="btn-block btn-launch-sim" id="btn-launch-sim">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Launch Autonomous Simulation
-          </button>
+          <div class="agent-recording-card" id="dd-recording-card">
+            <div class="card-header-label"><span>See it work — recorded live</span></div>
+            <video id="dd-video" controls preload="metadata" playsinline
+                   style="width:100%; border-radius:8px; background:#000; display:block;"></video>
+            <div class="sales-script">
+              <div class="sales-script-block">
+                <div class="sales-script-label">Situation</div>
+                <div class="sales-script-text" id="dd-sales-situation"></div>
+              </div>
+              <div class="sales-script-block">
+                <div class="sales-script-label">Agent Action</div>
+                <div class="sales-script-text" id="dd-sales-action"></div>
+              </div>
+              <div class="sales-script-block">
+                <div class="sales-script-label">Logic</div>
+                <div class="sales-script-text" id="dd-sales-logic"></div>
+              </div>
+            </div>
+          </div>
           <button class="btn-block btn-lineage-trace" id="btn-lineage-trace">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="6" y1="9" x2="6" y2="15"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
             View Full Lineage Trace
@@ -513,6 +528,7 @@
 <script src="data.js"></script>
 <script src="data-static.js"></script>
 <script src="data-graph.js"></script>
-<script src="app.js"></script>
+<script src="sales-assets.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
