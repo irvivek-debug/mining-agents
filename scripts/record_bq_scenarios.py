@@ -25,35 +25,36 @@ AGENT_CARD = "Mining Operations Insight Agent"
 
 SCENARIOS = {
   "S1-grade-reconciliation": [
-    "How many blocks are in geological_block_models and what is the average estimated copper grade percentage by lithology_type?",
-    "From drill_assay_logs, what is the average actual copper_grade_pct by geology_code?",
-    "Compare the estimated grade by lithology against the assayed grade for the matching geology code. Which lithology shows the largest gap between estimate and actual, in percentage points?",
-    "For that lithology, how many blocks are affected and what is the total estimated contained metal at risk if the actual grade applies? Show your calculation.",
-    "Summarize in three sentences for a mine general manager: what is misestimated, by how much, and what should we do first?",
+    "What is our planned head grade by rock type, and how many blocks does the resource model hold?",
+    "What head grades did the assay lab actually measure, by logged rock type?",
+    "Reconcile planned against assayed head grade by rock type. Where is the resource model most wrong, in percentage points?",
+    "For that rock type: how many blocks are affected, and what is the estimated contained metal at risk if the assayed grade is the truth? Show the calculation.",
+    "Three sentences for the mine GM: what is misestimated, by how much, and the first corrective action.",
   ],
   "S2-anomaly-hunt": [
-    "What metrics exist in telemetry_stream and how many readings does each have?",
-    "For the metric with the most readings, plot the daily average over time. Any visible drift?",
-    "Find anomalous readings in telemetry_stream: values more than 3 standard deviations from the mean for their metric_name. How many are there, and which assets produce the most?",
-    "Take the asset with the most anomalies: show its anomalous readings in time order. Are they clustered - and does the cluster look like a developing fault or a sensor problem? Justify from the data.",
-    "Draft the one-paragraph shift-handover note a plant supervisor should read tomorrow morning.",
+    "What does our plant telemetry cover, and how many readings per instrument metric?",
+    "Trend the busiest metric as a daily average. Any drift a reliability engineer should worry about?",
+    "Hunt for anomalous readings across the plant: anything beyond three standard deviations for its metric. How many, and which assets are the worst offenders?",
+    "For the worst offender: show its anomalies in time order. Developing fault or bad sensor? Argue from the data.",
+    "Write tomorrow morning's shift-handover paragraph for the plant supervisor.",
   ],
   "S3-parts-failure-graph": [
-    "Which parts in spares_inventory are at_or_below_reorder right now? List part_number, stock_level, lead_time_days.",
-    "Using work_order_parts_edge, which historical work orders consumed those at-risk parts?",
-    "Join through to erp_work_orders: which assets did those work orders repair, and what was the total repair_cost per asset?",
-    "So: rank the assets most exposed to a parts stock-out today - combine the number of at-risk parts they depend on, the historical repair cost, and the longest lead_time_days among their at-risk parts. Explain the ranking.",
-    "If we could expedite only three purchase orders this week, which parts, and why those three?",
+    "Which spare parts are at stock-out risk right now, and what are their supplier lead times?",
+    "Which maintenance work orders historically consumed those at-risk parts?",
+    "Which assets did that maintenance repair, and what has each asset cost us in repairs through those parts?",
+    "Rank the assets most exposed if we stock out this week — weigh the number of at-risk parts, the repair cost history, and the longest supplier lead time. Explain the ranking.",
+    "We can expedite three purchase orders. Which parts, and why those three?",
   ],
   "S4-pit-to-port-cascade": [
-    "From crusher_states, what is the average feed_rate_tph, and how many hours of readings show the bypass_valve_open?",
-    "If the crusher stops for 6 hours at that average feed rate, how many tonnes of production are lost?",
-    "From stockpiles, how many hours of reclaim can each stockpile sustain at its reclaim_rate_tph before running empty? Which run out first?",
-    "Trace forward: using rail_schedules, which consists load from those at-risk stockpiles, and using port_vessels (consist_ids contains the consist), which vessels do they feed?",
-    "Those vessels: what are their demurrage_days and loaded_tonnes? Estimate the demurrage exposure if loading slips by one day, stating your assumption for the daily demurrage rate as a range.",
-    "Write the five-line brief for the logistics manager: the chain from crusher to vessel, the first bottleneck, and the single action that buys the most time.",
+    "What is the crusher's average feed rate, and how often is it running in bypass?",
+    "A six-hour crusher outage at that feed rate: how many tonnes of production do we lose?",
+    "How many hours of reclaim buffer does each stockpile hold before running empty, and which run out first?",
+    "Trace the exposure downstream: which rail consists load from the at-risk stockpiles, and which vessels do those consists feed?",
+    "For those vessels: demurrage days on record, tonnes loaded, and the demurrage exposure if loading slips a day — state your day-rate assumption as a range.",
+    "Five lines for the logistics manager: the chain from crusher to vessel, the first bottleneck, and the single action that buys the most time.",
   ],
 }
+
 
 REVIEW_JS = r"""async () => {
   let sc = null;

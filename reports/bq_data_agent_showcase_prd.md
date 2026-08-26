@@ -1,4 +1,12 @@
-# BigQuery Data Agent Showcase — PRD & Prompt Scripts
+# BigQuery Data Agent Showcase — PRD & Prompt Scripts (v2)
+
+**What changed in v2.** The data catalog now carries business descriptions
+for all 10 tables and 59 key columns (`scripts/enrich_catalog.py`), and the
+agent's instruction includes a mining glossary (head grade, CSS, reclaim
+buffer, stock-out risk, laycan, TML, demurrage). The v2 prompts therefore
+speak pure business language — no prompt names a column — and the catalog
+does the translating on camera. That is itself the governance story: the
+catalog teaches the agent the business's vocabulary.
 
 **What this is.** Four demo scenarios run *entirely inside BigQuery Data
 Agents* — conversational prompts over `mining_data`, no custom agents, no
@@ -20,12 +28,12 @@ never memorised).
 us what we actually dug. The gap between them is misclassified ore — sent
 to the wrong destination at real cost. Watch the data agent find it."
 
-**Prompt script**
-1. `How many blocks are in geological_block_models and what is the average estimated copper grade percentage by lithology_type?`
-2. `From drill_assay_logs, what is the average actual copper_grade_pct by geology_code?`
-3. `Compare the estimated grade by lithology against the assayed grade for the matching geology code. Which lithology shows the largest gap between estimate and actual, in percentage points?`
-4. `For that lithology, how many blocks are affected and what is the total estimated contained metal at risk if the actual grade applies? Show your calculation.`
-5. `Summarize in three sentences for a mine general manager: what is misestimated, by how much, and what should we do first?`
+**Prompt script** *(v2 — business language; the catalog does the translating)*
+1. `What is our planned head grade by rock type, and how many blocks does the resource model hold?`
+2. `What head grades did the assay lab actually measure, by logged rock type?`
+3. `Reconcile planned against assayed head grade by rock type. Where is the resource model most wrong, in percentage points?`
+4. `For that rock type: how many blocks are affected, and what is the estimated contained metal at risk if the assayed grade is the truth? Show the calculation.`
+5. `Three sentences for the mine GM: what is misestimated, by how much, and the first corrective action.`
 
 **Data:** `geological_block_models` (1,000) ⟷ `drill_assay_logs` (295) via lithology/geology code.
 **Feasibility:** HIGH — both tables populated, shared categorical key, simple aggregates.
@@ -39,12 +47,12 @@ to the wrong destination at real cost. Watch the data agent find it."
 **Setup line.** "This is the largest table on the site — every sensor
 reading from the plant. Nobody reads it. The data agent does."
 
-**Prompt script**
-1. `What metrics exist in telemetry_stream and how many readings does each have?`
-2. `For the metric with the most readings, plot the daily average over time. Any visible drift?`
-3. `Find anomalous readings in telemetry_stream: values more than 3 standard deviations from the mean for their metric_name. How many are there, and which assets produce the most?`
-4. `Take the asset with the most anomalies: show its anomalous readings in time order. Are they clustered — and does the cluster look like a developing fault or a sensor problem? Justify from the data.`
-5. `Draft the one-paragraph shift-handover note a plant supervisor should read tomorrow morning.`
+**Prompt script** *(v2 — business language; the catalog does the translating)*
+1. `What does our plant telemetry cover, and how many readings per instrument metric?`
+2. `Trend the busiest metric as a daily average. Any drift a reliability engineer should worry about?`
+3. `Hunt for anomalous readings across the plant: anything beyond three standard deviations for its metric. How many, and which assets are the worst offenders?`
+4. `For the worst offender: show its anomalies in time order. Developing fault or bad sensor? Argue from the data.`
+5. `Write tomorrow morning's shift-handover paragraph for the plant supervisor.`
 
 **Data:** `telemetry_stream` (25,946).
 **Feasibility:** HIGH — single wide table; statistical outliers verified to exist before demo.
@@ -59,12 +67,12 @@ reading from the plant. Nobody reads it. The data agent does."
 work orders connect to machines. A stock-out on a $200 part can idle a
 $20M asset. The agent walks the graph."
 
-**Prompt script**
-1. `Which parts in spares_inventory are at_or_below_reorder right now? List part_number, stock_level, lead_time_days.`
-2. `Using work_order_parts_edge, which historical work orders consumed those at-risk parts?`
-3. `Join through to erp_work_orders: which assets did those work orders repair, and what was the total repair_cost per asset?`
-4. `So: rank the assets most exposed to a parts stock-out today — combine the number of at-risk parts they depend on, the historical repair cost, and the longest lead_time_days among their at-risk parts. Explain the ranking.`
-5. `If we could expedite only three purchase orders this week, which parts, and why those three?`
+**Prompt script** *(v2 — business language; the catalog does the translating)*
+1. `Which spare parts are at stock-out risk right now, and what are their supplier lead times?`
+2. `Which maintenance work orders historically consumed those at-risk parts?`
+3. `Which assets did that maintenance repair, and what has each asset cost us in repairs through those parts?`
+4. `Rank the assets most exposed if we stock out this week — weigh the number of at-risk parts, the repair cost history, and the longest supplier lead time. Explain the ranking.`
+5. `We can expedite three purchase orders. Which parts, and why those three?`
 
 **Data:** `spares_inventory` (105) → `work_order_parts_edge` (186) → `erp_work_orders` (500).
 **Feasibility:** MEDIUM-HIGH — the two-hop chain is verified non-empty; graph is shallow (186 edges) so depth is honest, not implied.
@@ -79,13 +87,13 @@ $20M asset. The agent walks the graph."
 owner sends a demurrage invoice. Four systems apart. Watch one question
 walk the whole chain."
 
-**Prompt script**
-1. `From crusher_states, what is the average feed_rate_tph, and how many hours of readings show the bypass_valve_open?`
-2. `If the crusher stops for 6 hours at that average feed rate, how many tonnes of production are lost?`
-3. `From stockpiles, how many hours of reclaim can each stockpile sustain at its reclaim_rate_tph before running empty? Which run out first?`
-4. `Trace forward: using rail_schedules, which consists load from those at-risk stockpiles, and using port_vessels (consist_ids contains the consist), which vessels do they feed?`
-5. `Those vessels: what are their demurrage_days and loaded_tonnes? Estimate the demurrage exposure if loading slips by one day, stating your assumption for the daily demurrage rate as a range.`
-6. `Write the five-line brief for the logistics manager: the chain from crusher to vessel, the first bottleneck, and the single action that buys the most time.`
+**Prompt script** *(v2 — business language; the catalog does the translating)*
+1. `What is the crusher's average feed rate, and how often is it running in bypass?`
+2. `A six-hour crusher outage at that feed rate: how many tonnes of production do we lose?`
+3. `How many hours of reclaim buffer does each stockpile hold before running empty, and which run out first?`
+4. `Trace the exposure downstream: which rail consists load from the at-risk stockpiles, and which vessels do those consists feed?`
+5. `For those vessels: demurrage days on record, tonnes loaded, and the demurrage exposure if loading slips a day — state your day-rate assumption as a range.`
+6. `Five lines for the logistics manager: the chain from crusher to vessel, the first bottleneck, and the single action that buys the most time.`
 
 **Data:** `crusher_states` (167) → `stockpiles` (60) → `rail_schedules` (120) → `port_vessels` (via `UNNEST(consist_ids)`).
 **Feasibility:** MEDIUM — the chain is real (array join verified); the 6-hour outage is a stated hypothetical, and the prompt makes the agent state its rate assumption as a range rather than invent a price.
