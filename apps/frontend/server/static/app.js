@@ -1377,3 +1377,26 @@
   window.App = App;
   document.addEventListener("DOMContentLoaded", App.init);
 })();
+
+
+/* --------------------------------------------------- data insights (BQ) */
+/* Self-contained: runs outside the app IIFE, so it owns its helpers. */
+(function renderBqInsights() {
+  var grid = document.getElementById("bq-insights-grid");
+  if (!grid || !window.BQ_INSIGHTS) return;
+  var esc = function (t) {
+    var d = document.createElement("div");
+    d.textContent = String(t == null ? "" : t);
+    return d.innerHTML;
+  };
+  grid.innerHTML = window.BQ_INSIGHTS.map(function (c) {
+    return '<div class="bq-insight-card">' +
+      '<div class="bq-insight-meta"><span class="bq-insight-kind">' + esc(c.kind) + '</span>' +
+      '<span class="bq-insight-impact">' + esc(c.impact) + '</span></div>' +
+      '<div class="bq-insight-title">' + esc(c.title) + '</div>' +
+      '<div class="bq-insight-question">\u201c' + esc(c.question) + '\u201d</div>' +
+      '<div class="bq-insight-finding">' + esc(c.finding) + '</div>' +
+      (c.video ? '<video controls preload="metadata" playsinline src="' + esc(c.video) + '"></video>' : '') +
+      '</div>';
+  }).join("");
+})();

@@ -835,3 +835,29 @@ main.main-content { max-width: 1200px; margin: 0 auto; padding: 36px 24px 80px 2
   color: var(--m3-primary); margin-bottom: 3px;
 }
 .sales-script-text { font-size: 12.5px; line-height: 1.55; color: var(--m3-text-secondary); }
+
+/* Data insights: BQ Data Agent scenarios beside the tables and graph they
+   query. Findings are computed live at build time; the video is the proof. */
+.bq-insights-section { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--m3-border); }
+.bq-insights-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px; margin-top: 14px;
+}
+.bq-insight-card {
+  background: var(--m3-surface); border: 1px solid var(--m3-outline-variant);
+  border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.bq-insight-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bq-insight-kind {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--m3-primary); background: color-mix(in srgb, var(--m3-primary) 10%, transparent);
+  padding: 3px 8px; border-radius: 99px;
+}
+.bq-insight-impact { font-size: 11px; font-weight: 600; color: var(--m3-success); }
+.bq-insight-title { font-family: var(--font-serif); font-size: 16.5px; font-weight: 700; }
+.bq-insight-question { font-size: 12px; color: var(--m3-text-tertiary); font-style: italic; }
+.bq-insight-finding {
+  font-size: 12.5px; line-height: 1.5; color: var(--m3-text-secondary);
+  border-left: 3px solid var(--m3-primary); padding-left: 10px;
+}
+.bq-insight-card video { width: 100%; border-radius: 8px; background: #000; }
