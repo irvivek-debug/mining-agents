@@ -486,6 +486,22 @@
         <div class="datagraph-detail" id="datagraph-detail"></div>
       </div>
     </div>
+
+    <div class="bq-insights-section">
+      <div class="datagraph-head">
+        <div>
+          <div class="eyebrow" style="color:var(--m3-primary);">&block; Data insights</div>
+          <h2 style="font-family:var(--font-serif); font-size:21px; font-weight:700; margin-bottom:4px;">Ask the data directly</h2>
+          <p style="font-size:12.5px; color:var(--m3-text-secondary); max-width:680px;">
+            The same tables and graph above, questioned in plain business language through a
+            BigQuery Data Agent &mdash; no code, no dashboards. Each recording shows the agent
+            writing and running its own SQL; every figure below is computed live from the
+            warehouse when this page is built, and verified against the recording&rsquo;s transcript.
+          </p>
+        </div>
+      </div>
+      <div class="bq-insights-grid" id="bq-insights-grid"></div>
+    </div>
   </div>
 
 </main>
@@ -529,6 +545,7 @@
 <script src="data-static.js"></script>
 <script src="data-graph.js"></script>
 <script src="sales-assets.js"></script>
+  <script src="bq-insights.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
