@@ -10,3 +10,6 @@ data/uat/.profile*/
 
 # UAT recordings: ~500MB of .webm, regenerable by re-running scripts/uat_run.py.
 data/uat/videos/
+.DS_Store
+data/uat/videos_prev_*/
+data/uat/videos_uat_evidence_*/
