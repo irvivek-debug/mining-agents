@@ -12,7 +12,7 @@
   "Variogram nugget ratio > 0.45 detected in Sector 3. Recommend infill drilling spacing."
  ],
  "S01-1-LITHOLOGY": [
-  "From drill_holes, profile the drilling campaign: hole count, total metres drilled, the depth distribution, and the azimuth and dip patterns \u2014 show the numbers. Piece-length logging for rock-quality classification is absent: say so plainly, then identify the three holes whose geometry makes them the best candidates for oriented-core re-logging, and why.",
+  "Classify drill core tray #482 rock quality and fracture frequency.",
   "RQD = 78.4% calculated; flags fault contact boundary."
  ],
  "S01-2-GEOSTAT": [
@@ -32,7 +32,7 @@
   "Generates 12-month extraction schedule preserving 1.30 Factor of Safety."
  ],
  "S02-1-GEOTECH": [
-  "From the geotech sensors on the 48 degree wall section, report the actual readings: slope angle, displacement, pore pressure and alarm states \u2014 show them. Then compute the simple stability ratio this data supports using a stated assumption of 35 degrees friction angle, in plain arithmetic, give the result as a range, and let the displacement trend make the final call: safe to continue, or hold.",
+  "Calculate Bishop simplified Factor of Safety on 48 deg pit wall.",
   "FoS = 1.38 calculated; confirms wall stability under dry conditions."
  ],
  "S02-2-SCHEDULE": [
@@ -48,11 +48,11 @@
   "Flags 4.8% ore under-haul in Bench 12; requests re-leveling."
  ],
  "S03-COORDINATOR": [
-  "From approved blasts in our design records, show the actual range of burden and powder factor used, against the fleet average \u2014 values on screen. For a harder-than-average block, recommend how far to move burden and powder factor while staying inside the range our own data supports, with each calculation step shown in plain numbers, and confirm from explosives inventory that magazine stock covers the recommendation.",
+  "Optimize burden and powder factor for hard granodiorite ($UCS=160 MPa$).",
   "Calculates burden B=6.2m, spacing S=7.1m, powder factor 0.78 kg/m3."
  ],
  "S03-1-GEOMETRY": [
-  "From our blast design records, profile the geometry we actually drill: average burden, spacing, hole diameter and hole depth, and the recorded powder factor \u2014 show the values and verify the powder factor arithmetic in plain numbers. Then recommend a staggered pattern for a 15 m production bench that stays inside our own historical envelope, saying which numbers come from data and which are judgment.",
+  "Design 180-hole staggered pattern for 15m production bench.",
   "Staggered 6.2x7.1m pattern generated with 1.8m sub-drill."
  ],
  "S03-2-EXPLOSIVE": [
@@ -60,7 +60,7 @@
   "Bulk emulsion 70/30 VOD = 5,400 m/s; explosive energy = 3.6 MJ/kg."
  ],
  "S03-3-VIBRATION": [
-  "From blast design records, compute the scaled distance from our typical charge to the crusher at 450 metres \u2014 plain arithmetic from the recorded hole geometry and powder factor, values shown. Site attenuation constants are uncalibrated: say so plainly, bound the expected vibration as a range using the standard published constants as a named assumption, and recommend the calibration blast that would make it exact.",
+  "Predict PPV vibration at primary crusher 450m from blast.",
   "Scaled distance PPV = 8.4 mm/s (< 15.0 mm/s limit)."
  ],
  "S03-R-CRITIC": [
@@ -112,7 +112,7 @@
   "Diagnoses slurry pooling; recommends water addition to 1,250 m3/h."
  ],
  "S06-1-SAG": [
-  "From plant telemetry for the SAG mill, trend power draw, rotational speed and any vibration metrics over the last 30 days \u2014 show the values and flag any reading more than 3 standard deviations from its mean. Acoustic arrays are not installed: state that plainly, then argue from the recorded metrics alone whether current operation looks like liner wear, overload, or normal running.",
+  "Analyze 1/3-octave acoustic sensor array on SAG mill shell.",
   "Acoustic signal shows toe angle dampened by 34%; confirms pooling."
  ],
  "S06-2-BALL": [
@@ -120,7 +120,7 @@
   "Daily ball addition = 14.2 tonnes of 60mm forged steel balls."
  ],
  "S06-3-CYCLONE": [
-  "From plant telemetry, report what the grinding circuit actually records with latest values \u2014 show them. Cyclone geometry and operating pressure are not instrumented: say so plainly, then give an illustrative cut-size answer as a range using standard 10-inch cyclone geometry as a named assumption, in plain arithmetic, and specify the two measurements that would make it exact.",
+  "Model cut size d50c on 12-cyclone cluster operating at 110 kPa.",
   "d50c = 74 microns; circulating load calculated at 285%."
  ],
  "S06-R-CRITIC": [
@@ -132,7 +132,7 @@
   "Calculates PAX dosage 38 g/t, predicting +1.8% Cu recovery gain."
  ],
  "S07-1-REAGENT": [
-  "From reagent inventory, report our frother position: MIBC stock level, reorder point, lead time and dollar value, plus any alternative frothers held \u2014 show the numbers. Then recommend a dosage as a grams-per-tonne range using the stated industry envelope of 5 to 15 g/t, compute weekly consumption across that range in plain arithmetic, and state how many weeks current stock covers at each end.",
+  "Calculate frother MIBC addition rate for 1.4 cm/s air velocity.",
   "MIBC dosage = 18 g/t; bubble Sauter diameter d32 = 1.2mm."
  ],
  "S07-2-AIR": [
@@ -156,7 +156,7 @@
   "Decant return flow = 1,450 m3/h; pond volume 2.1 Mm3."
  ],
  "S08-2-PORE": [
-  "From the TSF piezometers, trend pore pressure and phreatic surface by location across the full record \u2014 show the values and flag the worst factor-of-safety readings. Then estimate the dissipation timeline directly from the observed decay between readings, in plain arithmetic with no consolidation formulas, quote it as a range, and name the single lab parameter that would firm it up.",
+  "Model Terzaghi 1D consolidation under Dam 2 embankment.",
   "Excess pore pressure dissipation rate = 0.04 m/week."
  ],
  "S08-3-THICK": [
@@ -172,7 +172,7 @@
   "Classifies ISO 10816-3 Zone C, RUL = 96h; stages SAP PM work pack."
  ],
  "S09-1-VIBRATION": [
-  "From crusher telemetry, trend rotational torque and feed rate over the last 30 days \u2014 show the values and flag any outlier beyond 3 standard deviations with its timestamp. Spectral vibration data is absent: say so plainly, then use the assets register's stored physics parameters to state which defect signature we would expect to see, whether the trend is consistent with it, and finish with a clear inspect or do-not-inspect call.",
+  "Parse 10-1000Hz vibration spectrum for bearing defect harmonics.",
   "Identifies 2x BPFI bearing defect peak at 1480 RPM (4.8 mm/s)."
  ],
  "S09-2-TRIBOLOGY": [
@@ -288,7 +288,7 @@
   "Stress test Haul Road Rolling Resistance with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D11": [
-  "From fleet telemetry, list the haul-cycle metrics we actually record for the truck fleet with latest values \u2014 show them. Compute the fuel-efficiency measure this data genuinely supports, in plain arithmetic, and state plainly which additional logging a full litres-per-tonne-kilometre figure would need.",
+  "Calculate diesel consumption intensity (L/t-km) for 4.2km haul cycle.",
   "Stress test Fleet Fuel Burn Sentinel with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D12": [
@@ -296,7 +296,7 @@
   "Stress test Tire TKPH Telemetry Agent with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D13": [
-  "Screen fleet telemetry for Shovel #04: list every metric we record with its latest value and the unit's operational status, and flag any metric whose latest reading sits more than 3 standard deviations from its trailing mean \u2014 show the values. State plainly which failure modes (for example a lost ground-engaging tooth) this data can and cannot detect, and name the instrument that would close the gap.",
+  "Scan Shovel #04 dipper bucket camera feed for missing ground engaging tool tooth.",
   "Stress test Shovel GET Tooth Sentinel with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D14": [
@@ -304,7 +304,7 @@
   "Stress test Acoustic Grinding Sound with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D15": [
-  "From plant telemetry around the SAG discharge, list the recorded metrics and trend the most relevant one over the last 30 days \u2014 show the values. Screen blinding is not directly instrumented: say so plainly, state what the throughput and power readings can and cannot tell us about a discharge restriction, and name the single measurement that would settle it.",
+  "Calculate aperture blinding percentage on SAG discharge trommel.",
   "Stress test Trommel Screen Blinding with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D16": [
@@ -316,7 +316,7 @@
   "Stress test Sump Anti-Surge Sentinel with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D18": [
-  "From flotation assays, report current feed grade, concentrate grade, tailings grade and recovery \u2014 show the values and verify recovery with a plain two-product check, no formula notation. Bubble-size instrumentation is absent: say so plainly, then quantify how far today's recovery sits below the best 30-day recovery in the data and what that gap is worth in contained-metal terms, quoted as a range.",
+  "Measure Sauter mean bubble diameter d32 on rougher flotation cell #4.",
   "Stress test Froth Bubble Sizing/Color with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D19": [
@@ -332,7 +332,7 @@
   "Stress test Tailings Beach Slope Model with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D22": [
-  "From the assets register, report the Main Substation transformer record in full: type, criticality rating, installation date, current state and stored physics parameters \u2014 show them, and compute its age in years in plain arithmetic. Dissolved-gas readings are not in this estate: state that plainly and recommend the monitoring addition, using the criticality rating as the business justification.",
+  "Plot Duval Triangle 1 coordinates for Main Substation transformer oil.",
   "Stress test Transformer Duval Triangle with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D23": [
@@ -344,7 +344,7 @@
   "Stress test Conveyor Belt Rip Ultra with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D25": [
-  "From the assets register, report the primary crusher's record: type, criticality rating, installation date, current state and stored physics parameters \u2014 show them, and compute the asset's age in years in plain arithmetic. Liner thickness is not instrumented here: state that plainly, and recommend an inspection cadence justified by the age and criticality you just computed.",
+  "Measure remaining Hardox 500 liner thickness on Crusher discharge chute.",
   "Stress test Chute Wear Ultrasonic with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D26": [
@@ -360,7 +360,7 @@
   "Stress test Fuel Bunkering Density with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D29": [
-  "From plant telemetry, report the mill's average power draw in megawatts \u2014 show the value and the reading count behind it. Using a stated media wear rate of 45 grams per kilowatt-hour, compute daily grinding ball consumption in tonnes per day in plain arithmetic, no formulas. Then check spares inventory for grinding media and state how many days the current stock covers.",
+  "Calculate daily grinding ball consumption rate for Wi=14.2 kWh/t ore.",
   "Stress test Bond Ball Wear Batch with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D30": [
@@ -380,7 +380,7 @@
   "Stress test Laytime BIMCO Parser with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D34": [
-  "List every xanthate-class collector in reagent inventory with stock level, reorder point, lead time and unit price \u2014 show the numbers. Then, using this stated rule of thumb \u2014 6 months usable life at 20 C, halved for every 10 C above 20 C \u2014 work out usable life at 38 C storage in plain arithmetic (no formulas), and the dollar value of stock at risk if we cannot consume it in that window.",
+  "Model shelf life degradation of sodium isopropyl xanthate (SIPX) at 38 deg C.",
   "Stress test Reagent Shelf Life Model with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D35": [
@@ -388,7 +388,7 @@
   "Stress test Train Kinetic Braking Distance with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D36": [
-  "For every vessel currently in port, compare cargo moisture percentage against its Transportable Moisture Limit and report the safety margin in percentage points \u2014 show the values per vessel and flag any within 1 point of the limit. State plainly that boom-clearance monitoring is not in this dataset, and confirm which loading-safety checks this data does support.",
+  "Monitor shiploader boom LiDAR sensor distance from vessel hatch coaming.",
   "Stress test Shiploader LiDAR Anti-Collision with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D37": [
@@ -396,11 +396,11 @@
   "Stress test SAFTE Circadian Fatigue Model with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D38": [
-  "From safety telemetry, report all recorded incidents around the mill and plant: count by severity level, the locations involved, and how many investigations are still open \u2014 show the numbers. Gas readings are not logged in this estate: state that plainly, then argue from the incident history whether the confined-space liner inspection should proceed and what monitoring must be in place first.",
+  "Evaluate multi-gas monitor telemetry inside SAG mill during liner inspection.",
   "Stress test Confined Space Multi-Gas with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D39": [
-  "From fleet and plant telemetry, total the energy-related metrics the data actually holds, month by month \u2014 show the monthly values. Using a stated grid factor of 0.7 kg CO2 per kilowatt-hour, compute the carbon measure the data supports in plain arithmetic, quoted as a range, and name exactly which missing inputs \u2014 fuel litres, cathode tonnes \u2014 would complete a per-tonne intensity figure.",
+  "Calculate monthly carbon intensity per tonne of copper cathode produced.",
   "Stress test Scope 1/2 Carbon Tracker with an input anomaly 25% beyond operating envelope. Assert boundary validation."
  ],
  "D40": [

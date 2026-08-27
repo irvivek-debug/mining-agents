@@ -28,7 +28,7 @@ SCENARIOS = {
     "What is our planned head grade by rock type, and how many blocks does the resource model hold?",
     "What head grades did the assay lab actually measure, by logged rock type?",
     "Reconcile planned against assayed head grade by rock type. Where is the resource model most wrong, in percentage points?",
-    "For that rock type: how many blocks are affected, and what is the estimated contained metal at risk if the assayed grade is the truth? Show the calculation.",
+    "For that rock type: how many blocks are affected, and what is the estimated contained metal at risk if the assayed grade is the truth? Show the calculation step by step in plain numbers — no formula notation.",
     "Three sentences for the mine GM: what is misestimated, by how much, and the first corrective action.",
   ],
   "S2-anomaly-hunt": [
@@ -49,7 +49,7 @@ SCENARIOS = {
     "What is the crusher's average feed rate, and how often is it running in bypass?",
     "A six-hour crusher outage at that feed rate: how many tonnes of production do we lose?",
     "How many hours of reclaim buffer does each stockpile hold before running empty, and which run out first?",
-    "Trace the exposure downstream: which rail consists load from the at-risk stockpiles, and which vessels do those consists feed?",
+    "For the stockpile that runs out first, trace the exposure downstream: which rail consists load from it, and which vessels do those consists feed?",
     "For those vessels: demurrage days on record, tonnes loaded, and the demurrage exposure if loading slips a day — state your day-rate assumption as a range.",
     "Five lines for the logistics manager: the chain from crusher to vessel, the first bottleneck, and the single action that buys the most time.",
   ],
@@ -111,7 +111,7 @@ def find_input(pg):
 
 BUSY_JS = """() => {
   const t = document.body.innerText;
-  if (/Working on|Generating|Running a query|Analyzing context/i.test(t.slice(-2500))) return true;
+  if (/Working on|Generating|Running a query|Analyzing/i.test(t.slice(-2500))) return true;
   for (const el of document.querySelectorAll('[role=progressbar], .mat-mdc-progress-spinner, mat-spinner'))
     if (el.offsetParent !== null) return true;
   return false;
