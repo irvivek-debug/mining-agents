@@ -258,16 +258,22 @@ REVIEW_SCROLL_JS = r"""async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   // 1. Settle at the top: the viewer sees the question first.
   scroller.scrollTo({top: 0, behavior: 'smooth'});
-  await sleep(2500);
-  // 2. Read the answer: steady 100px steps at reading pace to the bottom.
+  await sleep(3000);
+  // 2. Read the answer page by page. A continuous crawl forces the viewer to
+  //    read moving text (the v1 pass did 100px/650ms and was unreadable);
+  //    humans read static screens. Step one viewport at a time with a small
+  //    overlap so no line is lost at the fold, and HOLD each screen still
+  //    long enough to actually read it (~6s, floor 4s).
+  const pageStep = Math.floor(scroller.clientHeight * 0.85);
   const bottom = scroller.scrollHeight - scroller.clientHeight;
-  for (let y = 0; y <= bottom; y += 100) {
-    scroller.scrollTo({top: y, behavior: 'smooth'});
-    await sleep(650);
+  for (let y = 0; y < bottom; y += pageStep) {
+    scroller.scrollTo({top: Math.min(y, bottom), behavior: 'smooth'});
+    await sleep(700);      // let the smooth animation finish...
+    await sleep(5300);     // ...then hold the screen static for reading
   }
   scroller.scrollTo({top: bottom, behavior: 'smooth'});
   // 3. Hold on the conclusion.
-  await sleep(3500);
+  await sleep(6000);
   return true;
 }"""
 

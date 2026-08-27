@@ -53,7 +53,19 @@ hallucinate") and should be re-prompted and re-recorded first.
    for a third of the runtime. (The BQ v3 recordings don't have this problem;
    the Conversational Analytics UI answers in seconds.)
 
-3. **A ~15-agent cluster where the prompt asks for data the estate doesn't
+3. **The review scroll is unreadable (user-reported, root-caused).** Both
+   recorders scrolled answers as a continuous crawl — `uat_run.py` at
+   100px/650ms, `record_bq_scenarios.py`'s end pass at 110px/600ms — so the
+   text never sits still and a human cannot read it; the BQ per-turn dwell
+   additionally jumped to the *bottom* of each answer, so anything taller
+   than one screen showed only its tail and the headline finding was never
+   static on screen. Every existing video has this baked in. **Both
+   recorders are now fixed** to page-stepping: show a full viewport, hold it
+   static ~5–6s for reading, step one screen with a small overlap, repeat —
+   dwell time scales with answer length. Any re-record scope inherits the
+   fix; existing videos can only be cured by re-recording.
+
+4. **A ~15-agent cluster where the prompt asks for data the estate doesn't
    hold.** Flags: hedging-refusal (8), no-final-answer (4), generic-no-data
    (4), no-computation (2). D11, D15, D18, D22, D25, D38, D39, S01-1, S02-1,
    S03-3, S06-1, S06-3, S07-1, S08-2, S09-1. The agents behave *honestly*
@@ -62,25 +74,25 @@ hallucinate") and should be re-prompted and re-recorded first.
    not an agent defect**: those prompts need rewriting to be answerable, or
    the missing columns need adding to the estate.
 
-4. **Four arithmetic/logic slips that survive on camera.** D34 (Arrhenius
+5. **Four arithmetic/logic slips that survive on camera.** D34 (Arrhenius
    shelf-life table off ~1000×), D29 (suspected lb/kWh vs g/kWh unit error),
    S03-1-GEOMETRY (powder factor contradicts its own figures), and
    S03-COORDINATOR (Kuz-Ram result doesn't follow from stated inputs). A
    technical buyer who checks will find them.
 
-5. **12 coordinator videos show no delegation.** Recorded before the swarms
+6. **12 coordinator videos show no delegation.** Recorded before the swarms
    were wired; the coordinators answer solo. S01-COORDINATOR-V2 now proves
    real A2A consultation — once the S02–S12 batch lands, the coordinator
    set should be re-recorded showing `consult_*` calls, or the "swarm"
    story in those videos stays cosmetic.
 
-6. **Rendering and polish defects**: raw LaTeX artifacts in S08 replies
+7. **Rendering and polish defects**: raw LaTeX artifacts in S08 replies
    (same class as BQ-S1's), a triple-word glitch in S09-COORDINATOR,
    a "% Fe" column label in S12-R-CRITIC's copper estate, a transaction-count
    subtotal inconsistency in S10-1-CONTRACT, and a "claimed-actuation"
    overreach in S05-R-CRITIC ("ENFORCED — 0.00 tph" from an advisory agent).
 
-7. **Bucket debris**: 8 agents carry stray failed-attempt videos in GCS
+8. **Bucket debris**: 8 agents carry stray failed-attempt videos in GCS
    (~504MB, incl. a 360MB stuck capture beside S07-1-REAGENT's normal take).
    The referenced videos are all correct; the strays should be deleted.
 

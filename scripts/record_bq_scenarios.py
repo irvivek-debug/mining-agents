@@ -69,10 +69,17 @@ REVIEW_JS = r"""async () => {
   walk(document);
   if (!sc) sc = document.scrollingElement;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  sc.scrollTo({top: 0, behavior: 'smooth'}); await sleep(2500);
+  sc.scrollTo({top: 0, behavior: 'smooth'}); await sleep(3000);
+  // Page-by-page, holding each screen STATIC: a continuous crawl makes the
+  // viewer read moving text (the v1 pass at 110px/600ms was unreadable).
+  const step = Math.floor(sc.clientHeight * 0.85);
   const bottom = sc.scrollHeight - sc.clientHeight;
-  for (let y = 0; y <= bottom; y += 110) { sc.scrollTo({top: y, behavior: 'smooth'}); await sleep(600); }
-  await sleep(3500); return true;
+  for (let y = 0; y < bottom; y += step) {
+    sc.scrollTo({top: Math.min(y, bottom), behavior: 'smooth'});
+    await sleep(700); await sleep(4800);
+  }
+  sc.scrollTo({top: bottom, behavior: 'smooth'});
+  await sleep(5000); return true;
 }"""
 
 
@@ -134,11 +141,31 @@ def wait_reply(frame, prev_len, timeout_s=300):
     return last
 
 
-def dwell_on_answer(pg, frame, seconds=10):
-    """Let the viewer READ the answer before the next prompt buries it:
-    scroll the fresh answer into view and hold."""
+SCROLLER_H_JS = """() => {
+  let sc = null;
+  const walk = (root) => {
+    for (const el of root.querySelectorAll('*')) {
+      if (el.scrollHeight > el.clientHeight + 200) sc = el;
+      if (el.shadowRoot) walk(el.shadowRoot);
+    }
+  };
+  walk(document);
+  return (sc || document.scrollingElement).scrollHeight;
+}"""
+
+
+def dwell_on_answer(pg, frame, start_px=None, hold_s=5, max_pages=6):
+    """Let the viewer READ the answer before the next prompt buries it.
+
+    v1 jumped to the bottom and held: any answer taller than one screen showed
+    only its tail, and the headline finding was never on screen as static,
+    readable text. Instead, start where this turn's answer begins (the
+    scroller height captured before the prompt was sent, minus a small
+    overlap so the question stays visible) and step one viewport at a time,
+    holding each screen still. Dwell time now scales with answer length.
+    """
     try:
-        frame.evaluate("""() => {
+        frame.evaluate("""([startPx, holdMs, maxPages]) => {
           let sc = null;
           const walk = (root) => {
             for (const el of root.querySelectorAll('*')) {
@@ -147,12 +174,23 @@ def dwell_on_answer(pg, frame, seconds=10):
             }
           };
           walk(document);
-          (sc || document.scrollingElement).scrollTo(
-            {top: 999999, behavior: 'smooth'});
-        }""")
+          sc = sc || document.scrollingElement;
+          const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+          const bottom = sc.scrollHeight - sc.clientHeight;
+          const step = Math.floor(sc.clientHeight * 0.85);
+          let y = startPx === null ? bottom
+                : Math.min(Math.max(0, startPx - 120), bottom);
+          return (async () => {
+            for (let p = 0; p < maxPages; p++) {
+              sc.scrollTo({top: y, behavior: 'smooth'});
+              await sleep(700); await sleep(holdMs);
+              if (y >= bottom) break;
+              y = Math.min(y + step, bottom);
+            }
+          })();
+        }""", [start_px, int(hold_s * 1000), max_pages])
     except Exception:
-        pass
-    pg.wait_for_timeout(int(seconds * 1000))
+        pg.wait_for_timeout(10000)   # degraded: at least hold the tail still
 
 
 def record(name, prompts):
@@ -222,13 +260,17 @@ def record(name, prompts):
                 n0 = probe_frame.evaluate("() => document.body.innerText.length")
             except Exception:
                 n0 = 0
+            try:                       # where this turn's content will begin
+                h0 = (chat_frame.evaluate(SCROLLER_H_JS) if chat_frame else None)
+            except Exception:
+                h0 = None
             chat_frame = send(q)
             print(f"  [{name}] prompt {i}/{len(prompts)} sent", flush=True)
             n1 = wait_reply(chat_frame, n0)
             grew = max(0, n1 - n0 - len(q))
             turn_report.append({"turn": i, "answer_chars": grew})
             pg.screenshot(path=str(vdir / f"turn{i}.png"))
-            dwell_on_answer(pg, chat_frame)
+            dwell_on_answer(pg, chat_frame, start_px=h0)
             print(f"  [{name}] turn {i}: answer ~{grew} chars, dwelled", flush=True)
         transcript = chat_frame.evaluate("() => document.body.innerText")
         (vdir / "transcript.txt").write_text(transcript)
