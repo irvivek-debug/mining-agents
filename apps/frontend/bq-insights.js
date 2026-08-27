@@ -8,7 +8,7 @@ window.BQ_INSIGHTS = [
   "kind": "Reconciliation",
   "question": "What is our planned head grade by rock type, and how many blocks does the resource model hold?",
   "finding": "BASALT is misestimated by 0.105 percentage points across 182 blocks \u2014 estimated 1.087%, assayed 1.192%.",
-  "video": "../../data/uat/bq_scenarios/S1-grade-reconciliation/page@e62b4722ecf8f0f799dbe8e69963e18a.webm",
+  "video": "../../data/uat/bq_scenarios/S1-grade-reconciliation/page@133b2e2f4f26e8a580344e4a9390bcf7.webm",
   "prompts": [
    "What is our planned head grade by rock type, and how many blocks does the resource model hold?",
    "What head grades did the assay lab actually measure, by logged rock type?",
@@ -24,7 +24,7 @@ window.BQ_INSIGHTS = [
   "kind": "Anomaly detection",
   "question": "What does our plant telemetry cover, and how many readings per instrument metric?",
   "finding": "37 readings on vibration_hz sit beyond three standard deviations \u2014 clustered, and nobody was reading them.",
-  "video": "../../data/uat/bq_scenarios/S2-anomaly-hunt/page@85548bbac86cf1993d06863c9d1cd581.webm",
+  "video": "../../data/uat/bq_scenarios/S2-anomaly-hunt/page@c8a14783a1f621dd098aae6b1a0401ed.webm",
   "prompts": [
    "What does our plant telemetry cover, and how many readings per instrument metric?",
    "Trend the busiest metric as a daily average. Any drift a reliability engineer should worry about?",
@@ -40,7 +40,7 @@ window.BQ_INSIGHTS = [
   "kind": "Graph traversal",
   "question": "Which spare parts are at stock-out risk right now, and what are their supplier lead times?",
   "finding": "CRUSHER-03 depends on 5 parts at stock-out risk, with $277,245 of repair history flowing through them.",
-  "video": "../../data/uat/bq_scenarios/S3-parts-failure-graph/page@17fd644295be234558265e9008c6ade7.webm",
+  "video": "../../data/uat/bq_scenarios/S3-parts-failure-graph/page@3dd9d4fc35aa1b9120b87a1773551171.webm",
   "prompts": [
    "Which spare parts are at stock-out risk right now, and what are their supplier lead times?",
    "Which maintenance work orders historically consumed those at-risk parts?",
@@ -56,7 +56,7 @@ window.BQ_INSIGHTS = [
   "kind": "Cross-domain cascade",
   "question": "What is the crusher's average feed rate, and how often is it running in bypass?",
   "finding": "Stockpile SP-02-01 holds 6.2 hours of reclaim buffer and feeds 9 vessels \u2014 a six-hour crusher outage reaches the port.",
-  "video": "../../data/uat/bq_scenarios/S4-pit-to-port-cascade/page@3189a3ab02c2c027daf6ff3aae94d325.webm",
+  "video": "../../data/uat/bq_scenarios/S4-pit-to-port-cascade/page@b8aa93907ad46ab9db06d8bd2d567793.webm",
   "prompts": [
    "What is the crusher's average feed rate, and how often is it running in bypass?",
    "A six-hour crusher outage at that feed rate: how many tonnes of production do we lose?",
