@@ -102,23 +102,57 @@ def find_input(pg):
     return None, None
 
 
+BUSY_JS = """() => {
+  const t = document.body.innerText;
+  if (/Working on|Generating|Running a query|Analyzing context/i.test(t.slice(-2500))) return true;
+  for (const el of document.querySelectorAll('[role=progressbar], .mat-mdc-progress-spinner, mat-spinner'))
+    if (el.offsetParent !== null) return true;
+  return false;
+}"""
+
+
 def wait_reply(frame, prev_len, timeout_s=300):
-    """A reply is done when the chat frame has grown and held still for 15s."""
+    """Done means: grown, busy indicators CLEARED, then stable for 20s, and
+    substantive. Stability alone fired while charts were still rendering."""
     deadline, stable, last = time.time() + timeout_s, 0, prev_len
+    grown = False
     while time.time() < deadline:
         time.sleep(5)
         try:
             n = frame.evaluate("() => document.body.innerText.length")
+            busy = frame.evaluate(BUSY_JS)
         except Exception:
             continue
-        if n > prev_len + 40 and n == last:
+        grown = grown or n > prev_len + 80
+        if grown and not busy and n == last:
             stable += 1
-            if stable >= 3:
+            if stable >= 4:
                 return n
         else:
             stable = 0
         last = n
     return last
+
+
+def dwell_on_answer(pg, frame, seconds=10):
+    """Let the viewer READ the answer before the next prompt buries it:
+    scroll the fresh answer into view and hold."""
+    try:
+        frame.evaluate("""() => {
+          let sc = null;
+          const walk = (root) => {
+            for (const el of root.querySelectorAll('*')) {
+              if (el.scrollHeight > el.clientHeight + 200) sc = el;
+              if (el.shadowRoot) walk(el.shadowRoot);
+            }
+          };
+          walk(document);
+          (sc || document.scrollingElement).scrollTo(
+            {top: 999999, behavior: 'smooth'});
+        }""")
+    except Exception:
+        pass
+    pg.wait_for_timeout(int(seconds * 1000))
 
 
 def record(name, prompts):
@@ -152,8 +186,9 @@ def record(name, prompts):
         pg.wait_for_timeout(8000)   # the card click navigates; let frames settle
 
         def send(q):
-            """Re-find the input at send time: frame navigations detach stale
-            handles, and fill() carries its own actionability wait."""
+            """Send AND verify: the S3/S4 closers were typed, logged 'sent',
+            and never appeared on screen. A send that is not visible in the
+            chat log did not happen."""
             last_err = None
             for _ in range(4):
                 f, b = find_input(pg)
@@ -164,14 +199,23 @@ def record(name, prompts):
                     b.fill(q, timeout=20000)
                     pg.wait_for_timeout(400)
                     b.press("Enter")
-                    return f
+                    pg.wait_for_timeout(2500)
+                    landed = f.evaluate(
+                        "(k) => document.body.innerText.includes(k)", q[:60])
+                    cleared = (b.input_value() or "") == "" if b.evaluate(
+                        "el => el.tagName") == "TEXTAREA" else True
+                    if landed and cleared:
+                        return f
+                    last_err = RuntimeError("typed but not landed")
                 except Exception as e:
                     last_err = e
-                    pg.wait_for_timeout(5000)
+                pg.wait_for_timeout(5000)
             pg.screenshot(path=str(vdir / "send_failed.png"))
-            raise RuntimeError(f"{name}: could not send prompt ({type(last_err).__name__ if last_err else 'no input found'})")
+            raise RuntimeError(f"{name}: prompt did not land after 4 attempts "
+                               f"({type(last_err).__name__ if last_err else 'no input'})")
 
         chat_frame = None
+        turn_report = []
         for i, q in enumerate(prompts, 1):
             probe_frame = chat_frame or pg.main_frame
             try:
@@ -180,9 +224,22 @@ def record(name, prompts):
                 n0 = 0
             chat_frame = send(q)
             print(f"  [{name}] prompt {i}/{len(prompts)} sent", flush=True)
-            wait_reply(chat_frame, n0)
+            n1 = wait_reply(chat_frame, n0)
+            grew = max(0, n1 - n0 - len(q))
+            turn_report.append({"turn": i, "answer_chars": grew})
+            pg.screenshot(path=str(vdir / f"turn{i}.png"))
+            dwell_on_answer(pg, chat_frame)
+            print(f"  [{name}] turn {i}: answer ~{grew} chars, dwelled", flush=True)
         transcript = chat_frame.evaluate("() => document.body.innerText")
         (vdir / "transcript.txt").write_text(transcript)
+        import json as _json
+        (vdir / "turns.json").write_text(_json.dumps(turn_report, indent=1))
+        thin = [t["turn"] for t in turn_report if t["answer_chars"] < 120]
+        missing = [i + 1 for i, q in enumerate(prompts) if q[:60] not in transcript]
+        if thin or missing:
+            raise RuntimeError(
+                f"{name}: RECORDING REJECTED — thin turns {thin}, "
+                f"prompts missing from page {missing}")
         try:
             chat_frame.evaluate(REVIEW_JS)
         except Exception as e:

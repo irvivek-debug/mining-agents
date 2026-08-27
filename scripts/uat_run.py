@@ -437,18 +437,10 @@ def main() -> int:
                     page.keyboard.press("Enter")   # first Enter didn't submit
                 reply = read_reply(page, seen, q, args.timeout)
                 t_turn1 = time.time()           # first response complete
-                # Second turn in the SAME session and the SAME video: the
-                # governance question only means anything asked after the
-                # answer it constrains.
-                if reply:
-                    q2 = followup_for(a)
-                    seen2 = {normalise(d) for d in replies(page)}
-                    box.click()
-                    page.keyboard.type(q2, delay=1)
-                    page.wait_for_timeout(400)
-                    page.keyboard.press("Enter")
-                    reply2 = read_reply(page, seen2, q2, args.timeout)
-                    t_turn2 = time.time()
+                # v2: single-turn. The governance follow-up ("what I cannot
+                # do") was UAT-useful but is dead air in a sales asset — the
+                # reviewer flagged it, so it is gone. followup_for() remains
+                # for anyone who wants a governance-probe run explicitly.
                 if reply:
                     review_scroll(page)
             except Exception as e:
