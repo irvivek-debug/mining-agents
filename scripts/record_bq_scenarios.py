@@ -72,9 +72,12 @@ REVIEW_JS = r"""async () => {
   sc.scrollTo({top: 0, behavior: 'smooth'}); await sleep(3000);
   // Page-by-page, holding each screen STATIC: a continuous crawl makes the
   // viewer read moving text (the v1 pass at 110px/600ms was unreadable).
-  const step = Math.floor(sc.clientHeight * 0.85);
-  const bottom = sc.scrollHeight - sc.clientHeight;
-  for (let y = 0; y < bottom; y += step) {
+  // Guards: a zero-height scroller must not zero the step (infinite loop),
+  // and a runaway page count must not stall the recording forever.
+  const step = Math.max(200, Math.floor(sc.clientHeight * 0.85));
+  const bottom = Math.max(0, sc.scrollHeight - sc.clientHeight);
+  let pages = 0;
+  for (let y = 0; y < bottom && pages < 25; y += step, pages++) {
     sc.scrollTo({top: Math.min(y, bottom), behavior: 'smooth'});
     await sleep(700); await sleep(4800);
   }
@@ -285,7 +288,8 @@ def record(name, prompts):
         try:
             chat_frame.evaluate(REVIEW_JS)
         except Exception as e:
-            print(f"  [{name}] review scroll failed: {type(e).__name__}", flush=True)
+            print(f"  [{name}] review scroll failed: "
+                  f"{type(e).__name__}: {str(e)[:160]}", flush=True)
         ctx.close()
     print(f"  [{name}] DONE — video + transcript in {vdir}", flush=True)
 
