@@ -8,12 +8,12 @@ window.BQ_INSIGHTS = [
   "kind": "Reconciliation",
   "question": "What is our planned head grade by rock type, and how many blocks does the resource model hold?",
   "finding": "BASALT is misestimated by 0.105 percentage points across 182 blocks \u2014 estimated 1.087%, assayed 1.192%.",
-  "video": "/videos/bq/S1-grade-reconciliation/page@133b2e2f4f26e8a580344e4a9390bcf7.webm",
+  "video": "/videos/bq/S1-grade-reconciliation/page@c9072e0c0c685ca9cc5a999ce4b72fec.webm",
   "prompts": [
    "What is our planned head grade by rock type, and how many blocks does the resource model hold?",
    "What head grades did the assay lab actually measure, by logged rock type?",
    "Reconcile planned against assayed head grade by rock type. Where is the resource model most wrong, in percentage points?",
-   "For that rock type: how many blocks are affected, and what is the estimated contained metal at risk if the assayed grade is the truth? Show the calculation.",
+   "For that rock type: how many blocks are affected, and what is the estimated contained metal at risk if the assayed grade is the truth? Show the calculation step by step in plain numbers \u2014 no formula notation.",
    "Three sentences for the mine GM: what is misestimated, by how much, and the first corrective action."
   ]
  },
@@ -24,7 +24,7 @@ window.BQ_INSIGHTS = [
   "kind": "Anomaly detection",
   "question": "What does our plant telemetry cover, and how many readings per instrument metric?",
   "finding": "37 readings on vibration_hz sit beyond three standard deviations \u2014 clustered, and nobody was reading them.",
-  "video": "/videos/bq/S2-anomaly-hunt/page@c8a14783a1f621dd098aae6b1a0401ed.webm",
+  "video": "/videos/bq/S2-anomaly-hunt/page@447cb45b31bade90e36e5a838c5033bd.webm",
   "prompts": [
    "What does our plant telemetry cover, and how many readings per instrument metric?",
    "Trend the busiest metric as a daily average. Any drift a reliability engineer should worry about?",
@@ -40,7 +40,7 @@ window.BQ_INSIGHTS = [
   "kind": "Graph traversal",
   "question": "Which spare parts are at stock-out risk right now, and what are their supplier lead times?",
   "finding": "CRUSHER-03 depends on 5 parts at stock-out risk, with $277,245 of repair history flowing through them.",
-  "video": "/videos/bq/S3-parts-failure-graph/page@3dd9d4fc35aa1b9120b87a1773551171.webm",
+  "video": "/videos/bq/S3-parts-failure-graph/page@cac2bcd5507304d50d7cb8144b84d4d1.webm",
   "prompts": [
    "Which spare parts are at stock-out risk right now, and what are their supplier lead times?",
    "Which maintenance work orders historically consumed those at-risk parts?",
@@ -56,12 +56,12 @@ window.BQ_INSIGHTS = [
   "kind": "Cross-domain cascade",
   "question": "What is the crusher's average feed rate, and how often is it running in bypass?",
   "finding": "Stockpile SP-02-01 holds 6.2 hours of reclaim buffer and feeds 9 vessels \u2014 a six-hour crusher outage reaches the port.",
-  "video": "/videos/bq/S4-pit-to-port-cascade/page@b8aa93907ad46ab9db06d8bd2d567793.webm",
+  "video": "/videos/bq/S4-pit-to-port-cascade/page@1b23deef54bc8576529919f3bafc7137.webm",
   "prompts": [
    "What is the crusher's average feed rate, and how often is it running in bypass?",
    "A six-hour crusher outage at that feed rate: how many tonnes of production do we lose?",
    "How many hours of reclaim buffer does each stockpile hold before running empty, and which run out first?",
-   "Trace the exposure downstream: which rail consists load from the at-risk stockpiles, and which vessels do those consists feed?",
+   "For the stockpile that runs out first, trace the exposure downstream: which rail consists load from it, and which vessels do those consists feed?",
    "For those vessels: demurrage days on record, tonnes loaded, and the demurrage exposure if loading slips a day \u2014 state your day-rate assumption as a range.",
    "Five lines for the logistics manager: the chain from crusher to vessel, the first bottleneck, and the single action that buys the most time."
   ]
