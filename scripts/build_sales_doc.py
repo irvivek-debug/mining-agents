@@ -203,7 +203,12 @@ def main() -> int:
         pair = scen.get(aid) or ["", ""]
         q = pair[0] if isinstance(pair, list) else pair
         cat = by_cat.get(aid)
-        vids = sorted((VIDEOS / aid).glob("*.webm")) if (VIDEOS / aid).exists() else []
+        # The ledger names the capture whose reply this entry describes.
+        # Globbing the directory instead picks whatever sorts first, and 37
+        # stale takes from earlier runs still sit beside the live ones -- that
+        # paired 14 entries with a video of a different (sometimes failed) run.
+        vid = ROOT / r["video"] if r.get("video") else None
+        vids = [vid] if vid and vid.exists() else []
         lines += [
             f"## {a['display_name']}",
             "",
@@ -234,7 +239,12 @@ def main() -> int:
         pair = scen.get(aid) or ["", ""]
         q = pair[0] if isinstance(pair, list) else pair
         cat = by_cat.get(aid)
-        vids = sorted((VIDEOS / aid).glob("*.webm")) if (VIDEOS / aid).exists() else []
+        # The ledger names the capture whose reply this entry describes.
+        # Globbing the directory instead picks whatever sorts first, and 37
+        # stale takes from earlier runs still sit beside the live ones -- that
+        # paired 14 entries with a video of a different (sometimes failed) run.
+        vid = ROOT / r["video"] if r.get("video") else None
+        vids = [vid] if vid and vid.exists() else []
         nums = first_numbers(r["reply"])
         assets[aid] = {
             "video": f"../../data/uat/videos/{aid}/{vids[0].name}" if vids else "",

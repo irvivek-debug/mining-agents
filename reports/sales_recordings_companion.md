@@ -408,7 +408,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Audit duplicate core sample assay variance against JORC Code standards. **Agent Action.** It looks up assay results and QA/QC standards — the operation's live data, not a briefing pack — and answers in its own words: “QA/QC Red Team Audit: Duplicate Core Sample Assay Variance & JORC Code” It reports real figures — 100.0%, 0.0, 447.75 — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S01-R-CRITIC/page@ea52d241e23224c991107267a5a92d37.webm`
+- **Recording:** `data/uat/videos/S01-R-CRITIC/page@ff20a8ecab0d5ac93da59c36cd259473.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/13867639205775571505/session/-
 
 ## Pit Wall Geotechnical Specialist (S02-1-GEOTECH)
@@ -525,7 +525,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Audit 10/10/20 payload distribution across 42 haul cycles. **Agent Action.** It looks up live fleet telemetry — the operation's live data, not a briefing pack — and answers in its own words: “OEM 10/10/20 Payload Distribution” It reports real figures — 1.20, 240.00, 202.03 — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S04-3-PAYLOAD/page@59acd839512abfb3142f4d42719222f2.webm`
+- **Recording:** `data/uat/videos/S04-3-PAYLOAD/page@81b7b977678a88905f3ab334a4808863.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/4572058693527972819/session/-
 
 ## Load & Haul Coordinator (S04-COORDINATOR)
@@ -687,7 +687,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Balance decant return water and evaporation pond volume. **Agent Action.** It looks up water balance logs — the operation's live data, not a briefing pack — and answers in its own words: “Decant Water Return & Evaporation Pond Water Balance” It reports real figures — 183,156.10, 1,096.74, 100.00% — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S08-1-WATER/page@1875f394a9efcb3928f3bbca231031ba.webm`
+- **Recording:** `data/uat/videos/S08-1-WATER/page@e7ce39f43f2d297f74ed4bd5a5e58761.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/7388494887499711666/session/-
 
 ## Piezometer Pressure Specialist (S08-2-PORE)
@@ -705,7 +705,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Regulate flocculant dosing for 65% solids underflow. **Agent Action.** It looks up plant telemetry — the operation's live data, not a briefing pack — and answers in its own words: “Operational Assessment & Telemetry” It reports real figures — 65.0%, 57.5%, 68.0% — pulled from the data during the recording. **Logic.** Before answering it runs its Kynch Sedimentation Solids Flux Theory method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S08-3-THICK/page@121fa0ce91cfa410229293dc0b0989ce.webm`
+- **Recording:** `data/uat/videos/S08-3-THICK/page@b6b51b5b66296d293c2958dd89b8dd6f.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/2504307796515544315/session/-
 
 ## Tailings (TSF) Coordinator (S08-COORDINATOR)
@@ -732,7 +732,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** From crusher telemetry, trend rotational torque and feed rate over the last 30 days — show the values and flag any outlier beyond 3 standard deviations with its timestamp. Spectral vibration data is absent: say so plainly, then use the assets register's stored physics parameters to state which defect signature we would expect to see, whether the trend is consistent with it, and finish with a clear inspect or do-not-inspect call. **Agent Action.** It looks up the asset register and crusher telemetry — the operation's live data, not a briefing pack — and answers in its own words: “1. Telemetry Trend Analysis (Last 30” It reports real figures — 3,874.51, 145.47, 3,438.10 — pulled from the data during the recording. **Logic.** Before answering it runs its ISO 10816-3 RMS Velocity & BPFI Harmonics method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S09-1-VIBRATION/page@8b3bd2504000791f37a1ebbd6d597ccd.webm`
+- **Recording:** `data/uat/videos/S09-1-VIBRATION/page@b5cd24a925d2bd69fed814664007fde7.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/1209525171906486472/session/-
 
 ## Oil Tribology Specialist (S09-2-TRIBOLOGY)
@@ -750,7 +750,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Analyze thermal gradient across pinion bearing housing. **Agent Action.** It looks up the asset register and crusher telemetry — the operation's live data, not a briefing pack — and answers in its own words: “Thermal IR Specialist Assessment: Pinion Bearing Housing Thermal Gradient” It reports real figures — 74.0, 4,205.0, 1,210.0 tph — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S09-3-THERMAL/page@971bd19431ff803203abdeace2559910.webm`
+- **Recording:** `data/uat/videos/S09-3-THERMAL/page@adf03ed9998bf2b9715c7b17c2059362.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/12266523653873596783/session/-
 
 ## Asset Reliability Swarm Coordinator (S09-COORDINATOR)
@@ -759,7 +759,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** SAG Mill pinion bearing vibration reaches 4.8 mm/s RMS at 1480 RPM. **Agent Action.** It looks up the asset register, crusher telemetry and open work orders — the operation's live data, not a briefing pack — and answers in its own words: “Coordinator ID: s09_coordinator (Asset Reliability Swarm Coordinator / P0 Crisis Arbiter / Reliability” It reports real figures — 4.80 mm, 24.67, 14.8 — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S09-COORDINATOR/page@3f4b4cc3623076a24998ed20d18ae3f1.webm`
+- **Recording:** `data/uat/videos/S09-COORDINATOR/page@a79714db8f41a4bcb8df8f2118e01433.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/523079695801690856/session/-
 
 ## Maintenance Safety Critic (Red Team) (S09-R-CRITIC)
@@ -795,7 +795,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Audit SAG liner premature failure against 8,000-hour MTBF warranty. **Agent Action.** It looks up the asset register and supplier contracts — the operation's live data, not a briefing pack — and answers in its own words: “Executive Summary & Warranty Recovery” It reports real figures — 0.00 — pulled from the data during the recording. **Logic.** Before answering it runs its MTBF vs Warranty Period Recovery Claimer method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S10-3-WARRANTY/page@17b82dc0017fae45c0e3ace352ca962a.webm`
+- **Recording:** `data/uat/videos/S10-3-WARRANTY/page@3ce63f86dad9cc2307dda1cdb6831226.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/10236263633444215320/session/-
 
 ## Procurement Coordinator (S10-COORDINATOR)
@@ -813,7 +813,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Enforce FCPA compliance gate on sole-source supplier requisitions. **Agent Action.** It looks up supplier contracts and invoices — the operation's live data, not a briefing pack — and answers in its own words: “Anti-Bribery & FCPA Red Team Audit Report: Sole-Source Requisition & Vendor Compliance Gate” It reports real figures — 17,444.19, 5.0, 78,737.49 — pulled from the data during the recording. **Logic.** Before answering it runs its Vendor Beneficial Ownership & Single-Source Flags method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S10-R-CRITIC/page@020e98ac12494a421b4ea528373d112f.webm`
+- **Recording:** `data/uat/videos/S10-R-CRITIC/page@3c1e56250f0933e5bfa03a595810dac4.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/6963659721239708994/session/-
 
 ## Safety Stock Optimizer (S11-1-STOCK)
@@ -822,7 +822,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Calculate safety stock buffer for high-criticality bearings. **Agent Action.** It looks up spare parts stock — the operation's live data, not a briefing pack — and answers in its own words: “1. Spare Parts Inventory Status” It reports real figures — 14 days, 1,250.00, 0.00 — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S11-1-STOCK/page@3b965bd8a823d77f9c94fcdfd0911e10.webm`
+- **Recording:** `data/uat/videos/S11-1-STOCK/page@f52b774e785783ac49732041df5f51bc.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/8952188845126189763/session/-
 
 ## Vendor Lead Time Specialist (S11-2-LEADTIME)
@@ -831,7 +831,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Model Gamma distribution supplier lead-time variability. **Agent Action.** It looks up purchase-order history — the operation's live data, not a briefing pack — and answers in its own words: “Gamma Distribution Supplier Lead-Time Variability” It reports real figures — 1 day, 15.04, 6.81 — pulled from the data during the recording. **Logic.** Before answering it runs its Gamma Distribution Lead Time Modeling method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S11-2-LEADTIME/page@6e9fc9e33cedc9579f517726878ca4d1.webm`
+- **Recording:** `data/uat/videos/S11-2-LEADTIME/page@f76924ee707f8de0a0521b1475d45449.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/9319212464069988816/session/-
 
 ## Carrying Cost Analyzer (S11-3-HOLDING)
@@ -885,7 +885,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Compute BIMCO laytime Statement of Fact deductions. **Agent Action.** It looks up vessel movements at the port — the operation's live data, not a briefing pack — and answers in its own words: “Marine Laytime & Demurrage Statement of Fact (SOF)” It reports real figures — 2.0 days, 48 hours, 162 days — pulled from the data during the recording. **Logic.** Before answering it runs its BIMCO Laytime Pro-Rata & Demurrage Liability method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S12-3-BERTH/page@883c977584e76b59bf90e7e310ccce52.webm`
+- **Recording:** `data/uat/videos/S12-3-BERTH/page@af29d7a21db2cff25af36971ad923267.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/17205870215175020849/session/-
 
 ## Supply Chain & Port Coordinator (S12-COORDINATOR)
@@ -894,7 +894,7 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Vessel 'MV Cape Osprey' arrives in 48h for 160,000t loading. **Agent Action.** It looks up rail schedules, vessel movements at the port and stockpile records — the operation's live data, not a briefing pack — and answers in its own words: “Operational Assessment: Vessel 'MV Cape Osprey' Arrival & Dynamic Network” It reports real figures — 61,262.1, 24,431.6, 100,619.2 — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S12-COORDINATOR/page@2c27ca5ea3461d820a218c2635bbc6f8.webm`
+- **Recording:** `data/uat/videos/S12-COORDINATOR/page@d13366cf4830b9fc9911681da215c6da.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/15457650955703083468/session/-
 
 ## Moisture & TML Critic (Red Team) (S12-R-CRITIC)
@@ -903,5 +903,5 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 **Situation.** Enforce IMSBC Transportable Moisture Limit (TML < 9.2%). **Agent Action.** It looks up vessel movements at the port and stockpile records — the operation's live data, not a briefing pack — and answers in its own words: “Governing Method &” It reports real figures — 9.20%, 10.00%, 9.73% — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
 
-- **Recording:** `data/uat/videos/S12-R-CRITIC/page@220cba1c1a025e4a4c655807f14f00d6.webm`
+- **Recording:** `data/uat/videos/S12-R-CRITIC/page@9bbd5c6a6c454dc96ad235119a243140.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/15122170761949992179/session/-

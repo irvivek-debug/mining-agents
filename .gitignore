@@ -13,3 +13,14 @@ data/uat/videos/
 .DS_Store
 data/uat/videos_prev_*/
 data/uat/videos_uat_evidence_*/
+
+# Dead-air-compressed copies of the referenced captures, produced by
+# scripts/compress_referenced.py. Derived from data/uat/videos/, uploaded to
+# GCS, never a source of truth.
+data/uat/videos_tight/
+
+# BigQuery-insight scenario captures: ~350MB of .webm across three takes,
+# regenerable from the bq scenario harness.
+data/uat/bq_scenarios/
+data/uat/bq_scenarios_v1/
+data/uat/bq_scenarios_v2_flawed/

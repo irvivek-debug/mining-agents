@@ -31,7 +31,7 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S01-R-CRITIC": {
-  "video": "../../data/uat/videos/S01-R-CRITIC/page@ea52d241e23224c991107267a5a92d37.webm",
+  "video": "../../data/uat/videos/S01-R-CRITIC/page@ff20a8ecab0d5ac93da59c36cd259473.webm",
   "situation": "Audit duplicate core sample assay variance against JORC Code standards.",
   "action": "Looks up assay results and QA/QC standards \u2014 the operation's live data \u2014 and answers in its own words: \u201cQA/QC Red Team Audit: Duplicate Core Sample Assay Variance & JORC Code\u201d Real figures from the recording: 100.0%, 0.0, 447.75.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -109,7 +109,7 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S04-3-PAYLOAD": {
-  "video": "../../data/uat/videos/S04-3-PAYLOAD/page@59acd839512abfb3142f4d42719222f2.webm",
+  "video": "../../data/uat/videos/S04-3-PAYLOAD/page@81b7b977678a88905f3ab334a4808863.webm",
   "situation": "Audit 10/10/20 payload distribution across 42 haul cycles.",
   "action": "Looks up live fleet telemetry \u2014 the operation's live data \u2014 and answers in its own words: \u201cOEM 10/10/20 Payload Distribution\u201d Real figures from the recording: 1.20, 240.00, 202.03.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -217,7 +217,7 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its GISTM Dam Conformance & Phreatic Surface Line method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S08-1-WATER": {
-  "video": "../../data/uat/videos/S08-1-WATER/page@1875f394a9efcb3928f3bbca231031ba.webm",
+  "video": "../../data/uat/videos/S08-1-WATER/page@e7ce39f43f2d297f74ed4bd5a5e58761.webm",
   "situation": "Balance decant return water and evaporation pond volume.",
   "action": "Looks up water balance logs \u2014 the operation's live data \u2014 and answers in its own words: \u201cDecant Water Return & Evaporation Pond Water Balance\u201d Real figures from the recording: 183,156.10, 1,096.74, 100.00%.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -229,7 +229,7 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S08-3-THICK": {
-  "video": "../../data/uat/videos/S08-3-THICK/page@121fa0ce91cfa410229293dc0b0989ce.webm",
+  "video": "../../data/uat/videos/S08-3-THICK/page@b6b51b5b66296d293c2958dd89b8dd6f.webm",
   "situation": "Regulate flocculant dosing for 65% solids underflow.",
   "action": "Looks up plant telemetry \u2014 the operation's live data \u2014 and answers in its own words: \u201cOperational Assessment & Telemetry\u201d Real figures from the recording: 65.0%, 57.5%, 68.0%.",
   "logic": "Before answering it runs its Kynch Sedimentation Solids Flux Theory method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -241,13 +241,13 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its Critical State Soil Mechanics & Static Liquefaction Index method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S09-COORDINATOR": {
-  "video": "../../data/uat/videos/S09-COORDINATOR/page@3f4b4cc3623076a24998ed20d18ae3f1.webm",
+  "video": "../../data/uat/videos/S09-COORDINATOR/page@a79714db8f41a4bcb8df8f2118e01433.webm",
   "situation": "SAG Mill pinion bearing vibration reaches 4.8 mm/s RMS at 1480 RPM.",
   "action": "Looks up the asset register, crusher telemetry and open work orders \u2014 the operation's live data \u2014 and answers in its own words: \u201cCoordinator ID: s09_coordinator (Asset Reliability Swarm Coordinator / P0 Crisis Arbiter / Reliability\u201d Real figures from the recording: 4.80 mm, 24.67, 14.8.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S09-1-VIBRATION": {
-  "video": "../../data/uat/videos/S09-1-VIBRATION/page@8b3bd2504000791f37a1ebbd6d597ccd.webm",
+  "video": "../../data/uat/videos/S09-1-VIBRATION/page@b5cd24a925d2bd69fed814664007fde7.webm",
   "situation": "From crusher telemetry, trend rotational torque and feed rate over the last 30 days \u2014 show the values and flag any outlier beyond 3 standard deviations with its timestamp. Spectral vibration data is absent: say so plainly, then use the assets register's stored physics parameters to state which defect signature we would expect to see, whether the trend is consistent with it, and finish with a clear inspect or do-not-inspect call.",
   "action": "Looks up the asset register and crusher telemetry \u2014 the operation's live data \u2014 and answers in its own words: \u201c1. Telemetry Trend Analysis (Last 30\u201d Real figures from the recording: 3,874.51, 145.47, 3,438.10.",
   "logic": "Before answering it runs its ISO 10816-3 RMS Velocity & BPFI Harmonics method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -259,7 +259,7 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its PQ Index & Karl Fischer Moisture PPM method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S09-3-THERMAL": {
-  "video": "../../data/uat/videos/S09-3-THERMAL/page@971bd19431ff803203abdeace2559910.webm",
+  "video": "../../data/uat/videos/S09-3-THERMAL/page@adf03ed9998bf2b9715c7b17c2059362.webm",
   "situation": "Analyze thermal gradient across pinion bearing housing.",
   "action": "Looks up the asset register and crusher telemetry \u2014 the operation's live data \u2014 and answers in its own words: \u201cThermal IR Specialist Assessment: Pinion Bearing Housing Thermal Gradient\u201d Real figures from the recording: 74.0, 4,205.0, 1,210.0 tph.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -289,13 +289,13 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S10-3-WARRANTY": {
-  "video": "../../data/uat/videos/S10-3-WARRANTY/page@17b82dc0017fae45c0e3ace352ca962a.webm",
+  "video": "../../data/uat/videos/S10-3-WARRANTY/page@3ce63f86dad9cc2307dda1cdb6831226.webm",
   "situation": "Audit SAG liner premature failure against 8,000-hour MTBF warranty.",
   "action": "Looks up the asset register and supplier contracts \u2014 the operation's live data \u2014 and answers in its own words: \u201cExecutive Summary & Warranty Recovery\u201d Real figures from the recording: 0.00.",
   "logic": "Before answering it runs its MTBF vs Warranty Period Recovery Claimer method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S10-R-CRITIC": {
-  "video": "../../data/uat/videos/S10-R-CRITIC/page@020e98ac12494a421b4ea528373d112f.webm",
+  "video": "../../data/uat/videos/S10-R-CRITIC/page@3c1e56250f0933e5bfa03a595810dac4.webm",
   "situation": "Enforce FCPA compliance gate on sole-source supplier requisitions.",
   "action": "Looks up supplier contracts and invoices \u2014 the operation's live data \u2014 and answers in its own words: \u201cAnti-Bribery & FCPA Red Team Audit Report: Sole-Source Requisition & Vendor Compliance Gate\u201d Real figures from the recording: 17,444.19, 5.0, 78,737.49.",
   "logic": "Before answering it runs its Vendor Beneficial Ownership & Single-Source Flags method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -307,13 +307,13 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S11-1-STOCK": {
-  "video": "../../data/uat/videos/S11-1-STOCK/page@3b965bd8a823d77f9c94fcdfd0911e10.webm",
+  "video": "../../data/uat/videos/S11-1-STOCK/page@f52b774e785783ac49732041df5f51bc.webm",
   "situation": "Calculate safety stock buffer for high-criticality bearings.",
   "action": "Looks up spare parts stock \u2014 the operation's live data \u2014 and answers in its own words: \u201c1. Spare Parts Inventory Status\u201d Real figures from the recording: 14 days, 1,250.00, 0.00.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S11-2-LEADTIME": {
-  "video": "../../data/uat/videos/S11-2-LEADTIME/page@6e9fc9e33cedc9579f517726878ca4d1.webm",
+  "video": "../../data/uat/videos/S11-2-LEADTIME/page@f76924ee707f8de0a0521b1475d45449.webm",
   "situation": "Model Gamma distribution supplier lead-time variability.",
   "action": "Looks up purchase-order history \u2014 the operation's live data \u2014 and answers in its own words: \u201cGamma Distribution Supplier Lead-Time Variability\u201d Real figures from the recording: 1 day, 15.04, 6.81.",
   "logic": "Before answering it runs its Gamma Distribution Lead Time Modeling method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -331,7 +331,7 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S12-COORDINATOR": {
-  "video": "../../data/uat/videos/S12-COORDINATOR/page@2c27ca5ea3461d820a218c2635bbc6f8.webm",
+  "video": "../../data/uat/videos/S12-COORDINATOR/page@d13366cf4830b9fc9911681da215c6da.webm",
   "situation": "Vessel 'MV Cape Osprey' arrives in 48h for 160,000t loading.",
   "action": "Looks up rail schedules, vessel movements at the port and stockpile records \u2014 the operation's live data \u2014 and answers in its own words: \u201cOperational Assessment: Vessel 'MV Cape Osprey' Arrival & Dynamic Network\u201d Real figures from the recording: 61,262.1, 24,431.6, 100,619.2.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
@@ -349,13 +349,13 @@ window.SALES_ASSETS = {
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S12-3-BERTH": {
-  "video": "../../data/uat/videos/S12-3-BERTH/page@883c977584e76b59bf90e7e310ccce52.webm",
+  "video": "../../data/uat/videos/S12-3-BERTH/page@af29d7a21db2cff25af36971ad923267.webm",
   "situation": "Compute BIMCO laytime Statement of Fact deductions.",
   "action": "Looks up vessel movements at the port \u2014 the operation's live data \u2014 and answers in its own words: \u201cMarine Laytime & Demurrage Statement of Fact (SOF)\u201d Real figures from the recording: 2.0 days, 48 hours, 162 days.",
   "logic": "Before answering it runs its BIMCO Laytime Pro-Rata & Demurrage Liability method, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
  "S12-R-CRITIC": {
-  "video": "../../data/uat/videos/S12-R-CRITIC/page@220cba1c1a025e4a4c655807f14f00d6.webm",
+  "video": "../../data/uat/videos/S12-R-CRITIC/page@9bbd5c6a6c454dc96ad235119a243140.webm",
   "situation": "Enforce IMSBC Transportable Moisture Limit (TML < 9.2%).",
   "action": "Looks up vessel movements at the port and stockpile records \u2014 the operation's live data \u2014 and answers in its own words: \u201cGoverning Method &\u201d Real figures from the recording: 9.20%, 10.00%, 9.73%.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
