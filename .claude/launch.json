@@ -14,6 +14,12 @@
       "port": 8800
     },
     {
+      "name": "reports",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8010", "--directory", "reports"],
+      "port": 8010
+    },
+    {
       "name": "prod-workspace",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["scripts/proxy_workspace.py", "--port", "8804"],
