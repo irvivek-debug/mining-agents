@@ -17,7 +17,7 @@ Realised value per ton of ore at the site is below plan. The gap is not one fail
 |---|---|---|
 | Work orders at CRITICAL priority | **101 of 500** | `erp_work_orders` |
 | Work orders CANCELLED (deferred, will resurface) | **104 of 500**, $617k booked repair cost | `erp_work_orders` |
-| Spare parts below reorder point | **15 of 105**, against 15.2-day mean lead time | `inventory_levels` |
+| Spare parts below reorder point | **28 of 140**, against 21.6-day mean lead time | `inventory_levels` |
 | Concentrator recovery spread | **88.2% – 95.2%** (mean 92.2%) at `CONC-01` | `metallurgical_recovery` |
 | Safety incidents on record | **60**, including fatality-class events | `safety_incidents` |
 | Fatigue readings unreviewed per operator population | **3,340** across 20 operators | `biometric_fatigue_logs` |
@@ -60,7 +60,7 @@ Two classes, because this asset is judged twice — once in a demo room, once by
 | Metric | Baseline | Target |
 |---|---|---|
 | Recovery rate variance at `CONC-01` | 7.0 pt spread (88.2–95.2) | ≤ 4.0 pt spread |
-| Parts below reorder point | 15 of 105 (14.3%) | ≤ 5 of 105 (4.8%) |
+| Parts below reorder point | 28 of 140 (20.0%) | ≤ 5 of 140 (3.6%) |
 | CRITICAL work orders open at any time | 21 OPEN of 101 CRITICAL | ≤ 10 OPEN |
 | Fatigue events reaching an operator before shift start | 0% (post-hoc only) | 100% of `fatigue_alert_triggered` |
 | Mean time from telemetry anomaly to dependency-impact assessment | manual, hours | < 60 seconds |
@@ -130,7 +130,7 @@ Every swarm carries a **Critic** as its fourth specialist. That is not padding: 
 | D28 | Economic Order Quantity Optimiser | 4.1.2 | P4 | false | `unit_price_usd`, demand from `work_order_parts_edge`; EOQ |
 | D29 | Lead Time Risk Analyst | 4.1.2 | P4 | false | `lead_time_days` distribution vs WO urgency |
 | D30 | Criticality-Weighted Stocking Policy | 4.1.2 | P4 | **true** — policy change | `inventory_levels` × `assets.criticality_rating` |
-| D31 | Stockout Exposure Analyst | 4.1.2 | P4 | false | 15 below-ROP parts × `MiningSupplyChainGraph` |
+| D31 | Stockout Exposure Analyst | 4.1.2 | P4 | false | 28 below-ROP parts × `MiningSupplyChainGraph` |
 | D32 | Bid Compliance Auditor | 5.2.1 | P4 | false | `procurement_bids.compliance_checked` |
 | D33 | Vendor Performance & Concentration Analyst | 5.2.1 | P4 | false | `vendor_name`, `bid_status` distribution |
 | D34 | Procurement Spend Anomaly Analyst | 5.2.1 | P4 | false | `proposed_cost` vs `unit_price_usd` baseline |

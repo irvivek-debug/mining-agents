@@ -78,6 +78,59 @@ def all_columns(client):
     return out
 
 
+# ---------------------------------------------------------------------------
+# The deliberate post-load deepening
+# ---------------------------------------------------------------------------
+# scripts/deepen_core_data.py runs after the load and intentionally changes one
+# table in LOAD_ORDER. inventory_levels was thin enough that a spares or
+# stockout agent asked to rank a portfolio could only ever name a handful of
+# parts -- a floor on what the product can demonstrate rather than a fact about
+# the mine. The script appends parts under a `SKU-EXT-` prefix, keeps the
+# original rows verbatim, and rewrites the table with part_number first.
+#
+# That result is the intended live state, not drift: `spares_inventory` is a
+# view over this table and `purchase_orders` is anchored to its part numbers,
+# so downstream data was built on the deepened shape.
+#
+# These tests therefore assert the deepened contract explicitly -- the original
+# rows still reconcile to the parquet and the backup, the extra rows are all
+# identifiable as extensions, and the column set still matches the backup while
+# the order matches what the deepening declares. Relaxing them to "whatever is
+# live" would delete the guard that a rolled-back or half-loaded dataset is a
+# red suite, which is the only reason this half of the file exists.
+DEEPENED = "inventory_levels"
+EXTENSION_PREFIX = "SKU-EXT-"
+DEEPENED_COLUMN_ORDER = [
+    "part_number",
+    "part_description",
+    "stock_level",
+    "reorder_point_limit",
+    "lead_time_days",
+    "unit_price_usd",
+]
+
+
+@pytest.fixture(scope="module")
+def deepened_split(client):
+    """Original vs extension row counts in the one deepened table."""
+    sql = f"""
+        SELECT
+          COUNTIF(NOT STARTS_WITH(part_number, @prefix)) AS original_rows,
+          COUNTIF(STARTS_WITH(part_number, @prefix)) AS extension_rows
+        FROM `{PROJECT_ID}.{DATASET}.{DEEPENED}`
+    """
+    job = client.query(
+        sql,
+        job_config=bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("prefix", "STRING", EXTENSION_PREFIX)
+            ]
+        ),
+    )
+    row = list(job.result())[0]
+    return {"original_rows": row.original_rows, "extension_rows": row.extension_rows}
+
+
 @pytest.fixture(scope="module")
 def graph_tables(client):
     """(node table ids, edge table ids) across every property graph in the dataset."""
@@ -449,9 +502,29 @@ class TestRunAll:
 
 
 class TestLoadedState:
-    def test_live_row_counts_match_the_parquet_files(self, live_row_counts):
+    def test_live_row_counts_match_the_parquet_files(
+        self, live_row_counts, deepened_split
+    ):
         for table in load.LOAD_ORDER:
-            assert live_row_counts[table] == load.parquet_row_count(table), table
+            expected = load.parquet_row_count(table)
+            if table != DEEPENED:
+                assert live_row_counts[table] == expected, table
+                continue
+            # The deepening is additive: the rows the parquet loaded must still
+            # all be there, and everything beyond them must be an extension.
+            assert deepened_split["original_rows"] == expected, (
+                f"{table}: {deepened_split['original_rows']} non-extension rows "
+                f"live, parquet holds {expected} -- the load itself has drifted, "
+                "which the deepening does not explain"
+            )
+            assert deepened_split["extension_rows"] > 0, (
+                f"{table}: no {EXTENSION_PREFIX} rows -- the deepening is "
+                "missing, so agents see the thin catalogue again"
+            )
+            assert live_row_counts[table] == expected + deepened_split["extension_rows"], (
+                f"{table}: {live_row_counts[table]} rows live, expected "
+                f"{expected} original + {deepened_split['extension_rows']} extension"
+            )
 
     def test_live_tables_are_not_empty(self, live_row_counts):
         # A graph query over an empty table succeeds and returns zero rows, so
@@ -463,12 +536,35 @@ class TestLoadedState:
         for table in load.LOAD_ORDER:
             backup = load.backup_name(table)
             assert all_columns[backup], f"{backup} missing"
-            assert all_columns[table] == all_columns[backup], table
+            if table != DEEPENED:
+                assert all_columns[table] == all_columns[backup], table
+                continue
+            # The deepening reordered this table's columns but changed nothing
+            # else, so compare on everything except ordinal position. A dropped,
+            # added, retyped or newly-required column still fails here.
+            def shape(cols):
+                return sorted((c, t, n) for c, t, _, n in cols)
+
+            assert shape(all_columns[table]) == shape(all_columns[backup]), (
+                f"{table}: column set/types/nullability differ from {backup}; "
+                "the deepening only reorders, so this is real schema drift"
+            )
 
     def test_columns_also_match_the_pre_rewrite_profile(self, all_columns):
         for table in load.LOAD_ORDER:
             got = [c for c, _, _, _ in all_columns[table]]
-            assert got == load.column_names(table), table
+            if table != DEEPENED:
+                assert got == load.column_names(table), table
+                continue
+            assert sorted(got) == sorted(load.column_names(table)), (
+                f"{table}: column names differ from the pre-rewrite profile"
+            )
+            # Order is pinned to what the deepening declares, so a future
+            # rewrite that silently reshuffles `SELECT *` still fails.
+            assert got == DEEPENED_COLUMN_ORDER, (
+                f"{table}: live column order {got} is neither the profile's nor "
+                "the order scripts/deepen_core_data.py declares"
+            )
 
     def test_partitioning_and_clustering_preserved(self, client):
         for table in load.LOAD_ORDER:
@@ -481,9 +577,14 @@ class TestLoadedState:
             backup = load.backup_name(table)
             assert live_row_counts.get(backup) == SCHEMAS["schemas"][table]["num_rows"]
 
-    def test_inventory_levels_gained_the_two_missing_skus(self, live_row_counts):
-        """The one table whose row count deliberately differs from its backup."""
+    def test_inventory_levels_gained_the_two_missing_skus(self, deepened_split):
+        """The one table whose row count deliberately differs from its backup.
+
+        Measured against the original rows, not the live total: the later
+        deepening adds `SKU-EXT-` parts on top, and folding those into this
+        count would hide the two SKUs this test exists to prove arrived.
+        """
         assert (
-            live_row_counts["inventory_levels"]
-            == live_row_counts["inventory_levels" + BACKUP_SUFFIX] + 2
+            deepened_split["original_rows"]
+            == SCHEMAS["schemas"][DEEPENED]["num_rows"] + 2
         )
