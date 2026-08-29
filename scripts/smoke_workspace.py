@@ -32,14 +32,29 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SERVED = ROOT / "apps" / "frontend" / "server" / "static" / "sales-assets.js"
+STATIC = ROOT / "apps" / "frontend" / "server" / "static"
+SERVED = STATIC / "sales-assets.js"
+# The BigQuery-insight deep-dive ships its own four recordings. They are a
+# separate capture harness with its own re-record cycle, so they break the
+# same way and on a different schedule -- covering only sales-assets.js left
+# four videos that no gate would have caught going missing.
+BQ_SERVED = STATIC / "bq-insights.js"
 BUCKET = "mining-agents-showcase-genial-union-475913"
 EXPECTED = 100
+BQ_EXPECTED = 4
 
 
 def manifest() -> dict[str, dict]:
     text = SERVED.read_text()
     return json.loads(text[text.index("{"):text.rindex("}") + 1])
+
+
+def bq_manifest() -> dict[str, dict]:
+    """The bq deep-dive's scenarios, keyed by id, in the same shape."""
+    text = BQ_SERVED.read_text()
+    blob = json.loads(text[text.index("["):text.rindex("]") + 1])
+    return {s.get("id") or s.get("slug") or str(i): s
+            for i, s in enumerate(blob)}
 
 
 def check_objects(assets: dict[str, dict]) -> list[str]:
@@ -103,16 +118,25 @@ def check_serving(assets: dict[str, dict]) -> list[str]:
 
 def main() -> int:
     assets = manifest()
-    print(f"manifest: {len(assets)} agents from "
-          f"{SERVED.relative_to(ROOT)}")
+    bq = bq_manifest()
+    print(f"manifest: {len(assets)} agents from {SERVED.relative_to(ROOT)}")
+    print(f"manifest: {len(bq)} bq scenarios from {BQ_SERVED.relative_to(ROOT)}")
     failures: list[str] = []
     if len(assets) != EXPECTED:
         failures.append(f"manifest carries {len(assets)} agents, expected {EXPECTED}")
+    if len(bq) != BQ_EXPECTED:
+        failures.append(f"bq manifest carries {len(bq)} scenarios, "
+                        f"expected {BQ_EXPECTED}")
 
     missing = check_objects(assets)
     print(f"{'ok   ' if not missing else 'FAIL '} objects in GCS: "
           f"{len(assets) - len(missing)}/{len(assets)}")
     failures += missing
+
+    bq_missing = check_objects(bq)
+    print(f"{'ok   ' if not bq_missing else 'FAIL '} bq objects in GCS: "
+          f"{len(bq) - len(bq_missing)}/{len(bq)}")
+    failures += bq_missing
 
     serving = check_serving(assets)
     print(f"{'ok   ' if not serving else 'FAIL '} app serving "
