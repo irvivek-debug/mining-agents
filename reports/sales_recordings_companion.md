@@ -636,6 +636,15 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 - **Recording:** `data/uat/videos/S06-R-CRITIC/page@43366a1adf5e09faf6c4232aed9d8dbf.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/13013800279746514045/session/-
 
+## Collector Dosing Specialist (S07-1-REAGENT)
+
+*Mineral Processing/Plant — Flotation Technician*
+
+**Situation.** From reagent inventory, report our MIBC frother position — stock level, reorder point, lead time and dollar value — showing the numbers. Then state in plain arithmetic how far current stock sits above or below the reorder point, and what that gap is worth in dollars. **Agent Action.** It looks up reagent stock levels — the operation's live data, not a briefing pack — and answers in its own words: “Based on the data retrieved from genial-union-475913-i7.mining_data.reagent_inventory, here is the position report for MIBC Frother 200L (Part Number:” It reports real figures — 21 days, 75.00, 56,550.00 — pulled from the data during the recording. **Logic.** Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so instead of guessing.
+
+- **Recording:** `data/uat/videos/S07-1-REAGENT/page@5ae813c47cc410987d11367935e39d90.webm`
+- **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/12936409017092172708/session/-
+
 ## Froth Air Specialist (S07-2-AIR)
 
 *Mineral Processing/Plant — Plant Metallurgist*
@@ -896,9 +905,3 @@ the on-screen tool trace is the proof of grounding; narrate over it.
 
 - **Recording:** `data/uat/videos/S12-R-CRITIC/page@220cba1c1a025e4a4c655807f14f00d6.webm`
 - **Live agent:** https://vertexaisearch.cloud.google.com/home/cid/af13d38d-d69f-4dce-9076-f12625444a86/r/agent/15122170761949992179/session/-
-
----
-
-**Not yet included (1):** S07-1-REAGENT
-  (no passing recording on the current ledger — the companion only
-  describes what a recording actually shows)

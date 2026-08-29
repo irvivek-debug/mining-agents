@@ -186,6 +186,12 @@ window.SALES_ASSETS = {
   "action": "Looks up flotation assay results and plant telemetry \u2014 the operation's live data \u2014 and answers in its own words: \u201cExecutive Optimization\u201d Real figures from the recording: 0.72%, 1.09%, 0.81%.",
   "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
  },
+ "S07-1-REAGENT": {
+  "video": "../../data/uat/videos/S07-1-REAGENT/page@5ae813c47cc410987d11367935e39d90.webm",
+  "situation": "From reagent inventory, report our MIBC frother position \u2014 stock level, reorder point, lead time and dollar value \u2014 showing the numbers. Then state in plain arithmetic how far current stock sits above or below the reorder point, and what that gap is worth in dollars.",
+  "action": "Looks up reagent stock levels \u2014 the operation's live data \u2014 and answers in its own words: \u201cBased on the data retrieved from genial-union-475913-i7.mining_data.reagent_inventory, here is the position report for MIBC Frother 200L (Part Number:\u201d Real figures from the recording: 21 days, 75.00, 56,550.00.",
+  "logic": "Before answering it runs its governing calculation, checks any numbers given in the question against what the records actually say, points out any difference, and names the records behind every figure. If it cannot back something with data, it says so."
+ },
  "S07-2-AIR": {
   "video": "../../data/uat/videos/S07-2-AIR/page@972d9b9e73cd200b1fe255468304dafd.webm",
   "situation": "Regulate superficial gas velocity Jg across rougher bank.",

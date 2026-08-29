@@ -27,7 +27,8 @@ time, carries no secret. There is no error signature; only a pickle
 inspection finds it.
 
 ## Know where the model is served
-`gemini-3.7-flash` serves ONLY from the `global` endpoint; eleven regions
+The current flash-tier model (see `references/model-policy.md` — the only
+file that names IDs) serves ONLY from the `global` endpoint; eleven regions
 404. An engine in us-central1 resolves publisher models regionally — set
 `env_vars={"GOOGLE_CLOUD_LOCATION": "global"}`. Signature: every
 invocation 404s on a model that demonstrably exists in the console.

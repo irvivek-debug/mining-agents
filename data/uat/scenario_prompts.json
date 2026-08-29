@@ -132,7 +132,7 @@
   "Calculates PAX dosage 38 g/t, predicting +1.8% Cu recovery gain."
  ],
  "S07-1-REAGENT": [
-  "From reagent inventory, report our frother position: MIBC stock level, reorder point, lead time and dollar value, plus any alternative frothers held \u2014 show the numbers. Then recommend a dosage as a grams-per-tonne range using the stated industry envelope of 5 to 15 g/t, compute weekly consumption across that range in plain arithmetic, and state how many weeks current stock covers at each end.",
+  "From reagent inventory, report our MIBC frother position \u2014 stock level, reorder point, lead time and dollar value \u2014 showing the numbers. Then state in plain arithmetic how far current stock sits above or below the reorder point, and what that gap is worth in dollars.",
   "MIBC dosage = 18 g/t; bubble Sauter diameter d32 = 1.2mm."
  ],
  "S07-2-AIR": [
