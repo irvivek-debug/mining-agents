@@ -60,10 +60,20 @@ Two classes, because this asset is judged twice — once in a demo room, once by
 | Metric | Baseline | Target |
 |---|---|---|
 | Recovery rate variance at `CONC-01` | 7.0 pt spread (88.2–95.2) | ≤ 4.0 pt spread |
-| Parts below reorder point | 28 of 140 (20.0%) | ≤ 5 of 140 (3.6%) |
+| Parts below reorder point | 28 of 140 (20.0%) | ≤ 12 of 140 (8.6%) † |
 | CRITICAL work orders open at any time | 21 OPEN of 101 CRITICAL | ≤ 10 OPEN |
 | Fatigue events reaching an operator before shift start | 0% (post-hoc only) | 100% of `fatigue_alert_triggered` |
 | Mean time from telemetry anomaly to dependency-impact assessment | manual, hours | < 60 seconds |
+
+† The below-ROP target is split by lead time, because lead time is a physical
+constraint no agent can compress. Of the 28 parts below reorder point, **18 sit
+at a lead time of ≤ 21 days** (of 94 such parts) and are addressable by earlier
+detection and a faster purchase-order raise — target **≤ 5**. The other **10 sit
+above 21 days** (of 46 such parts; 5 of them beyond 45 days), where the
+achievable gain is *detecting the approach to ROP sooner*, not eliminating the
+breach inside one cycle — target **≤ 7**. Hence ≤ 12 in total. A single blended
+target of ≤ 5 would implicitly claim we can stop stocking out on 45-day-lead
+items, which is the first thing an experienced planner will challenge.
 
 **Accelerator metrics** — what makes it reusable rather than a one-off:
 
