@@ -16,6 +16,16 @@ Two stages, because they fail for different reasons:
                     returns the page, the manifest, and ranged video bytes.
                     This exercises the streaming code path, not just storage.
 
+The app driven here -- apps/frontend/server/main.py -- is deployed as the Cloud
+Run service `mining-agents-showcase`, NOT `mag-workspace`. The two are easy to
+confuse: mag-workspace runs apps.workspace.server (FastAPI, no /videos route)
+and is the service scripts/deploy_apps.py targets. Deploying mag-workspace does
+nothing for the recordings. Redeploy this one with:
+
+    gcloud run deploy mining-agents-showcase \
+        --source apps/frontend/server --region us-central1 \
+        --no-allow-unauthenticated
+
 The deployed service sits behind IAP, so an end-to-end HTTPS check would need
 either a service-account key or an interactive IAP sign-in. Neither belongs in
 a script, so this deliberately stops at the bucket and the app, and says so.
