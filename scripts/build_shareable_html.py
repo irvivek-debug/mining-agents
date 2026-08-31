@@ -61,7 +61,8 @@ def _embedded(path: pathlib.Path, open_ch: str, close_ch: str):
     return json.loads(text[text.index(open_ch):text.rindex(close_ch) + 1])
 
 
-def build(video_base: str | None, video_map: dict[str, str]) -> str:
+def build(video_base: str | None, video_map: dict[str, str],
+          external: bool = False) -> str:
     assets = _embedded(SALES, "{", "}")
     scenarios = _embedded(BQ, "[", "]")
     agents = {a["agent_id"]: a for a in json.loads(AGENTS.read_text())}
@@ -85,7 +86,9 @@ def build(video_base: str | None, video_map: dict[str, str]) -> str:
                            meta.get("display_name", aid)).strip(),
             "dept": meta.get("department", ""),
             "persona": meta.get("persona", ""),
-            "url": meta.get("url", ""),
+            # The external build withholds endpoints, matching the promise the
+            # public-showcase branch's README already makes to its readers.
+            "url": "" if external else meta.get("url", ""),
             "tables": meta.get("tables", []),
             "situation": entry.get("situation", ""),
             "action": entry.get("action", ""),
@@ -318,6 +321,9 @@ def main() -> int:
     ap.add_argument("--video-map", type=pathlib.Path,
                     help='JSON {"AGENT-ID": "url"} — required for Google Drive')
     ap.add_argument("--out", type=pathlib.Path, default=OUT)
+    ap.add_argument("--external", action="store_true",
+                    help="withhold live agent endpoints (for the public "
+                         "Pages build, which promises exactly that)")
     args = ap.parse_args()
 
     vmap: dict[str, str] = {}
@@ -331,7 +337,7 @@ def main() -> int:
                   file=sys.stderr)
             return 2
 
-    doc = build(args.video_base, vmap)
+    doc = build(args.video_base, vmap, external=args.external)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(doc)
     kb = len(doc.encode()) / 1024
